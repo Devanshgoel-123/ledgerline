@@ -1,0 +1,35 @@
+import { z } from "zod";
+import { TX_TYPES } from "../enums/index.js";
+
+export const createRuleBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).default("Custom rule"),
+    priority: z.coerce.number().int().min(0).max(10_000).default(50),
+    enabled: z.boolean().default(true),
+    matchNarrationRe: z.string().max(500).nullable().optional(),
+    matchUpiId: z.string().max(200).nullable().optional(),
+    matchMerchantAlias: z.string().max(200).nullable().optional(),
+    matchAmountMin: z.coerce.number().nonnegative().nullable().optional(),
+    matchAmountMax: z.coerce.number().nonnegative().nullable().optional(),
+    matchType: z.enum(TX_TYPES).nullable().optional(),
+    setProviderId: z.string().uuid().nullable().optional(),
+    setPayeeName: z.string().max(200).nullable().optional(),
+    setCategorySlug: z.string().max(64).nullable().optional(),
+    setTags: z.array(z.string().max(64)).max(20).optional().default([]),
+  })
+  .refine(
+    (body) =>
+      Boolean(
+        body.matchNarrationRe ||
+          body.matchUpiId ||
+          body.matchMerchantAlias ||
+          body.matchAmountMin != null ||
+          body.matchAmountMax != null ||
+          body.matchType,
+      ),
+    { message: "At least one match criterion is required" },
+  )
+  .refine(
+    (body) => Boolean(body.setPayeeName || body.setCategorySlug || body.setProviderId),
+    { message: "Set payee name, category, or provider" },
+  );
