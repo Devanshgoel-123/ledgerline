@@ -1,0 +1,175 @@
+# Full local/staging stack: Postgres + API + web.
+# Usage:
+#   cp .env.example .env   # set JWT_SECRET + ENCRYPTION_KEY
+#   ./scripts/docker-prod-check.sh
+#   docker compose up --build
+#
+# Optional separate Gmail pooling worker:
+#   docker compose --profile worker up --build
+
+name: ledgerline
+
+services:
+  postgres:
+    profiles: ["local-db"]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ledgerline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ledgerline}
+      POSTGRES_DB: ${POSTGRES_DB:-ledgerline}
+    volumes:
+      - ledgerline_pg:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-ledgerline} -d ${POSTGRES_DB:-ledgerline}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-4000}:4000"
+    # Docker's embedded resolver (127.0.0.11) returns ENOTFOUND for the Neon
+    # pooler host. Public resolvers answer that name.
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    # backend/.env holds Telegram (and a few local-only flags). Root .env
+    # is listed second so it wins when both files set the same key.
+    env_file:
+      # Optional: only needed when the backend also runs outside Docker.
+      - path: backend/.env
+        required: false
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_PRETTY: "0"
+      # Keep scans running in this container even if backend/.env disables them for local npm.
+      DISABLE_INLINE_GMAIL_JOBS: "0"
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      ALLOW_ANON_PARSE: ${ALLOW_ANON_PARSE:-0}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:4000/api/v1/auth/google/callback}
+      GOOGLE_ALLOWED_EMAILS: ${GOOGLE_ALLOWED_EMAILS:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      GMAIL_PUBSUB_TOPIC: ${GMAIL_PUBSUB_TOPIC:-}
+      GMAIL_PUSH_AUDIENCE: ${GMAIL_PUSH_AUDIENCE:-}
+      GMAIL_PUSH_SERVICE_ACCOUNT: ${GMAIL_PUSH_SERVICE_ACCOUNT:-}
+      POOLING_WORKER_SEPARATE: ${POOLING_WORKER_SEPARATE:-0}
+      POOLING_WORKER_HOST: ${POOLING_WORKER_HOST:-worker}
+      POOLING_WORKER_PORT: ${POOLING_WORKER_PORT:-5473}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  worker:
+    profiles: ["worker"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["node", "dist/worker/poolingServer.js"]
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    env_file:
+      # Optional: only needed when the backend also runs outside Docker.
+      - path: backend/.env
+        required: false
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_PRETTY: "0"
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:4000/api/v1/auth/google/callback}
+      POOLING_WORKER_HOST: 0.0.0.0
+      POOLING_WORKER_PORT: ${POOLING_WORKER_PORT:-5473}
+      POOLING_WORKER_INTERVAL_MS: ${POOLING_WORKER_INTERVAL_MS:-21600000}
+      POOLING_WORKER_SEPARATE: "1"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:${POOLING_WORKER_PORT:-5473}/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  ledgerline_pg:
