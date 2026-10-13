@@ -1,0 +1,193 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { INDIA_RETAIL_BRANDS } from "../providers/indiaRetail.js";
+import type { CategoryMeta } from "./types.js";
+import type { MemoryStore } from "./memory.js";
+
+const MIGRATION_SQL = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "migrations",
+  "003_reference_data.up.sql",
+);
+
+function readMigrationSql(): string {
+  return readFileSync(MIGRATION_SQL, "utf8");
+}
+
+function parseJsonMeta(raw: string): CategoryMeta {
+  try {
+    return JSON.parse(raw.replace(/''/g, "'")) as CategoryMeta;
+  } catch {
+    return {};
+  }
+}
+
+/** Replay 003_reference_data.up.sql into an in-memory store (tests). */
+export async function seedMemoryReferenceData(store: MemoryStore): Promise<void> {
+  const existing = await store.listBankPresets();
+  if (existing.length > 0) return;
+
+  const sql = readMigrationSql();
+
+  for (const match of sql.matchAll(
+    /INSERT INTO categories[\s\S]*?SELECT NULL, '([^']+)', '([^']+)', '([^']+)', '([^']+)', TRUE, (\d+), ('\{[^']*\}'::jsonb|'{}'::jsonb)/g,
+  )) {
+    const metaRaw = match[6].startsWith("'{}")
+      ? "{}"
+      : match[6].slice(1, match[6].indexOf("'::jsonb"));
+    await store.upsertCategory({
+      userId: null,
+      slug: match[1],
+      label: match[2],
+      blurb: match[3],
+      accent: match[4],
+      isGlobal: true,
+      sortOrder: Number(match[5]),
+      meta: parseJsonMeta(metaRaw),
+    });
+  }
+
+  for (const match of sql.matchAll(
+    /INSERT INTO providers[\s\S]*?SELECT NULL, '([^']+)', ARRAY\[([^\]]*)\](?:::TEXT\[\])?, ARRAY\[([^\]]*)\](?:::TEXT\[\])?, ARRAY\[([^\]]*)\](?:::TEXT\[\])?, (NULL|'[^']*'), (NULL|'[^']*'), ('[^']*'|NULL), TRUE/g,
+  )) {
+    const parseArray = (raw: string): string[] => {
+      if (!raw.trim()) return [];
+      return [...raw.matchAll(/'([^']*)'/g)].map((m) => m[1]);
+    };
+    const unquote = (raw: string): string | null =>
+      raw === "NULL" ? null : raw.slice(1, -1);
+
+    await store.upsertProvider({
+      userId: null,
+      canonicalName: match[1],
+      aliases: parseArray(match[2]),
+      upiHandles: parseArray(match[3]),
+      senderDomains: parseArray(match[4]),
+      websiteDomain: unquote(match[5]),
+      logoUrl: unquote(match[6]),
+      categorySlug: unquote(match[7]),
+      isGlobal: true,
+    });
+  }
+
+  for (const match of sql.matchAll(
+    /\('([^']+)', '([^']+)', (NULL|'[^']*'), (TRUE|FALSE), ARRAY\[([^\]]*)\], '([^']*)', (\d+)\)/g,
+  )) {
+    const parseArray = (raw: string): string[] =>
+      [...raw.matchAll(/'([^']*)'/g)].map((m) => m[1]);
+    const adapterRaw = match[3];
+    await store.upsertBankPreset({
+      id: match[1],
+      label: match[2],
+      adapterId: adapterRaw === "NULL" ? null : adapterRaw.slice(1, -1),
+      pdfAdapterReady: match[4] === "TRUE",
+      defaultSenderEmails: parseArray(match[5]),
+      description: match[6],
+      sortOrder: Number(match[7]),
+    });
+  }
+
+  // Later catalog migrations are not in 003. Tests and the picker expect them.
+  await store.upsertCategory({
+    userId: null,
+    slug: "rides",
+    label: "Rides",
+    blurb: "Cabs · autos · bikes",
+    accent: "#0284c7",
+    isGlobal: true,
+    sortOrder: 26,
+    meta: { parent: "travel" },
+  });
+  await store.upsertCategory({
+    userId: null,
+    slug: "stays",
+    label: "Stays",
+    blurb: "Hotels · stays",
+    accent: "#7c3aed",
+    isGlobal: true,
+    sortOrder: 27,
+    meta: { parent: "travel" },
+  });
+  await store.upsertCategory({
+    userId: null,
+    slug: "passed-on",
+    label: "Passed on",
+    blurb: "Someone else's money that you passed on",
+    accent: "#64748b",
+    isGlobal: true,
+    sortOrder: 28,
+    meta: { parent: "household" },
+  });
+  const travel = store.categories.find((category) => category.slug === "travel" && category.isGlobal);
+  if (travel) travel.blurb = "Rides · stays · fuel";
+  for (const provider of store.providers) {
+    if (
+      provider.isGlobal &&
+      ["uber", "rapido", "namma yatri", "makemytrip"].includes(provider.canonicalName.toLowerCase())
+    ) {
+      provider.categorySlug = "rides";
+    }
+  }
+
+  await store.upsertCategory({
+    userId: null,
+    slug: "self-transfer",
+    label: "Self Transfer",
+    blurb: "Internal transfers between accounts",
+    accent: "#8b8b8b",
+    isGlobal: true,
+    sortOrder: 8,
+    meta: { parent: "investments" },
+  });
+
+  for (const app of [
+    { name: "Groww", aliases: ["Groww", "Grow", "Groww Invest"], handles: ["groww"], site: "groww.in" },
+    {
+      name: "Zerodha",
+      aliases: ["Zerodha", "Zerodha Broking", "Kite", "Coin by Zerodha"],
+      handles: ["zerodha", "zerodhabroking"],
+      site: "zerodha.com",
+    },
+  ]) {
+    await store.upsertProvider({
+      userId: null,
+      canonicalName: app.name,
+      aliases: app.aliases,
+      upiHandles: app.handles,
+      senderDomains: [app.site],
+      websiteDomain: app.site,
+      logoUrl: null,
+      categorySlug: "investments",
+      isGlobal: true,
+    });
+  }
+
+  const investments = store.categories.find((category) => category.slug === "investments" && category.isGlobal);
+  if (investments) investments.blurb = "Brokers · SIPs · mutual funds · Grow";
+
+  for (const match of sql.matchAll(
+    /INSERT INTO invites \(code, max_uses\)\s*VALUES\s*\(([^)]+)\)/g,
+  )) {
+    for (const row of match[1].split("),(")) {
+      const parts = row.replace(/[()]/g, "").split(",").map((s) => s.trim());
+      const code = parts[0].replace(/^'|'$/g, "");
+      const maxUses = Number(parts[1]);
+      await store.seedInvite(code, maxUses);
+    }
+  }
+
+  for (const brand of INDIA_RETAIL_BRANDS) {
+    await store.upsertProvider({
+      userId: null,
+      canonicalName: brand.canonicalName,
+      aliases: brand.aliases,
+      upiHandles: brand.upiHandles,
+      senderDomains: brand.senderDomains,
+      websiteDomain: brand.websiteDomain,
+      logoUrl: `/providers/${brand.logoFile}`,
+      categorySlug: brand.categorySlug,
+      isGlobal: true,
+    });
+  }
+}
