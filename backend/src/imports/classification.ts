@@ -1,0 +1,59 @@
+import type {
+  CategoryRow,
+  ProviderRow,
+  TransactionRow,
+  UserRuleRow,
+} from "../db/types.js";
+import { CategorySlug, ClassificationSource } from "../enums/index.js";
+import {
+  applyRules,
+  detectFromProviders,
+  type ClassifiedFields,
+} from "../rules/engine.js";
+
+export type TransactionClassificationCandidate = Pick<
+  TransactionRow,
+  "description" | "upiId" | "merchant" | "amount" | "type" | "payee"
+>;
+
+export type ClassificationContext = {
+  providers: ProviderRow[];
+  rules: UserRuleRow[];
+  categories: CategoryRow[];
+};
+
+export function classifyTransaction(
+  tx: TransactionClassificationCandidate,
+  context: ClassificationContext,
+  defaults: Partial<ClassifiedFields> = {},
+): ClassifiedFields {
+  const providerMatch = detectFromProviders(tx, context.providers);
+  if (providerMatch.providerId || providerMatch.merchant) {
+    return {
+      merchant: providerMatch.merchant ?? defaults.merchant ?? tx.merchant ?? null,
+      payee: defaults.payee ?? tx.payee ?? null,
+      providerId: providerMatch.providerId ?? defaults.providerId ?? null,
+      categorySlug: providerMatch.categorySlug ?? defaults.categorySlug ?? CategorySlug.Other,
+      classificationSource: ClassificationSource.ProviderRegistry,
+    };
+  }
+
+  const classification = applyRules(
+    tx,
+    context.rules,
+    context.providers,
+    {
+      merchant: defaults.merchant ?? tx.merchant ?? null,
+      payee: defaults.payee ?? tx.payee ?? null,
+      providerId: defaults.providerId ?? null,
+      categorySlug: defaults.categorySlug ?? null,
+      classificationSource: defaults.classificationSource ?? ClassificationSource.Parser,
+    },
+    context.categories,
+  );
+
+  return {
+    ...classification,
+    categorySlug: classification.categorySlug ?? CategorySlug.Other,
+  };
+}

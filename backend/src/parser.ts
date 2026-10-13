@@ -1,0 +1,657 @@
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { buildDailyInsights } from "./analytics/dailyInsights.js";
+import type {
+  AmountBand,
+  DailySpend,
+  MerchantSpend,
+  ParseResult,
+  PayeeSpend,
+  Transaction,
+  TransactionType,
+  UpiRanking,
+} from "./lib/index.js";
+
+/**
+ * HDFC-style statement columns:
+ * Date | Narration | Chq./Ref.No. | Value Dt | Withdrawal Amt. | Deposit Amt. | Closing Balance
+ */
+
+const HEADER_RE =
+  /^(date|narration|chq\.?\/?ref\.?|value\s*dt|withdrawal|deposit|closing\s*balance)/i;
+
+/** Page chrome. Bank and branch names count only at the start of a line, never inside a narration. */
+const NOISE_RE =
+  /(statement of account|opening balance|page\s+\d|generated on|customer id|account number|ifsc|total debits?|total credits?|this is a computer|confidential|disclaimer)|^(?:hdfc bank|branch)\b/i;
+
+const AMOUNT_RE = /([\d,]+\.\d{2})/g;
+
+/**
+ * One amount-column cell: Indian or plain grouping, paise optional. Only used
+ * on the columns after the value date, never on narration text.
+ */
+const COLUMN_AMOUNT_RE = /^(?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d{1,2})?$/;
+
+/** Statement row date: DD/MM/YY or DD/MM/YYYY. */
+const ROW_DATE = String.raw`\d{2}\/\d{2}\/(?:\d{4}|\d{2})`;
+const ROW_START_RE = new RegExp(String.raw`^${ROW_DATE}(?!\d)`);
+
+const DATE_RE = /\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/g;
+
+function extractAmounts(text: string): number[] {
+  const amounts: number[] = [];
+  for (const match of text.matchAll(AMOUNT_RE)) {
+    const value = parseAmount(match[1]);
+    if (!Number.isNaN(value)) amounts.push(value);
+  }
+  return amounts;
+}
+
+/**
+ * Amounts in the cells right after the value date, up to the first cell that
+ * is not one (a wrapped narration tail can follow). Null when there are none.
+ */
+function extractColumnAmounts(trailing: string): number[] | null {
+  const cells = trailing.trim().split(/\s+/).filter(Boolean);
+  const amounts: number[] = [];
+  for (const cell of cells) {
+    if (!COLUMN_AMOUNT_RE.test(cell)) break;
+    amounts.push(parseAmount(cell));
+  }
+  return amounts.length ? amounts : null;
+}
+
+function rowLooksComplete(line: string): boolean {
+  if (!ROW_START_RE.test(line)) return false;
+  const columns = line.match(HDFC_ROW_RE)?.[5];
+  const cells = columns ? extractColumnAmounts(columns) : null;
+  if (cells) return cells.length >= 2;
+  if (extractAmounts(line).length < 2) return false;
+  return [...line.matchAll(DATE_RE)].length >= 2;
+}
+
+function isContinuationFragment(line: string, prev: string): boolean {
+  if (!rowLooksComplete(prev)) return true;
+  // Wrapped tails after a finished row (e.g. TRIP-... or TIB0... or ref+amounts)
+  return /^(TRIP\b|TIB0|[A-Z0-9._]+@[A-Z0-9]+|\d{10,})/i.test(line);
+}
+
+/** Join wrapped PDF narration lines onto the previous date-started row. */
+export function stitchStatementLines(lines: string[]): string[] {
+  const stitched: string[] = [];
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+/g, " ").trim();
+    if (!line) continue;
+
+    const startsWithDate = ROW_START_RE.test(line);
+    const looksLikeHeader = HEADER_RE.test(line) || NOISE_RE.test(line);
+
+    if (
+      !startsWithDate &&
+      !looksLikeHeader &&
+      stitched.length > 0 &&
+      isContinuationFragment(line, stitched[stitched.length - 1])
+    ) {
+      stitched[stitched.length - 1] = `${stitched[stitched.length - 1]} ${line}`;
+      continue;
+    }
+
+    stitched.push(line);
+  }
+
+  return stitched;
+}
+
+const HDFC_ROW_RE = new RegExp(
+  String.raw`^(${ROW_DATE})\s+(.+?)\s+(\d{6,})\s+(${ROW_DATE})\s+(.+)$`,
+);
+
+const CREDIT_NARRATION_RE =
+  /\b(cash\s*deposit|salary|interest|refund|neft\s*cr|imps\s*cr|rtgs\s*cr|upi[- ].*\bcr\b|credited|received|deposit amt)\b/i;
+
+/** Strong debit signals only — do NOT treat every UPI- as debit (UPI can credit too). */
+const DEBIT_NARRATION_RE =
+  /\b(atm-?wdl|atm\s*withdrawal|pos-|ach\s*dr|nach|emi|charges|fee|withdrawal|purchase|paid\s+to|sent\s+to)\b/i;
+
+const TIME_RE =
+  /\b([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\s*(?:AM|PM|am|pm)?\b/;
+
+function extractTime(text: string): string | null {
+  const match = text.match(TIME_RE);
+  if (!match) return null;
+  const raw = match[0].replace(/\s+/g, " ").trim().toUpperCase();
+  // Normalize to HH:MM or HH:MM:SS
+  const parts = raw.match(
+    /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i,
+  );
+  if (!parts) return raw;
+  let hour = Number(parts[1]);
+  const minute = parts[2];
+  const second = parts[3];
+  const meridiem = parts[4]?.toUpperCase();
+  if (meridiem === "PM" && hour < 12) hour += 12;
+  if (meridiem === "AM" && hour === 12) hour = 0;
+  const hh = String(hour).padStart(2, "0");
+  return second ? `${hh}:${minute}:${second}` : `${hh}:${minute}`;
+}
+
+function classifyByBalance(
+  txnAmount: number,
+  closingBalance: number,
+  prevBalance: number | null,
+): TransactionType | null {
+  if (prevBalance === null) return null;
+  const delta = Math.round((closingBalance - prevBalance) * 100) / 100;
+  if (Math.abs(delta - txnAmount) <= 0.05) return "credit";
+  if (Math.abs(delta + txnAmount) <= 0.05) return "debit";
+  if (delta > 0.05) return "credit";
+  if (delta < -0.05) return "debit";
+  return null;
+}
+
+function inferType(
+  narration: string,
+  txnAmount: number,
+  closingBalance: number,
+  prevBalance: number | null,
+): TransactionType {
+  // Closing-balance movement is the source of truth on HDFC statements
+  const fromBalance = classifyByBalance(txnAmount, closingBalance, prevBalance);
+  if (fromBalance) return fromBalance;
+
+  if (CREDIT_NARRATION_RE.test(narration)) return "credit";
+  if (DEBIT_NARRATION_RE.test(narration)) return "debit";
+
+  // Ambiguous (common for UPI) without a prior balance
+  return "debit";
+}
+
+function toIsoDate(raw: string): string | null {
+  const parts = raw.split("/").map(Number);
+  if (parts.length !== 3) return null;
+  let [day, month, year] = parts;
+  if (year < 100) year += year >= 70 ? 1900 : 2000;
+  month -= 1;
+  const d = new Date(Date.UTC(year, month, day));
+  if (
+    d.getUTCFullYear() !== year ||
+    d.getUTCMonth() !== month ||
+    d.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+function parseAmount(raw: string): number {
+  return Number(raw.replace(/,/g, ""));
+}
+
+const UPI_ID_RE =
+  /\b(\d{6,15}@[a-zA-Z][a-zA-Z0-9]{1,20}|[a-zA-Z][a-zA-Z0-9._]{1,40}@[a-zA-Z][a-zA-Z0-9]{1,20})\b/i;
+
+function extractUpi(narration: string): string | null {
+  // Prefer phone/handle@PSP embedded in UPI-NAME-id@psp-...
+  const match = narration.match(UPI_ID_RE);
+  if (!match) return null;
+
+  let candidate = match[1].toLowerCase();
+
+  // UPI-PAYEE-9000000003@ptaxis-... → keep only the @ segment
+  if (candidate.includes("-") && candidate.includes("@")) {
+    const withAt = candidate.split("-").filter((part) => part.includes("@"));
+    if (withAt.length) candidate = withAt[withAt.length - 1];
+  }
+
+  if (/\.(com|in|org|net)$/.test(candidate)) return null;
+  if (!candidate.includes("@") || candidate.length < 5) return null;
+  return candidate;
+}
+
+function cleanNarration(narration: string): string {
+  return narration.replace(/\s+/g, " ").trim().slice(0, 180);
+}
+
+interface ParsedRow {
+  date: string;
+  time: string | null;
+  narration: string;
+  amount: number;
+  type: TransactionType;
+  upiId: string | null;
+  closingBalance: number;
+  raw: string;
+}
+
+function parseHdfcRow(
+  line: string,
+  prevBalance: number | null,
+): ParsedRow | null {
+  const match = line.match(HDFC_ROW_RE);
+  if (!match) return null;
+
+  const date = toIsoDate(match[1]);
+  if (!date) return null;
+
+  const narration = cleanNarration(match[2]);
+  const trailing = match[5].trim();
+  const amounts = extractColumnAmounts(trailing) ?? extractAmounts(trailing);
+
+  // Typical rows: [txnAmount, closingBalance]
+  // Rare both columns filled: [withdrawal, deposit, closingBalance]
+  if (amounts.length < 2) return null;
+
+  let amount: number;
+  let type: TransactionType;
+  let closingBalance: number;
+
+  if (amounts.length >= 3) {
+    const [withdrawal, deposit, balance] = amounts;
+    closingBalance = balance;
+    if (withdrawal > 0 && deposit === 0) {
+      amount = withdrawal;
+      type = "debit";
+    } else if (deposit > 0 && withdrawal === 0) {
+      amount = deposit;
+      type = "credit";
+    } else if (withdrawal > 0) {
+      amount = withdrawal;
+      type = "debit";
+    } else {
+      amount = deposit;
+      type = "credit";
+    }
+  } else {
+    amount = amounts[0];
+    closingBalance = amounts[1];
+    type = inferType(narration, amount, closingBalance, prevBalance);
+  }
+
+  if (amount <= 0) return null;
+
+  return {
+    date,
+    time: extractTime(line),
+    narration,
+    amount: Math.round(amount * 100) / 100,
+    type,
+    upiId: extractUpi(narration),
+    closingBalance,
+    raw: line.slice(0, 240),
+  };
+}
+
+function parseLooseRow(
+  line: string,
+  prevBalance: number | null,
+): ParsedRow | null {
+  const dates = [...line.matchAll(DATE_RE)].map((m) => m[1]);
+  if (!dates.length) return null;
+
+  const date = toIsoDate(dates[0]);
+  if (!date) return null;
+
+  const amounts = extractAmounts(line);
+  if (amounts.length < 2) return null;
+
+  const amount = amounts[amounts.length - 2];
+  const closingBalance = amounts[amounts.length - 1];
+  if (amount <= 0) return null;
+
+  // Strip leading date for narration start
+  const narration = cleanNarration(
+    line
+      .replace(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s*/, "")
+      .replace(/\s+\d{6,}\s+\d{1,2}\/\d{1,2}\/\d{2,4}\s+[\d,]+\.\d{2}(?:\s+[\d,]+\.\d{2})?\s*$/, "")
+      .trim(),
+  );
+
+  return {
+    date,
+    time: extractTime(line),
+    narration,
+    amount: Math.round(amount * 100) / 100,
+    type: inferType(narration, amount, closingBalance, prevBalance),
+    upiId: extractUpi(line),
+    closingBalance,
+    raw: line.slice(0, 240),
+  };
+}
+
+export async function extractTextFromPdf(
+  data: Buffer,
+  password = "",
+): Promise<string> {
+  const loadingTask = getDocument({
+    data: new Uint8Array(data),
+    password: password || undefined,
+    useSystemFonts: true,
+  });
+
+  try {
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+
+      // Bucket by approximate Y so cells on one table row stay together
+      type TextItem = { x: number; str: string };
+      const buckets = new Map<number, TextItem[]>();
+
+      for (const item of content.items) {
+        if (!("str" in item) || !item.str.trim()) continue;
+        const transform = "transform" in item ? item.transform : null;
+        if (!transform) continue;
+        const x = transform[4] as number;
+        const y = Math.round((transform[5] as number) / 2) * 2;
+        const row = buckets.get(y) ?? [];
+        row.push({ x, str: item.str });
+        buckets.set(y, row);
+      }
+
+      const lines = [...buckets.entries()]
+        .sort((a, b) => b[0] - a[0])
+        .map(([, parts]) =>
+          parts
+            .sort((a, b) => a.x - b.x)
+            .map((p) => p.str)
+            .join(" ")
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
+        .filter(Boolean);
+
+      pages.push(lines.join("\n"));
+    }
+
+    return pages.join("\n");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/password/i.test(message)) {
+      // pdf.js PasswordException: code 1 = no password given, 2 = wrong password.
+      const code = (error as { code?: number }).code;
+      throw new Error(
+        code === 1 || /no password/i.test(message)
+          ? "PDF password required"
+          : "Incorrect PDF password",
+      );
+    }
+    throw error;
+  }
+}
+
+export interface StatementLine extends Transaction {
+  closingBalance: number;
+  /** Previous closing balance ± amount equals this closing balance to the paisa. */
+  balanceOk: boolean;
+}
+
+/** First amount on the "Opening Balance" line or the two lines below it (HDFC summary block). */
+export function findOpeningBalance(text: string): number | null {
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (!/opening\s*balance/i.test(lines[i]!)) continue;
+    for (const candidate of [lines[i]!, lines[i + 1] ?? "", lines[i + 2] ?? ""]) {
+      const amounts = extractAmounts(candidate);
+      if (amounts.length) return amounts[0]!;
+    }
+  }
+  return null;
+}
+
+function balanceMatches(
+  amount: number,
+  type: TransactionType,
+  closing: number,
+  prev: number | null,
+): boolean {
+  if (prev === null) return false;
+  const expected = type === "credit" ? prev + amount : prev - amount;
+  return Math.abs(Math.round((expected - closing) * 100)) <= 1;
+}
+
+/**
+ * Statement rows in statement order. Type comes from the closing-balance
+ * chain, starting from the opening balance, so the first row is typed too.
+ */
+export function parseStatementLines(text: string): StatementLine[] {
+  const rows: StatementLine[] = [];
+  const seen = new Set<string>();
+  const opening = findOpeningBalance(text);
+
+  for (const rawLine of stitchStatementLines(text.split("\n"))) {
+    const line = rawLine.trim();
+    if (line.length < 10) continue;
+    const startsWithDate = /^\d{1,2}\/\d{1,2}\/\d{2,4}\b/.test(line);
+    if (!startsWithDate) continue;
+    if (HEADER_RE.test(line)) continue;
+
+    const prevBalance = rows.length ? rows[rows.length - 1]!.closingBalance : opening;
+    const parsed: ParsedRow | null =
+      parseHdfcRow(line, prevBalance) ?? parseLooseRow(line, prevBalance);
+    if (!parsed) continue;
+
+    const key = `${parsed.date}|${parsed.amount}|${parsed.narration.slice(0, 60)}|${parsed.closingBalance}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    rows.push({
+      date: parsed.date,
+      time: parsed.time,
+      description: parsed.narration,
+      amount: parsed.amount,
+      type: parsed.type,
+      upiId: parsed.upiId,
+      merchant: null,
+      payee: null,
+      closingBalance: parsed.closingBalance,
+      balanceOk: false,
+    });
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const prev = i === 0 ? opening : rows[i - 1]!.closingBalance;
+    const cur = rows[i]!;
+    const fromBalance = classifyByBalance(cur.amount, cur.closingBalance, prev);
+    if (fromBalance) cur.type = fromBalance;
+    cur.balanceOk = balanceMatches(cur.amount, cur.type, cur.closingBalance, prev);
+  }
+
+  return rows;
+}
+
+export function parseTransactions(text: string): Transaction[] {
+  return parseStatementLines(text)
+    .map(({ closingBalance: _c, balanceOk: _b, ...txn }) => txn)
+    .sort((a, b) =>
+      a.date === b.date
+        ? (b.time ?? "").localeCompare(a.time ?? "") ||
+          a.description.localeCompare(b.description)
+        : b.date.localeCompare(a.date),
+    );
+}
+
+export function buildAnalytics(
+  transactions: Transaction[],
+  options?: {
+    amountBand?: { label: string; min: number; max: number } | null;
+  },
+): ParseResult {
+  const debits = transactions.filter((t) => t.type === "debit");
+  const credits = transactions.filter((t) => t.type === "credit");
+
+  const dailyMap = new Map<string, number>();
+  for (const t of debits) {
+    dailyMap.set(t.date, (dailyMap.get(t.date) ?? 0) + t.amount);
+  }
+
+  const daily: DailySpend[] = [...dailyMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, amount]) => ({
+      date,
+      amount: Math.round(amount * 100) / 100,
+    }))
+    .filter((day) => day.amount > 0);
+
+  const upiMap = new Map<string, UpiRanking>();
+  for (const t of transactions) {
+    if (!t.upiId) continue;
+    if (t.type !== "debit" && t.type !== "credit") continue;
+    const signed = t.type === "credit" ? -t.amount : t.amount;
+    const existing = upiMap.get(t.upiId);
+    if (!existing) {
+      upiMap.set(t.upiId, {
+        upiId: t.upiId,
+        total: signed,
+        count: t.type === "debit" ? 1 : 0,
+        lastDate: t.date,
+      });
+    } else {
+      existing.total = Math.round((existing.total + signed) * 100) / 100;
+      if (t.type === "debit") existing.count += 1;
+      if (t.date > existing.lastDate) existing.lastDate = t.date;
+    }
+  }
+
+  const upiRanking = [...upiMap.values()]
+    .filter((row) => row.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  const merchantMap = new Map<string, MerchantSpend>();
+  for (const t of transactions) {
+    if (!t.merchant) continue;
+    if (t.type !== "debit" && t.type !== "credit") continue;
+    const signed = t.type === "credit" ? -t.amount : t.amount;
+    let bucket = merchantMap.get(t.merchant);
+    if (!bucket) {
+      bucket = {
+        merchant: t.merchant,
+        total: 0,
+        count: 0,
+        lastDate: "",
+      };
+      merchantMap.set(t.merchant, bucket);
+    }
+    bucket.total = Math.round((bucket.total + signed) * 100) / 100;
+    if (t.type === "debit") bucket.count += 1;
+    if (!bucket.lastDate || t.date > bucket.lastDate) bucket.lastDate = t.date;
+  }
+  const merchantSpend = [...merchantMap.values()]
+    .filter((row) => row.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  const payeeMap = new Map<string, PayeeSpend>();
+  for (const t of transactions) {
+    if (!t.payee) continue;
+    if (t.type !== "debit" && t.type !== "credit") continue;
+    const signed = t.type === "credit" ? -t.amount : t.amount;
+    let bucket = payeeMap.get(t.payee);
+    if (!bucket) {
+      bucket = {
+        name: t.payee,
+        total: 0,
+        paid: 0,
+        received: 0,
+        count: 0,
+        lastDate: "",
+        days: [],
+      };
+      payeeMap.set(t.payee, bucket);
+    }
+    bucket.total = Math.round((bucket.total + signed) * 100) / 100;
+    bucket.count += 1;
+    if (t.type === "debit") bucket.paid = Math.round((bucket.paid + t.amount) * 100) / 100;
+    else bucket.received = Math.round((bucket.received + t.amount) * 100) / 100;
+    if (!bucket.days.includes(t.date)) bucket.days.push(t.date);
+    if (!bucket.lastDate || t.date > bucket.lastDate) bucket.lastDate = t.date;
+  }
+  for (const bucket of payeeMap.values()) {
+    bucket.days.sort();
+  }
+  const payeeSpend = [...payeeMap.values()].sort((a, b) => b.total - a.total);
+
+  const bandConfig = options?.amountBand ?? null;
+  const bandDayCounts: Record<string, number> = {};
+  let bandCount = 0;
+  let bandTotal = 0;
+  for (const t of debits) {
+    if (
+      !bandConfig ||
+      t.amount < bandConfig.min ||
+      t.amount > bandConfig.max
+    ) {
+      continue;
+    }
+    bandCount += 1;
+    bandTotal += t.amount;
+    bandDayCounts[t.date] = (bandDayCounts[t.date] ?? 0) + 1;
+  }
+  const amountBand25to60: AmountBand = {
+    label: bandConfig?.label ?? "",
+    min: bandConfig?.min ?? 0,
+    max: bandConfig?.max ?? 0,
+    count: bandCount,
+    total: Math.round(bandTotal * 100) / 100,
+    days: Object.keys(bandDayCounts).sort(),
+    dayCounts: bandDayCounts,
+  };
+
+  const grossSpent =
+    Math.round(debits.reduce((sum, t) => sum + t.amount, 0) * 100) / 100;
+  const totalReceived =
+    Math.round(credits.reduce((sum, t) => sum + t.amount, 0) * 100) / 100;
+  const totalSpent = grossSpent;
+  const days = daily.length || 1;
+
+  const dailyInsights = buildDailyInsights(daily, null);
+
+  return {
+    summary: {
+      totalSpent,
+      totalInvested: 0,
+      totalReceived,
+      net: Math.round((totalReceived - grossSpent) * 100) / 100,
+      transactionCount: debits.length,
+      upiPayees: upiRanking.length,
+      avgDailySpend: Math.round((totalSpent / days) * 100) / 100,
+      dateFrom: daily[0]?.date ?? null,
+      dateTo: daily[daily.length - 1]?.date ?? null,
+    },
+    daily,
+    dailyInsights,
+    upiRanking,
+    merchantSpend,
+    payeeSpend,
+    amountBand25to60,
+    transactions: [...transactions].sort((a, b) => b.date.localeCompare(a.date)),
+    meta: {
+      pagesTextChars: 0,
+      parsedCount: transactions.length,
+    },
+  };
+}
+
+export async function parsePdf(
+  data: Buffer,
+  password = "",
+  /** Reads transactions from the PDF text; pass a bank adapter's extract. */
+  extract: (text: string) => Transaction[] = parseTransactions,
+): Promise<ParseResult> {
+  const text = await extractTextFromPdf(data, password);
+  if (!text.trim()) {
+    throw new Error(
+      "Could not extract text from PDF. It may be image-based or empty.",
+    );
+  }
+
+  const transactions = extract(text);
+  if (!transactions.length) {
+    throw new Error("No transactions found in this statement.");
+  }
+
+  const result = buildAnalytics(transactions);
+  result.meta.pagesTextChars = text.length;
+  return result;
+}
