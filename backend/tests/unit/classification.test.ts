@@ -1,0 +1,225 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { CategoryRow, ProviderRow, UserRuleRow } from "../db/types.js";
+import { classifyTransaction } from "../../src/imports/classification.js";
+
+const categories: CategoryRow[] = [
+  {
+    id: "cat-other",
+    userId: null,
+    slug: "other",
+    label: "Other",
+    blurb: "",
+    accent: "#000000",
+    sortOrder: 100,
+    meta: {},
+    isGlobal: true,
+  },
+  {
+    id: "cat-cigarettes",
+    userId: null,
+    slug: "cigarettes",
+    label: "Cigarettes",
+    blurb: "",
+    accent: "#000000",
+    sortOrder: 50,
+    meta: {
+      amountBandMin: 25,
+      amountBandMax: 60,
+      amountBandLabel: "Smokes",
+    },
+    isGlobal: true,
+  },
+];
+
+const providers: ProviderRow[] = [
+  {
+    id: "provider-swiggy",
+    userId: null,
+    canonicalName: "Swiggy",
+    aliases: ["SWIGGY"],
+    upiHandles: ["swiggy"],
+    senderDomains: [],
+    websiteDomain: "swiggy.com",
+    logoUrl: null,
+    categorySlug: "food",
+    isGlobal: true,
+  },
+];
+
+function rule(overrides: Partial<UserRuleRow>): UserRuleRow {
+  return {
+    id: "rule-1",
+    userId: "user-1",
+    name: "Rule",
+    priority: 10,
+    enabled: true,
+    matchNarrationRe: null,
+    matchUpiId: null,
+    matchMerchantAlias: null,
+    matchAmountMin: null,
+    matchAmountMax: null,
+    matchType: null,
+    setProviderId: null,
+    setPayeeName: null,
+    setCategorySlug: "outing",
+    setTags: [],
+    ...overrides,
+  };
+}
+
+describe("classifyTransaction", () => {
+  it("keeps provider registry ahead of user rules", () => {
+    const result = classifyTransaction(
+      {
+        description: "UPI-SWIGGY-swiggy@ybl",
+        upiId: "swiggy@ybl",
+        merchant: null,
+        amount: 120,
+        type: "debit",
+        payee: null,
+      },
+      {
+        providers,
+        categories,
+        rules: [rule({ matchUpiId: "swiggy@ybl", setCategorySlug: "outing" })],
+      },
+    );
+
+    assert.equal(result.merchant, "Swiggy");
+    assert.equal(result.categorySlug, "food");
+    assert.equal(result.classificationSource, "provider_registry");
+  });
+
+  it("does not guess cigarettes from the amount alone", () => {
+    const result = classifyTransaction(
+      {
+        description: "Local shop",
+        upiId: null,
+        merchant: null,
+        amount: 40,
+        type: "debit",
+        payee: null,
+      },
+      {
+        providers: [],
+        categories,
+        rules: [],
+      },
+    );
+
+    assert.notEqual(result.categorySlug, "cigarettes");
+    assert.notEqual(result.classificationSource, "amount_band");
+  });
+
+  it("applies user rules when no provider matches", () => {
+    const result = classifyTransaction(
+      {
+        description: "Pay Nikhil for dinner",
+        upiId: "nikhil@oksbi",
+        merchant: null,
+        amount: 500,
+        type: "debit",
+        payee: null,
+      },
+      {
+        providers: [],
+        categories,
+        rules: [rule({ matchUpiId: "nikhil@oksbi", setPayeeName: "Nikhil" })],
+      },
+    );
+
+    assert.equal(result.payee, "Nikhil");
+    assert.equal(result.classificationSource, "rule:rule-1");
+  });
+
+  it("falls back to other when nothing matches", () => {
+    const result = classifyTransaction(
+      {
+        description: "Unknown merchant",
+        upiId: null,
+        merchant: null,
+        amount: 999,
+        type: "debit",
+        payee: null,
+      },
+      {
+        providers: [],
+        categories,
+        rules: [],
+      },
+    );
+
+    assert.equal(result.categorySlug, "other");
+    assert.equal(result.classificationSource, "parser");
+  });
+
+  it("uses a saved UPI id on the next parse even when the narration has no vendor name", () => {
+    const result = classifyTransaction(
+      {
+        description: "UPI/myntra@ybl/YESB",
+        upiId: "myntra@ybl",
+        merchant: null,
+        amount: 999,
+        type: "debit",
+        payee: null,
+      },
+      {
+        providers: [
+          {
+            id: "provider-myntra",
+            userId: null,
+            canonicalName: "Myntra",
+            aliases: [],
+            upiHandles: ["myntra@ybl"],
+            senderDomains: [],
+            websiteDomain: null,
+            logoUrl: null,
+            categorySlug: "shopping",
+            isGlobal: true,
+          },
+        ],
+        categories,
+        rules: [],
+      },
+    );
+    assert.equal(result.merchant, "Myntra");
+    assert.equal(result.providerId, "provider-myntra");
+    assert.equal(result.categorySlug, "shopping");
+  });
+
+  it("does not label every HDFC alert as the bank", () => {
+    const result = classifyTransaction(
+      {
+        description:
+          "Alert : Update on your HDFC Bank account UPI-SWIGGY-swiggy@ybl",
+        upiId: "swiggy@ybl",
+        merchant: null,
+        amount: 250,
+        type: "debit",
+        payee: null,
+      },
+      {
+        providers: [
+          {
+            id: "hdfc",
+            userId: null,
+            canonicalName: "HDFC Bank",
+            aliases: ["HDFC"],
+            upiHandles: [],
+            senderDomains: [],
+            websiteDomain: null,
+            logoUrl: null,
+            categorySlug: null,
+            isGlobal: true,
+          },
+          ...providers,
+        ],
+        categories,
+        rules: [],
+      },
+    );
+    assert.equal(result.merchant, "Swiggy");
+    assert.equal(result.categorySlug, "food");
+  });
+});
