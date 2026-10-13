@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+frontend/node_modules
+backend/node_modules
+frontend/.next/
+backend/dist/
+
+# Env
+.env
+.env.local
+frontend/.env.local
+backend/.env
+
+# OS / IDE
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Uploads / temp
+uploads/
+*.pdf
+# Synthetic test fixtures only; never real statements.
+!backend/tests/fixtures/*.pdf
+data/
+backend/dumps/
+
+# Screenshots and logs written by local Playwright runs
+/*.png
+/audit-output.log
+/test-results/
+/playwright-report/
+# Xcode
+ios/**/xcuserdata/
+ios/**/DerivedData/
+*.xcuserstate
