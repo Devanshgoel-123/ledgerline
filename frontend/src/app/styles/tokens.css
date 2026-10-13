@@ -1,0 +1,163 @@
+/* ── Tailwind theme bridge ── */
+@theme {
+  --color-bg: var(--bg);
+  --color-bg-muted: var(--bg-muted);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-border: var(--border);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --radius-lg: var(--radius-lg);
+  --radius-md: var(--radius);
+  --radius-sm: var(--radius-sm);
+}
+
+/* ── Ledgerline semantic tokens ── */
+:root,
+[data-theme="light"] {
+  --bg: #f5f8f6;
+  --bg-muted: #eef2ee;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --foreground: #0e1611;
+  --muted: #5c665d;
+  --muted-2: #8a9288;
+  --border: rgb(9 20 12 / 9%);
+  --border-strong: rgb(9 20 12 / 16%);
+  /* Warm ink for quiet controls. Copper stays on the total, active nav, and tallest bars. */
+  --primary: #3c3834;
+  --primary-hover: #2a2623;
+  --primary-soft: rgb(60 56 52 / 0.08);
+  --primary-foreground: #f7f3ee;
+  --copper: #c46b3a;
+  --copper-soft: rgb(196 107 58 / 0.12);
+  --parchment: #e4d5bc;
+  --parchment-ink: #7a6240;
+  --clay: #a8887c;
+  --clay-ink: #7a5348;
+  --success: #3f6b52;
+  --success-soft: rgb(63 107 82 / 0.12);
+  --warning: var(--parchment-ink);
+  --warning-soft: rgb(196 176 138 / 0.22);
+  --danger: var(--clay-ink);
+
+  /* ── Typography Scale (Standardized) ── */
+  --text-xs: 0.75rem;      /* 12px - caption/metadata */
+  --text-sm: 0.875rem;     /* 14px - body/default */
+  --text-base: 1rem;       /* 16px - lead paragraph */
+  --text-lg: 1.125rem;     /* 18px - subheading (h3) */
+  --text-xl: 1.25rem;      /* 20px - section heading (h2) */
+  --text-2xl: 1.5rem;      /* 24px - page heading (h1) */
+  --text-3xl: 2rem;        /* 32px - hero/display */
+
+  /* ── Line Height Scale ── */
+  --leading-tight: 1.2;    /* headings */
+  --leading-normal: 1.5;   /* body text */
+  --leading-relaxed: 1.75; /* large text */
+  --danger-soft: rgb(143 106 92 / 0.12);
+  --info: #3d5c68;
+  --info-soft: rgb(61 92 104 / 0.12);
+  --credit: #3f6b52;
+  --debit: var(--clay-ink);
+  --chart-1: #c46b3a;
+  --chart-2: #c4b08a;
+  --chart-3: #8f6a5c;
+  --chart-4: #8a8178;
+  --chart-5: #5c665d;
+  --chart-grid: rgba(14, 22, 17, 0.08);
+  --bar-calm: linear-gradient(180deg, #d5cfc6 0%, #b7aea3 62%, #8c8378 100%);
+  --bar-watch: linear-gradient(180deg, #f0e6d4 0%, #e0d0b4 58%, #b89a6a 100%);
+  --bar-hot: linear-gradient(180deg, #e7d5cc 0%, #c4a496 55%, #8f6a5c 100%);
+  --bar-peak: linear-gradient(180deg, #d49262 0%, #c46b3a 58%, #8a4524 100%);
+  /* Essentials & Spending */
+  --cat-food: #6b7c4e;
+  --cat-shopping: #5a7c6f;
+  --cat-travel: #4a7a8f;
+  --cat-grocery: #7a8856;
+  --cat-healthcare: #8a6f7b;
+  --cat-pharmacy: #a0798b;
+  --cat-household: #5fa87d;
+  --cat-furniture: #c97828;
+  --cat-petrol: #a67c54;
+  --cat-scooty-rental: #3c8f92;
+  --cat-stays: #5b8ba0;
+  --cat-rides: #6a7c8f;
+
+  /* Personal & Lifestyle */
+  --cat-outing: #8e6b9a;
+  --cat-dinner: #c98840;
+  --cat-fun-activity: #8264c8;
+  --cat-sports: #4ea87d;
+  --cat-salon: #c486a8;
+  --cat-personal: #7d9fb5;
+  --cat-vices: #b85c6b;
+  --cat-booze: #c76a74;
+  --cat-cigarettes: #9a7c5c;
+
+  /* Lifestyle & Care */
+  --cat-cook-maid: #d884a8;
+  --cat-family: #8f7aa0;
+  --cat-random-expense: #8a8a8a;
+
+  /* Financial */
+  --cat-rent: #4a9fd4;
+  --cat-salary: #5a9c4e;
+  --cat-investments: #5a7848;
+  --cat-banks: #3b7da8;
+  --cat-brokerage: #4a8a68;
+  --cat-passed-on: #9a9a9a;
+  --cat-from-home: #6fa87a;
+
+  /* Generic */
+  --cat-other: #7a7a7a;
+  --shadow-sm: 0 1px 2px rgba(9, 20, 12, 0.04);
+  --shadow-md: 0 12px 32px rgba(9, 20, 12, 0.06);
+  --shadow-card: 0 1px 3px rgba(9, 20, 12, 0.04), 0 12px 32px rgba(9, 20, 12, 0.05);
+  --glow: transparent;
+  --surface-glow: radial-gradient(
+      520px 240px at 94% 0%,
+      rgb(245 241 234 / 0.8),
+      transparent 50%
+    );
+  --ring: rgb(60 56 52 / 0.16);
+  --sidebar-bg: #ffffff;
+  --sidebar-active: #c46b3a;
+  --header-bg: rgba(255, 255, 255, 0.82);
+  --overlay: rgba(14, 22, 17, 0.45);
+  --ledger-line: rgb(60 56 52 / 0.06);
+  --radius: 0.9rem;
+  --radius-sm: 0.6rem;
+  --radius-lg: 1.15rem;
+  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --ease: 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+  --content-max: 1400px;
+  --sidebar-width: 264px;
+
+  /* Legacy aliases used across components */
+  --text: var(--foreground);
+  --line: var(--border);
+  --glass: var(--surface);
+  --glass-2: var(--surface-elevated);
+  --purple: var(--primary);
+  --purple-2: var(--primary);
+  --purple-soft: var(--primary-soft);
+  --cyan: var(--info);
+  --zinc: var(--bg-muted);
+}

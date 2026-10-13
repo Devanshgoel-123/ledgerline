@@ -1,0 +1,119 @@
+import type { ParseResult } from "@/types";
+import type { PoolingRunStatus } from "@/enums/pooling";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface BankPreset {
+  id: string;
+  label: string;
+  adapterId: string | null;
+  pdfAdapterReady: boolean;
+  defaultSenderEmails: string[];
+  description: string;
+}
+
+export interface AccountSummary {
+  id: string;
+  userId: string;
+  bank: string;
+  label: string;
+  statementSenderEmails: string[];
+  poolingEnabled: boolean;
+  poolingStartedAt: string | null;
+}
+
+export type ScanWindow = { from: string; to: string };
+
+export type GmailStatus = {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+  scanWindow?: ScanWindow;
+  /** Inclusive IST day already scanned. Null until the first full scan, or after a clear. */
+  lastScannedOn?: string | null;
+  poolingEnabled: boolean;
+  latestRun?: {
+    status: PoolingRunStatus | string;
+    imported: number;
+    scanned?: number;
+    skipped?: number;
+    errorMessage: string | null;
+  } | null;
+};
+
+/** What one statement upload did. Mirrors the API's ImportReport. */
+export type ImportReport = {
+  duplicate: boolean;
+  previousImportDate: string | null;
+  lines: number;
+  alreadyRecorded: number;
+  added: number;
+  directionCorrected: number;
+  needsReview: number;
+  previouslyDeleted: number;
+  outsideWindow: number;
+  statementFrom: string | null;
+  statementTo: string | null;
+};
+
+export type ParseStatementResult = ParseResult & {
+  importId?: string;
+  inserted?: number;
+  isDuplicate?: boolean;
+  message?: string;
+  report?: ImportReport;
+};
+
+export type ImportStatus = {
+  hasTransactions: boolean;
+  latestMonth: string | null;
+  transactionCount: number;
+  /** Demo rows still in the ledger. */
+  sampleCount?: number;
+  scanWindow: ScanWindow;
+};
+
+export interface Provider {
+  id: string;
+  canonicalName: string;
+  aliases: string[];
+  upiHandles: string[];
+  websiteDomain: string | null;
+  logoUrl: string | null;
+  categorySlug: string | null;
+  isGlobal: boolean;
+}
+
+export type TelegramVerifyState = {
+  phone: string;
+  codeSent: boolean;
+  expiresAt: string | null;
+  botUrl: string | null;
+};
+
+export type TelegramStatus = {
+  configured: boolean;
+  linked: boolean;
+  botUsername: string | null;
+  phone: string | null;
+  verify: TelegramVerifyState | null;
+  deepLink?: string | null;
+  startCommand?: string | null;
+};
+
+export type ClearedImportedData = {
+  ok: true;
+  scanWindow: ScanWindow;
+  deleted: {
+    transactions: number;
+    imports: number;
+    mailMessages: number;
+    poolingRuns: number;
+    overrides: number;
+  };
+};

@@ -1,0 +1,145 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  LayoutGrid,
+  List,
+  Settings2,
+  FileSearch,
+  Upload,
+  Users,
+  Wallet,
+} from "lucide-react";
+import type { DashboardView } from "@/enums/dashboard";
+import { DASHBOARD_VIEWS } from "@/enums/dashboard";
+
+export type { DashboardView };
+export { DASHBOARD_VIEWS };
+
+export interface DashboardNavItem {
+  id: DashboardView;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  path: string;
+}
+
+/** URL paths for each dashboard view (App Router). */
+export const DASHBOARD_PATHS: Record<DashboardView, string> = {
+  overview: "/overview",
+  categories: "/lifestyle",
+  apps: "/apps",
+  people: "/people",
+  upi: "/upi-handles",
+  habits: "/habits",
+  transactions: "/transactions",
+  import: "/import",
+  "statement-match": "/statement-match",
+  settings: "/settings",
+};
+
+export const DASHBOARD_NAV: DashboardNavItem[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    description: "This month at a glance",
+    icon: LayoutDashboard,
+    path: DASHBOARD_PATHS.overview,
+  },
+  {
+    id: "categories",
+    label: "Lifestyle",
+    description: "Where life costs go",
+    icon: Wallet,
+    path: DASHBOARD_PATHS.categories,
+  },
+  {
+    id: "apps",
+    label: "Apps",
+    description: "Spending by app and shop",
+    icon: LayoutGrid,
+    path: DASHBOARD_PATHS.apps,
+  },
+  {
+    id: "people",
+    label: "People",
+    description: "Money sent to people",
+    icon: Users,
+    path: DASHBOARD_PATHS.people,
+  },
+  {
+    id: "transactions",
+    label: "Transactions",
+    description: "Every payment, searchable",
+    icon: List,
+    path: DASHBOARD_PATHS.transactions,
+  },
+  {
+    id: "import",
+    label: "Import",
+    description: "Add statements or scan email",
+    icon: Upload,
+    path: DASHBOARD_PATHS.import,
+  },
+  {
+    id: "statement-match",
+    label: "Statement match",
+    description: "Name the shops behind UPI IDs",
+    icon: FileSearch,
+    path: DASHBOARD_PATHS["statement-match"],
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    description: "Limits & account",
+    icon: Settings2,
+    path: DASHBOARD_PATHS.settings,
+  },
+];
+
+export const DASHBOARD_NAV_GROUPS: { label: string; ids: DashboardView[] }[] = [
+  {
+    label: "Insights",
+    ids: ["overview", "categories", "apps", "people"],
+  },
+  { label: "Data", ids: ["transactions", "import", "statement-match"] },
+  { label: "System", ids: ["settings"] },
+];
+
+/** Primary destinations shown in the mobile bottom bar (with data). */
+export const MOBILE_NAV_IDS: DashboardView[] = [
+  "overview",
+  "categories",
+  "apps",
+  "transactions",
+  "import",
+];
+
+/** Mobile bar while the account has no transactions yet. */
+export const MOBILE_NAV_SETUP_IDS: DashboardView[] = [
+  "import",
+  "settings",
+];
+
+/** Views accessible without imported transaction data. */
+export const DATA_OPTIONAL_VIEWS: DashboardView[] = [
+  "import",
+  "statement-match",
+  "settings",
+];
+
+const PATH_TO_VIEW = Object.fromEntries(
+  Object.entries(DASHBOARD_PATHS).map(([view, path]) => [path, view]),
+) as Record<string, DashboardView>;
+
+export function pathForView(view: DashboardView): string {
+  return DASHBOARD_PATHS[view];
+}
+
+export function viewFromPath(pathname: string): DashboardView | null {
+  const normalized = pathname.replace(/\/$/, "") || "/";
+  return PATH_TO_VIEW[normalized] ?? null;
+}
+
+export function viewLabel(id: DashboardView): string {
+  return DASHBOARD_NAV.find((item) => item.id === id)?.label ?? "Dashboard";
+}

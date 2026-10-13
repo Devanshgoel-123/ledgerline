@@ -1,0 +1,151 @@
+/* ── Typography Utilities (Standardized Scale) ── */
+
+/* Text size utilities */
+.text-xs {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.text-base,
+body {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+.text-lg {
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+}
+
+.text-xl {
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+}
+
+.text-2xl {
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+.text-3xl {
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+}
+
+/* Semantic text roles */
+.text-caption {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.text-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.text-body {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--foreground);
+}
+
+.text-lead {
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  color: var(--foreground);
+}
+
+/* Heading sizes */
+h1,
+.h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+}
+
+h2,
+.h2 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+h3,
+.h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: var(--leading-normal);
+}
+
+h4,
+.h4 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-normal);
+}
+
+h5,
+h6,
+.h5,
+.h6 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-normal);
+}
+
+/* Meta/secondary text */
+.meta,
+.text-muted,
+small {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* Display text (hero) */
+.display-text,
+.text-display {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.03em;
+}
+
+/* Emphasis and decoration */
+strong,
+b {
+  font-weight: 600;
+}
+
+em,
+i {
+  font-style: italic;
+}
+
+/* Code and monospace */
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+/* Utility combinations */
+.text-sm.font-bold {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.text-xs.font-semibold {
+  font-size: var(--text-xs);
+  font-weight: 600;
+}

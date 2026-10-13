@@ -1,0 +1,107 @@
+/* ── Dark theme token overrides ── */
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] {
+  --bg: #0a0c0b;
+  --bg-muted: #10130f;
+  --surface: #10130f;
+  --surface-elevated: #171b16;
+  --foreground: #e9efea;
+  --muted: #8b948c;
+  --muted-2: #6b7368;
+  --border: rgb(255 255 255 / 7%);
+  --border-strong: rgb(255 255 255 / 13%);
+  --primary: #c9c2b8;
+  --primary-hover: #ddd6cc;
+  --primary-soft: rgb(201 194 184 / 0.1);
+  --primary-foreground: #141210;
+  --copper: #c46b3a;
+  --copper-soft: rgb(196 107 58 / 0.16);
+  --parchment: #d4c6b0;
+  --parchment-ink: #d4c6b0;
+  --clay: #8f7266;
+  --clay-ink: #c4a497;
+  --success: #9aafa0;
+  --success-soft: rgb(154 175 160 / 0.14);
+  --warning: var(--parchment-ink);
+  --warning-soft: rgb(212 198 176 / 0.14);
+  --danger: var(--clay-ink);
+  --danger-soft: rgb(143 114 102 / 0.16);
+  --info: #8eb4c4;
+  --info-soft: rgb(142 180 196 / 0.14);
+  --credit: #9aafa0;
+  --debit: var(--clay-ink);
+  --chart-1: #c46b3a;
+  --chart-2: #d4c6b0;
+  --chart-3: #8f7266;
+  --chart-4: #a89478;
+  --chart-5: #8b948c;
+  --chart-grid: rgba(233, 239, 234, 0.07);
+  --bar-calm: linear-gradient(180deg, #5c574f 0%, #3e3a35 58%, #2a2724 100%);
+  --bar-watch: linear-gradient(180deg, #efe6d6 0%, #d4c6b0 55%, #a89478 100%);
+  --bar-hot: linear-gradient(180deg, #c4aaa0 0%, #8f7266 55%, #5c4a42 100%);
+  --bar-peak: linear-gradient(180deg, #d08956 0%, #c46b3a 58%, #8a4524 100%);
+  /* Essentials & Spending */
+  --cat-food: #c4d4a8;
+  --cat-shopping: #a8d4c0;
+  --cat-travel: #a0c8d8;
+  --cat-grocery: #c8d8a4;
+  --cat-healthcare: #d4b0c4;
+  --cat-pharmacy: #dcc4d4;
+  --cat-household: #a8d4b8;
+  --cat-furniture: #ffd966;
+  --cat-petrol: #d4b498;
+  --cat-scooty-rental: #7dd3d8;
+  --cat-stays: #a8d0d8;
+  --cat-rides: #b8c4d4;
+
+  /* Personal & Lifestyle */
+  --cat-outing: #c8a8d4;
+  --cat-dinner: #ffc966;
+  --cat-fun-activity: #b8a0e8;
+  --cat-sports: #88d4a8;
+  --cat-salon: #e8b0d4;
+  --cat-personal: #b8c8d4;
+  --cat-vices: #e0a4b4;
+  --cat-booze: #e8b8c0;
+  --cat-cigarettes: #d4b598;
+
+  /* Lifestyle & Care */
+  --cat-cook-maid: #f0b8d8;
+  --cat-family: #d4b8d8;
+  --cat-random-expense: #c4c4c4;
+
+  /* Financial */
+  --cat-rent: #88c8e8;
+  --cat-salary: #a0e090;
+  --cat-investments: #a8c494;
+  --cat-banks: #88b8d8;
+  --cat-brokerage: #a0d4a8;
+  --cat-passed-on: #d0d0d0;
+  --cat-from-home: #a8d4a8;
+
+  /* Generic */
+  --cat-other: #b0b0b0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.4);
+  --glow: transparent;
+  --surface-glow: none;
+  --ring: rgb(233 239 234 / 0.16);
+  --sidebar-bg: #10130f;
+  --sidebar-active: #c46b3a;
+  --header-bg: rgba(16, 19, 15, 0.82);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --ledger-line: rgb(255 255 255 / 0.04);
+  --text: var(--foreground);
+  --line: var(--border);
+  --glass: var(--surface);
+  --glass-2: var(--surface-elevated);
+  --purple: var(--primary);
+  --purple-2: var(--primary);
+  --purple-soft: var(--primary-soft);
+  --cyan: var(--info);
+  --zinc: var(--bg-muted);
+}
