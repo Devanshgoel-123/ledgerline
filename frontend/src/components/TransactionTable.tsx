@@ -1,0 +1,428 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { CategorySummary, Transaction } from "@/types";
+import type { Provider } from "@/lib/api/types";
+import { formatInrExact } from "@/helpers/currency";
+import { formatShortDate } from "@/helpers/dates";
+import { categoryWithDescendants } from "@/helpers/categoryTree";
+import { groupTransactionsByDay } from "@/helpers/apps";
+import { BrandMark } from "@/components/BrandMark";
+import { SpotlightCard } from "@/components/SpotlightCard";
+import { CategoryMenu } from "@/components/CategoryMenu";
+import { TxnAssignPicker } from "@/components/TxnAssignPicker";
+import { BillSplitControl } from "@/components/LedgerMoneyForms";
+
+interface TransactionTableProps {
+  items: Transaction[];
+  categories: CategorySummary[];
+  providers?: Provider[];
+  assigningId?: string | null;
+  assignError?: string | null;
+  onAssign?: (
+    txn: Transaction,
+    patch: { categorySlug?: string | null; providerId?: string | null },
+  ) => void;
+  deletingId?: string | null;
+  onDelete?: (txn: Transaction) => void;
+  onChanged?: () => void;
+}
+
+type SortKey = "date" | "amount" | "merchant" | "category";
+type SortDir = "asc" | "desc";
+type TypeFilter = "all" | "debit" | "credit";
+
+function merchantOf(txn: Transaction): string {
+  return txn.merchant ?? txn.payee ?? txn.upiId ?? "Other";
+}
+
+function isAccountBank(name: string): boolean {
+  return /\b(hdfc|icici|axis|sbi|state bank)\b/i.test(name);
+}
+
+function spendTitle(txn: Transaction, providers: Provider[]): {
+  title: string;
+  logoUrl: string | null;
+  unnamed: boolean;
+} {
+  const provider = providers.find((item) => item.id === txn.providerId);
+  if (provider && provider.categorySlug !== "banks") {
+    return {
+      title: provider.canonicalName,
+      logoUrl: provider.logoUrl,
+      unnamed: false,
+    };
+  }
+  const merchant = merchantOf(txn);
+  if (isAccountBank(merchant) || merchant === "Other") {
+    return { title: "UPI payment", logoUrl: null, unnamed: true };
+  }
+  return { title: merchant, logoUrl: txn.logoUrl ?? null, unnamed: false };
+}
+
+function isUnclassified(txn: Transaction, providers: Provider[]): boolean {
+  if (txn.payee?.trim()) return false;
+  if (txn.category === "family") return false;
+  const provider = providers.find((item) => item.id === txn.providerId);
+  if (provider && provider.categorySlug && provider.categorySlug !== "banks") return false;
+  if (txn.category && txn.category !== "other" && txn.category !== "banks") return false;
+  return true;
+}
+
+export function TransactionTable({
+  items,
+  categories,
+  providers = [],
+  assigningId,
+  assignError,
+  onAssign,
+  deletingId,
+  onDelete,
+  onChanged,
+}: TransactionTableProps) {
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [unclassifiedOnly, setUnclassifiedOnly] = useState(false);
+
+  // Picking a parent category also shows its subcategories, e.g. Travel includes Rides.
+  const categoryMatch = useMemo(
+    () => (categoryFilter === "all" ? null : categoryWithDescendants(categoryFilter, categories)),
+    [categoryFilter, categories],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const min = minAmount.trim() === "" ? null : Number(minAmount);
+    const max = maxAmount.trim() === "" ? null : Number(maxAmount);
+    return items.filter((txn) => {
+      if (typeFilter !== "all" && txn.type !== typeFilter) return false;
+      if (unclassifiedOnly && !isUnclassified(txn, providers)) return false;
+      if (categoryMatch && !categoryMatch.has(txn.category ?? "other")) return false;
+      if (min != null && Number.isFinite(min) && txn.amount < min) return false;
+      if (max != null && Number.isFinite(max) && txn.amount > max) return false;
+      if (fromDate && txn.date < fromDate) return false;
+      if (toDate && txn.date > toDate) return false;
+      if (!q) return true;
+      const hay = [
+        txn.merchant,
+        txn.payee,
+        txn.description,
+        txn.upiId,
+        txn.categoryLabel,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [items, query, categoryMatch, typeFilter, providers, unclassifiedOnly, minAmount, maxAmount, fromDate, toDate]);
+
+  const sorted = useMemo(() => {
+    const next = [...filtered];
+    next.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "amount") cmp = a.amount - b.amount;
+      else if (sortKey === "merchant") {
+        cmp = merchantOf(a).localeCompare(merchantOf(b));
+      } else if (sortKey === "category") {
+        cmp = (a.categoryLabel ?? a.category ?? "").localeCompare(
+          b.categoryLabel ?? b.category ?? "",
+        );
+      } else {
+        cmp =
+          a.date.localeCompare(b.date) ||
+          (a.time ?? "").localeCompare(b.time ?? "");
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return next;
+  }, [filtered, sortKey, sortDir]);
+
+  const days = useMemo(() => groupTransactionsByDay(sorted), [sorted]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir(key === "amount" || key === "date" ? "desc" : "asc");
+  }
+
+  function sortMark(key: SortKey) {
+    if (sortKey !== key) return "";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  }
+
+  const creditCount = items.filter((txn) => txn.type === "credit").length;
+
+  function assignControls(txn: Transaction) {
+    return (
+      <TxnAssignPicker
+        txn={txn}
+        categories={categories}
+        providers={providers}
+        disabled={!txn.id || !onAssign || assigningId === txn.id}
+        onAssign={onAssign}
+      />
+    );
+  }
+
+  return (
+    <SpotlightCard className="panel txn-panel">
+      <header className="panel-head txn-head">
+        <div>
+          <h2 className="ui-header">Transactions</h2>
+          <p className="meta">
+            {sorted.length} of {items.length} rows
+            {" · "}
+            {creditCount} credit{creditCount === 1 ? "" : "s"}
+            {assignError ? ` · ${assignError}` : ""}
+          </p>
+        </div>
+        <div className="sort-bar">
+          {(["date", "amount", "merchant", "category"] as SortKey[]).map(
+            (key) => (
+              <button
+                key={key}
+                type="button"
+                className={`sort-chip ${sortKey === key ? "active" : ""}`}
+                onClick={() => toggleSort(key)}
+              >
+                {key[0].toUpperCase() + key.slice(1)}
+                {sortMark(key)}
+              </button>
+            ),
+          )}
+        </div>
+      </header>
+
+      <div className="txn-toolbar">
+        <label className="field txn-search">
+          <span className="sr-only">Search transactions</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search merchant, UPI, narration…"
+          />
+        </label>
+        <div className="type-filter" role="group" aria-label="Debit or credit">
+          {(
+            [
+              ["all", "All"],
+              ["debit", "Debits"],
+              ["credit", "Credits"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`sort-chip ${value} ${typeFilter === value ? "active" : ""}`}
+              onClick={() => setTypeFilter(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <CategoryMenu
+          categories={categories}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+        />
+        <button
+          type="button"
+          className={`sort-chip ${unclassifiedOnly ? "active" : ""}`}
+          aria-pressed={unclassifiedOnly}
+          onClick={() => setUnclassifiedOnly((current) => !current)}
+        >
+          Unclassified
+        </button>
+      </div>
+      <div className="txn-filters">
+        <label className="field field-compact">
+          <span>From</span>
+          <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+        </label>
+        <label className="field field-compact">
+          <span>To</span>
+          <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+        </label>
+        <label className="field field-compact">
+          <span>Min ₹</span>
+          <input
+            type="number"
+            min="0"
+            inputMode="decimal"
+            value={minAmount}
+            placeholder="0"
+            onChange={(event) => setMinAmount(event.target.value)}
+          />
+        </label>
+        <label className="field field-compact">
+          <span>Max ₹</span>
+          <input
+            type="number"
+            min="0"
+            inputMode="decimal"
+            value={maxAmount}
+            placeholder="Any"
+            onChange={(event) => setMaxAmount(event.target.value)}
+          />
+        </label>
+      </div>
+
+      <div className="table-scroll">
+        <table>
+          <colgroup>
+            <col className="col-date" />
+            <col className="col-merchant" />
+            <col className="col-assign" />
+            <col className="col-upi" />
+            <col className="col-amount" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Merchant / narration</th>
+              <th>Where it went</th>
+              <th>UPI</th>
+              <th className="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {days.map((day) => {
+              return [
+                <tr key={`day-${day.date}`} className="txn-day-head">
+                  <td colSpan={5}>
+                    <div className="txn-day-label">
+                      <strong>{formatShortDate(day.date)}</strong>
+                      <span className="meta">
+                        {day.items.length} txn{day.items.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                  </td>
+                </tr>,
+                ...day.items.map((txn, i) => {
+                  const spend = spendTitle(txn, providers);
+                  return (
+                    <tr key={txn.id ?? `${txn.date}-${txn.amount}-${i}`}>
+                      <td className="mono">{formatShortDate(txn.date)}</td>
+                      <td>
+                        <div className="provider-cell">
+                          <BrandMark name={spend.title} logoUrl={spend.logoUrl} />
+                          <div>
+                            <div
+                              className={
+                                spend.unnamed
+                                  ? "badge-other"
+                                  : "provider-name merchant-primary"
+                              }
+                            >
+                              {spend.title}
+                            </div>
+                            <BillSplitControl txn={txn} onSaved={() => onChanged?.()} />
+                            {txn.description && txn.description !== spend.title ? (
+                              <div className="desc meta">{txn.description}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td>{assignControls(txn)}</td>
+                      <td className="mono upi-cell">{txn.upiId ?? "—"}</td>
+                      <td className={`num mono ${txn.type}`}>
+                        <div className="txn-amount">
+                          <span>
+                            {txn.type === "debit" ? "−" : "+"}
+                            {formatInrExact(txn.amount)}
+                          </span>
+                          {txn.id && onDelete ? (
+                            <button
+                              type="button"
+                              className="txn-delete"
+                              disabled={deletingId === txn.id}
+                              onClick={() => onDelete(txn)}
+                            >
+                              {deletingId === txn.id ? "Deleting" : "Delete"}
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }),
+              ];
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="txn-cards" aria-label="Transaction list">
+        {days.map((day) => {
+          return (
+            <div key={`cards-${day.date}`}>
+              <div className="txn-day-label mb-2">
+                <strong>{formatShortDate(day.date)}</strong>
+                <span className="meta">
+                  {day.items.length} txn{day.items.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              {day.items.map((txn, i) => {
+                const spend = spendTitle(txn, providers);
+                return (
+                  <article
+                    key={txn.id ?? `${txn.date}-${i}`}
+                    className="txn-card"
+                  >
+                    <div className="txn-card-top">
+                      <div className="provider-cell">
+                        <BrandMark name={spend.title} logoUrl={spend.logoUrl} />
+                        <div>
+                          <strong>{spend.title}</strong>
+                          <p className="meta">{formatShortDate(txn.date)}</p>
+                          <BillSplitControl txn={txn} onSaved={() => onChanged?.()} />
+                        </div>
+                      </div>
+                      <strong className={`mono ${txn.type}`}>
+                        {txn.type === "debit" ? "−" : "+"}
+                        {formatInrExact(txn.amount)}
+                      </strong>
+                    </div>
+                    {assignControls(txn)}
+                    {txn.description && txn.description !== spend.title ? (
+                      <p className="meta" style={{ marginTop: "0.45rem" }}>
+                        {txn.description}
+                      </p>
+                    ) : null}
+                    {txn.upiId ? (
+                      <p className="meta mono" style={{ marginTop: "0.45rem" }}>
+                        {txn.upiId}
+                      </p>
+                    ) : null}
+                    {txn.id && onDelete ? (
+                      <button
+                        type="button"
+                        className="txn-delete"
+                        disabled={deletingId === txn.id}
+                        onClick={() => onDelete(txn)}
+                      >
+                        {deletingId === txn.id ? "Deleting" : "Delete"}
+                      </button>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </SpotlightCard>
+  );
+}

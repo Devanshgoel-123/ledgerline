@@ -1,0 +1,58 @@
+"use client";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { cn } from "@/helpers/cn";
+
+interface LedgerlineFadeContentProps {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+  distance?: number;
+}
+
+export function LedgerlineFadeContent({
+  children,
+  className,
+  delay = 0,
+  distance = 12,
+}: LedgerlineFadeContentProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+
+  useEffect(() => {
+    if (visible) return;
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      // Any part on screen counts. A ratio threshold never fires for a section taller than
+      // the viewport divided by that ratio, which left long lists blank on phones.
+      { threshold: 0, rootMargin: "0px 0px -40px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return (
+    <div
+      ref={ref}
+      className={cn(className)}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : `translateY(${distance}px)`,
+        transition: `opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
