@@ -44,8 +44,8 @@ jobs:
       TELEGRAM_BOT_USERNAME: ""
       TELEGRAM_WEBHOOK_SECRET: ""
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -68,8 +68,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -102,8 +102,8 @@ jobs:
     env:
       E2E_DATABASE_URL: postgres://postgres:e2e@localhost:5432/e2e
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm ci --no-audit --no-fund
@@ -116,7 +116,7 @@ jobs:
       - run: npm test
       - name: Keep traces of failed journeys
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-results
           path: test-results/
