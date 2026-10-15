@@ -11,7 +11,7 @@
     "test": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
-    "framer-motion": "^12.42.2",
+    "framer-motion": "^14.3.0",
     "lucide-react": "^1.55.0",
     "next": "16.4.0",
     "ogl": "^1.0.11",
@@ -22,13 +22,13 @@
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.7.0",
-    "eslint": "^9",
+    "eslint": "^10.12.0",
     "eslint-config-next": "16.4.0",
-    "happy-dom": "^20.11.6",
+    "happy-dom": "^21.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"
