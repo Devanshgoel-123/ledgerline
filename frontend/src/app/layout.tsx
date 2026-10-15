@@ -1,25 +1,31 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
+// Fonts ship in the repo (SIL Open Font License, see ./fonts), so a build never
+// needs to reach Google Fonts; a failed download used to fail the build.
+const inter = localFont({
+  src: "./fonts/inter-latin-wght.woff2",
+  weight: "100 900",
   variable: "--font-inter",
   display: "swap",
 });
 
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
+const bricolage = localFont({
+  src: "./fonts/bricolage-grotesque-latin-wght.woff2",
+  weight: "200 800",
   variable: "--font-bricolage",
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+const jetbrains = localFont({
+  src: [
+    { path: "./fonts/jetbrains-mono-latin-400.woff2", weight: "400" },
+    { path: "./fonts/jetbrains-mono-latin-500.woff2", weight: "500" },
+  ],
   variable: "--font-jetbrains",
-  weight: ["400", "500"],
   display: "swap",
 });
 
