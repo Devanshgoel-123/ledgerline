@@ -278,6 +278,12 @@ Both must pass with 0 errors.
 3. Test locally before pushing
 4. Create PR on GitHub
 
+`main` is protected: every change lands through a pull request, and it
+can merge only when **Backend tests**, **Frontend tests**, **Browser
+journeys**, and **Dependency review** pass on the latest `main`. Pull
+requests are squash-merged. Workflows on a first-time contributor's pull
+request run after a maintainer approves them.
+
 Commit style:
 ```
 feat: add demo data endpoint
@@ -332,6 +338,19 @@ Features in prod:
 - No published database port (internal only)
 - Strict secret validation
 - Optional Gmail worker container
+
+### Web app on Vercel
+
+The Next.js app (`frontend/`) deploys to Vercel: a merge to `main`
+deploys to production and every pull request gets a preview. The API is
+a long-running server (Gmail scanning and the Telegram bot keep running),
+so host `backend/` with Docker as above.
+
+1. Import the repository in Vercel and set **Root Directory** to `frontend`.
+2. Set `NEXT_PUBLIC_API_URL` to your API's public URL, then redeploy:
+   the value is built into the page.
+3. On the API, add the Vercel domain to `CORS_ORIGINS` and set
+   `FRONTEND_URL` to it, so sign-in and email links come back to the app.
 
 ### Production Checklist
 
