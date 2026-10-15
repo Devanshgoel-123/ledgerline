@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Fails a pull request that adds a dependency with a known high or critical vulnerability.
       - uses: actions/dependency-review-action@v4
         with:
