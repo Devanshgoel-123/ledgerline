@@ -1,4 +1,4 @@
-import { createPublicKey } from "node:crypto";
+import { createPublicKey, type JsonWebKey } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { AppError } from "../errors/AppError.js";
 
