@@ -70,7 +70,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function runPolling(): Promise<void> {
   try {
     const cleared = await telegramGet<boolean>("deleteWebhook");
-    if (!cleared.ok) logger.warn({ reason: replyError(cleared) }, "telegram webhook clear failed");
+    // Telegram accepted the token, so the bot is up before the first 25 s poll returns.
+    if (cleared.ok) markTelegramOk();
+    else logger.warn({ reason: replyError(cleared) }, "telegram webhook clear failed");
   } catch (error) {
     logger.warn({ reason: failureReason(error) }, "telegram webhook clear failed, polling anyway");
   }
