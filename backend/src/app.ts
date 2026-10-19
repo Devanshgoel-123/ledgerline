@@ -44,7 +44,7 @@ const upload = multer({
 export function createApp(): express.Application {
   const app = express();
 
-  app.set("trust proxy", 1);
+  app.set("trust proxy", config.trustProxy);
   app.disable("x-powered-by");
   // Live dashboard/status JSON must not 304 — the browser then keeps polling a stale "running" scan.
   app.set("etag", false);

@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { createApiClient } from "@/lib/api/client";
-import { passwordAuth, type PasswordAuthMode } from "@/lib/api";
+import { LOGIN_NONCE_KEY, passwordAuth, type PasswordAuthMode } from "@/lib/api";
 import { SESSION_EXPIRED_EVENT } from "@/lib/api/http";
 import type { AuthUser } from "@/lib/api/types";
 
@@ -80,16 +80,26 @@ function persistToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
 }
 
-function takeAuthParams(): { token: string | null; authError: string | null } {
+/**
+ * A session token in the address bar is used only when it returns from a Google
+ * sign-in this tab started (matching nonce). Otherwise a link could silently sign
+ * the visitor into someone else's account and collect what they upload.
+ */
+export function takeAuthParams(): { token: string | null; authError: string | null } {
   const url = new URL(window.location.href);
   const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
-  const token = url.searchParams.get("token") ?? hashParams.get("token");
+  const offered = url.searchParams.get("token") ?? hashParams.get("token");
+  const expectedNonce = sessionStorage.getItem(LOGIN_NONCE_KEY);
+  const token =
+    offered && expectedNonce && hashParams.get("nonce") === expectedNonce ? offered : null;
   const authError =
     url.searchParams.get("auth_error") ?? hashParams.get("auth_error");
-  if (token || authError) {
+  if (offered || authError) {
+    sessionStorage.removeItem(LOGIN_NONCE_KEY);
     url.searchParams.delete("token");
     url.searchParams.delete("auth_error");
     hashParams.delete("token");
+    hashParams.delete("nonce");
     hashParams.delete("auth_error");
     const qs = url.searchParams.toString();
     const hash = hashParams.toString();

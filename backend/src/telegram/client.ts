@@ -5,6 +5,7 @@ import {
   TELEGRAM_DELETE_BATCH,
 } from "../constants/telegram.js";
 import { logger } from "../logger/index.js";
+import { markChatReachable, markChatUnreachable } from "./health.js";
 import type { InlineKeyboard } from "./ui.js";
 
 export type TelegramChat = {
@@ -42,10 +43,18 @@ export type TelegramCallbackQuery = {
   message?: { message_id: number; chat: TelegramChat };
 };
 
+/** Sent when a user blocks ("kicked") or restarts ("member") the bot. */
+export type TelegramChatMemberUpdate = {
+  chat: TelegramChat;
+  from: { id: number };
+  new_chat_member: { status: string };
+};
+
 export type TelegramUpdate = {
   update_id: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  my_chat_member?: TelegramChatMemberUpdate;
 };
 
 export type TelegramSender = (
@@ -162,11 +171,29 @@ async function postTelegram(
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    // 403: the user blocked the bot or deleted the chat. Settings shows that instead of "Connected".
+    if (res.status === 403) markChatUnreachable(chatId, describeTelegramFailure(body));
     logger.warn({ status: res.status, body: body.slice(0, 200) }, "telegram sendMessage failed");
     return null;
   }
+  markChatReachable(chatId);
   const parsed = (await res.json()) as { result?: { message_id?: number } };
   return parsed.result?.message_id ?? null;
+}
+
+function describeTelegramFailure(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { description?: string };
+    if (parsed.description) return parsed.description;
+  } catch {
+    // Not JSON; fall through.
+  }
+  return "Telegram refused the message";
+}
+
+/** Sends one message and reports whether Telegram accepted it. */
+export async function trySendTelegramMessage(chatId: string, text: string): Promise<boolean> {
+  return (await postTelegram(chatId, text)) != null;
 }
 
 export async function sendTelegramMessage(

@@ -41,3 +41,7 @@ export type GmailBackfillBody = z.infer<typeof gmailBackfillBodySchema>;
 export const unlockStatementBodySchema = z.object({
   password: z.string().min(1, "Enter the statement password").max(200),
 });
+
+export const gmailConfirmBodySchema = z.object({
+  pending: z.string().min(16).max(64),
+});

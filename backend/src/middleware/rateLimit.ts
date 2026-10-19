@@ -43,6 +43,30 @@ const shared: Partial<Options> = {
   validate: { xForwardedForHeader: false },
 };
 
+function keyByEmail(req: Request): string {
+  const email = (req.body as { email?: unknown } | undefined)?.email;
+  return typeof email === "string" ? `email:${email.trim().toLowerCase()}` : `ip:${keyByIp(req)}`;
+}
+
+/**
+ * Per-address limit on password sign-in and reset mail. The IP limit alone does
+ * not stop a guesser that spreads attempts across many addresses.
+ */
+export const emailRateLimiter: RateLimitRequestHandler = rateLimit({
+  ...shared,
+  windowMs: 15 * 60_000,
+  max: 10,
+  keyGenerator: keyByEmail,
+  handler: (req, res, _next, optionsUsed) => {
+    sendRateLimitResponse(
+      req,
+      res,
+      optionsUsed.windowMs,
+      "Too many attempts for this account. Try again in 15 minutes.",
+    );
+  },
+});
+
 /** Global IP-based limiter (burst protection for the whole API). */
 export const globalRateLimiter: RateLimitRequestHandler = rateLimit({
   ...shared,

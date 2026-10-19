@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useApi } from "@/lib/useApi";
 import { useDashboard } from "@/lib/dashboard-context";
 import { pathForView } from "@/lib/dashboardViews";
-import { telegramConnectHint, type TelegramStatus } from "@/lib/telegram";
+import { telegramConnectHint, telegramPill, type TelegramStatus } from "@/lib/telegram";
 import type { GmailStatus } from "@/lib/api/types";
 import { formatInr } from "@/helpers/currency";
 import { userInitials } from "@/helpers/userInitials";
@@ -123,16 +123,23 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
     telegram?.verify && !telegram.verify.codeSent && !telegram.linked,
   );
 
+  const linkedButDown = Boolean(
+    telegram?.linked && telegram.connection && telegram.connection !== "connected",
+  );
+
   useEffect(() => {
-    if (!api || !waitingForShare) return;
-    const timer = window.setInterval(() => {
-      void api
-        .telegramStatus()
-        .then(setTelegram)
-        .catch(() => undefined);
-    }, 3000);
+    if (!api || (!waitingForShare && !linkedButDown)) return;
+    const timer = window.setInterval(
+      () => {
+        void api
+          .telegramStatus()
+          .then(setTelegram)
+          .catch(() => undefined);
+      },
+      waitingForShare ? 3000 : 10_000,
+    );
     return () => window.clearInterval(timer);
-  }, [api, waitingForShare]);
+  }, [api, waitingForShare, linkedButDown]);
 
   useEffect(() => {
     let cancelled = false;
@@ -351,9 +358,32 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
             </p>
           </div>
           <div className="settings-row-end">
-            <span className={`status-pill ${telegram?.linked ? "is-on" : "is-off"}`}>
-              {telegram?.linked ? "Connected" : "Not linked"}
+            <span className={`status-pill is-${telegramPill(telegram).tone}`}>
+              {telegramPill(telegram).label}
             </span>
+            {telegram?.linked ? (
+              <button
+                type="button"
+                className="ghost"
+                disabled={telegramBusy}
+                onClick={async () => {
+                  setTelegramBusy(true);
+                  try {
+                    setError(null);
+                    const next = await api.sendTelegramTest();
+                    setTelegram(next);
+                    if (next.sent) setMessage("Test message sent. Check Telegram.");
+                    else setError("Telegram did not accept the message. Open the bot and tap Start.");
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Could not send a test message");
+                  } finally {
+                    setTelegramBusy(false);
+                  }
+                }}
+              >
+                Send test
+              </button>
+            ) : null}
             {telegram?.linked ? (
               <button
                 type="button"

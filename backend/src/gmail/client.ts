@@ -69,6 +69,10 @@ export async function exchangeCode(code: string): Promise<{
   const me = await oauth2.userinfo.get();
   const email = me.data.email;
   if (!email) throw new Error("Could not read Google account email");
+  // Sign-in matches accounts by email, so an unverified address must never count.
+  if (me.data.verified_email !== true) {
+    throw new Error("Verify this email address with Google, then try again");
+  }
   return {
     refreshToken: tokens.refresh_token ?? "",
     accessToken: tokens.access_token ?? null,

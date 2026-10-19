@@ -206,7 +206,13 @@ export class PostgresStore implements Store {
         ),
       )
       .returning({ userId: s.passwordResetTokens.userId });
-    return r?.userId ?? null;
+    if (!r) return null;
+    // Any other link mailed to this account stops working too.
+    await this.db
+      .update(s.passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(and(eq(s.passwordResetTokens.userId, r.userId), isNull(s.passwordResetTokens.usedAt)));
+    return r.userId;
   }
   async resetPassword(userId: string, passwordHash: string) {
     const now = new Date();

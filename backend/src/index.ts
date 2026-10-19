@@ -3,7 +3,7 @@ import { config } from "./config.js";
 import { closeStore, getStore } from "./db/index.js";
 import { startGmailJobs } from "./gmail/jobs.js";
 import { logger } from "./logger/index.js";
-import { startTelegramPolling } from "./telegram/poll.js";
+import { startTelegram } from "./telegram/poll.js";
 import { startTelegramSchedules } from "./telegram/service.js";
 
 const app = createApp();
@@ -30,7 +30,7 @@ async function boot() {
   } else {
     startGmailJobs();
   }
-  startTelegramPolling();
+  startTelegram();
   startTelegramSchedules();
 
   const server = app.listen(config.port, "0.0.0.0", () => {

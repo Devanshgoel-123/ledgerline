@@ -15,6 +15,20 @@ export function googleLoginUrl(): string {
   return `${API_BASE}/api/auth/google`;
 }
 
+export const LOGIN_NONCE_KEY = "ledgerline.login_nonce";
+
+/** A nonce only this tab knows. The app accepts a #token= hand-off only with it. */
+export function newLoginNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  const nonce = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  sessionStorage.setItem(LOGIN_NONCE_KEY, nonce);
+  return nonce;
+}
+
+export function startGoogleLogin(): void {
+  window.location.href = `${googleLoginUrl()}?nonce=${newLoginNonce()}`;
+}
+
 export type PasswordAuthMode = "login" | "register";
 
 /**

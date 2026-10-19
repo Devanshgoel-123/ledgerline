@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { config } from "../config.js";
 import { TELEGRAM_START_PREFIX } from "../constants/telegram.js";
 import { getStore } from "../db/index.js";
@@ -40,6 +40,7 @@ import {
   registerTelegramCommands,
   sendTelegramMessage,
   telegramProgressPublisher,
+  trySendTelegramMessage,
   type TelegramCallbackQuery,
   type TelegramChatClearer,
   type TelegramMessage,
@@ -47,6 +48,13 @@ import {
   type TelegramSender,
   type TelegramUpdate,
 } from "./client.js";
+import {
+  chatUnreachableReason,
+  markChatReachable,
+  markChatUnreachable,
+  telegramBotHealth,
+  type TelegramMode,
+} from "./health.js";
 import {
   afterSettingKeyboard,
   categoryIcon,
@@ -119,9 +127,24 @@ export type TelegramVerifyState = {
   botUrl: string | null;
 };
 
+/**
+ * connected: linked, the bot is receiving updates, and Telegram accepts messages for the chat.
+ * bot_offline: linked, but this server is not receiving updates, so the bot will not answer.
+ * chat_blocked: linked, but Telegram refused the last message (bot blocked or chat deleted).
+ */
+export type TelegramConnection =
+  | "not_configured"
+  | "not_linked"
+  | "bot_offline"
+  | "chat_blocked"
+  | "connected";
+
 export type TelegramStatus = {
   configured: boolean;
   linked: boolean;
+  connection: TelegramConnection;
+  bot: { mode: TelegramMode; online: boolean; problem: string | null };
+  chatProblem: string | null;
   botUsername: string | null;
   phone: string | null;
   verify: TelegramVerifyState | null;
@@ -155,9 +178,13 @@ export function parseStartCommand(text: string): {
 export function telegramWebhookSecretMatches(
   header: string | undefined,
 ): boolean {
+  // Without a webhook URL this API long-polls and must not accept pushed updates:
+  // anyone could post one with a linked user's chat id.
   const expected = config.telegram.webhookSecret;
-  if (!expected) return true;
-  return header === expected;
+  if (!config.telegram.webhookUrl || !expected || !header) return false;
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function verifyState(user: UserRow): TelegramVerifyState | null {
@@ -173,11 +200,32 @@ function verifyState(user: UserRow): TelegramVerifyState | null {
   };
 }
 
+function connectionOf(
+  user: UserRow,
+  botOnline: boolean,
+  chatProblem: string | null,
+): TelegramConnection {
+  if (!config.telegram.enabled) return "not_configured";
+  if (!user.telegramChatId) return "not_linked";
+  if (!botOnline) return "bot_offline";
+  if (chatProblem) return "chat_blocked";
+  return "connected";
+}
+
 function publicStatus(user: UserRow): TelegramStatus {
   const verify = verifyState(user);
+  const health = telegramBotHealth();
+  const chatProblem = user.telegramChatId ? chatUnreachableReason(user.telegramChatId) : null;
   return {
     configured: config.telegram.enabled,
     linked: Boolean(user.telegramChatId),
+    connection: connectionOf(user, health.online, chatProblem),
+    bot: {
+      mode: health.mode,
+      online: health.online,
+      problem: health.online ? null : (health.lastError ?? "No reply from Telegram yet"),
+    },
+    chatProblem,
     botUsername: config.telegram.botUsername || null,
     phone: user.phoneE164 ? maskPhone(user.phoneE164) : null,
     verify,
@@ -211,6 +259,28 @@ export async function createTelegramLink(userId: string): Promise<TelegramStatus
     deepLink: buildTelegramDeepLink(config.telegram.botUsername, token),
     startCommand: `/start ${token}`,
   };
+}
+
+const TEST_COOLDOWN_MS = 20_000;
+const lastTestAt = new Map<string, number>();
+
+/** Sends a message to the linked chat; the result is the real end-to-end check. */
+export async function sendTelegramTest(userId: string): Promise<TelegramStatus & { sent: boolean }> {
+  if (!config.telegram.enabled) {
+    throw AppError.serviceUnavailable("Telegram is not configured");
+  }
+  const user = await loadUser(userId);
+  if (!user.telegramChatId) throw AppError.badRequest("Link Telegram first");
+  const last = lastTestAt.get(userId) ?? 0;
+  if (Date.now() - last < TEST_COOLDOWN_MS) {
+    throw AppError.tooManyRequests("Wait a few seconds before sending another test");
+  }
+  lastTestAt.set(userId, Date.now());
+  const sent = await trySendTelegramMessage(
+    user.telegramChatId,
+    "✅ Ledgerline is connected. Send /status here any time.",
+  );
+  return { ...publicStatus(user), sent };
 }
 
 export async function unlinkTelegramAccount(userId: string): Promise<TelegramStatus> {
@@ -820,9 +890,22 @@ export async function handleTelegramUpdate(
     await handleCallback(update.callback_query, send, clearChat);
     return;
   }
+  const member = update.my_chat_member;
+  if (member) {
+    if (member.chat.type !== "private") return;
+    const chatId = String(member.chat.id);
+    if (member.new_chat_member.status === "kicked") {
+      markChatUnreachable(chatId, "The bot is blocked in Telegram. Unblock it or tap Start.");
+    } else if (member.new_chat_member.status === "member") {
+      markChatReachable(chatId);
+    }
+    return;
+  }
   const message = update.message;
   if (!message || message.chat.type !== "private") return;
   const chatId = String(message.chat.id);
+  // A user who writes to the bot has not blocked it.
+  markChatReachable(chatId);
   if (message.contact) {
     await handleSharedContact(chatId, message, send);
     return;

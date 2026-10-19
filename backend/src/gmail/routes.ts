@@ -11,6 +11,7 @@ import { tenantContext } from "../middleware/tenantContext.js";
 import {
   enablePoolingBodySchema,
   gmailBackfillBodySchema,
+  gmailConfirmBodySchema,
   unlockStatementBodySchema,
 } from "../validators/gmail.js";
 import { listLockedStatements, unlockGmailStatement } from "./poolingService.js";
@@ -31,6 +32,7 @@ import {
   gmailPushController,
   syncGmailController,
 } from "./controller.js";
+import { holdGmailConnection, sameVerifiedEmail, takeGmailConnection } from "./pendingConnect.js";
 import { persistGoogleConnection } from "./service.js";
 
 export const gmailRouter = Router();
@@ -111,6 +113,7 @@ export async function handleGmailOAuthCallback(
       sub?: string;
       purpose: string;
       returnTo?: string;
+      nonce?: string;
     };
     purpose = payload.purpose;
     returnToApp = payload.returnTo === "app";
@@ -148,7 +151,9 @@ export async function handleGmailOAuthCallback(
         });
       }
       const url = new URL(config.frontendUrl);
-      url.hash = `token=${encodeURIComponent(result.token)}`;
+      const hash = new URLSearchParams({ token: result.token });
+      if (payload.nonce) hash.set("nonce", payload.nonce);
+      url.hash = hash.toString();
       res.redirect(url.toString());
       return;
     }
@@ -181,6 +186,24 @@ export async function handleGmailOAuthCallback(
         );
       return;
     }
+    const owner = await store.findUserById(payload.sub);
+    if (!sameVerifiedEmail(owner, tokens.email)) {
+      if (payload.returnTo === "app") {
+        res.redirect(
+          appGmailRedirect(
+            "error",
+            `To connect ${tokens.email}, which is not your sign-in email, use Ledgerline on the web.`,
+          ),
+        );
+        return;
+      }
+      const confirm = new URL(`${config.frontendUrl}/import`);
+      confirm.searchParams.set("gmail", "confirm");
+      confirm.searchParams.set("pending", holdGmailConnection(payload.sub, tokens));
+      confirm.searchParams.set("email", tokens.email);
+      res.redirect(confirm.toString());
+      return;
+    }
     await persistGoogleConnection({ userId: payload.sub, tokens });
     res.redirect(
       payload.returnTo === "app"
@@ -202,6 +225,22 @@ export async function handleGmailOAuthCallback(
 }
 
 gmailRouter.get("/callback", handleGmailOAuthCallback);
+
+gmailRouter.post(
+  "/confirm",
+  validate(gmailConfirmBodySchema),
+  asyncHandler(async (req, res) => {
+    const { pending } = req.body as { pending: string };
+    const tokens = takeGmailConnection(pending, req.user!.id);
+    if (!tokens) {
+      throw AppError.badRequest(
+        "This Gmail connection expired or was started from another account. Connect Gmail again.",
+      );
+    }
+    await persistGoogleConnection({ userId: req.user!.id, tokens });
+    res.json({ connected: true, email: tokens.email });
+  }),
+);
 
 gmailRouter.post("/disconnect", asyncHandler(disconnectGmailController));
 

@@ -61,6 +61,12 @@ TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 TELEGRAM_BOT_USERNAME=@your_bot_name
 ```
 
+The API long-polls Telegram, so the bot works on a laptop with no public URL or
+ngrok tunnel. Run one API per bot token. To have Telegram push updates instead,
+set `TELEGRAM_WEBHOOK_URL` to the API's public https address and
+`TELEGRAM_WEBHOOK_SECRET` to 16+ random characters. Settings shows "Connected"
+only when the bot is receiving updates and Telegram accepts messages for your chat.
+
 ### 3. Run with Docker
 
 ```bash

@@ -2,15 +2,34 @@ import { config } from "../config.js";
 import { TELEGRAM_API_BASE } from "../constants/telegram.js";
 import { logger } from "../logger/index.js";
 import { answerTelegramCallback, type TelegramUpdate } from "./client.js";
+import { markTelegramError, markTelegramOk, setTelegramMode } from "./health.js";
 import { handleTelegramUpdate } from "./service.js";
 
+/** Updates the bot asks Telegram for. my_chat_member says when a user blocks or unblocks it. */
+export const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"];
+
+const WEBHOOK_CHECK_MS = 60_000;
+
+type TelegramReply<T> = { ok?: boolean; result?: T; description?: string; error_code?: number };
+
 /**
- * This machine pulls updates from Telegram. No public URL or ngrok tunnel is
- * required. Production with a real webhook host skips polling.
+ * With TELEGRAM_WEBHOOK_URL set, Telegram pushes updates to that URL.
+ * Otherwise this process long-polls, in any NODE_ENV: no public URL or tunnel
+ * is needed. Only one process per bot token may poll.
  */
-export function startTelegramPolling(): void {
-  if (!config.telegram.enabled || config.isProduction) return;
-  void run().catch((error: unknown) => {
+export function startTelegram(): void {
+  if (!config.telegram.enabled) {
+    setTelegramMode("off");
+    return;
+  }
+  if (config.telegram.webhookUrl) {
+    setTelegramMode("webhook");
+    void runWebhook(config.telegram.webhookUrl);
+    return;
+  }
+  setTelegramMode("polling");
+  void runPolling().catch((error: unknown) => {
+    markTelegramError("polling stopped");
     logger.error({ err: error }, "telegram polling stopped");
   });
 }
@@ -23,16 +42,43 @@ function failureReason(error: unknown): string {
   return String(error);
 }
 
-async function run(): Promise<void> {
-  const token = config.telegram.botToken;
+/** The bot token is in the URL path, so errors are reported without the URL. */
+async function telegramGet<T>(
+  method: string,
+  params: Record<string, string> = {},
+): Promise<TelegramReply<T>> {
+  const url = new URL(`${TELEGRAM_API_BASE}/bot${config.telegram.botToken}/${method}`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  const response = await fetch(url);
+  const body = (await response.json().catch(() => ({}))) as TelegramReply<T>;
+  if (!response.ok && body.ok === undefined) {
+    return { ok: false, error_code: response.status, description: response.statusText };
+  }
+  return body;
+}
+
+function replyError(reply: TelegramReply<unknown>): string {
+  if (reply.error_code === 401) return "Telegram rejected the bot token";
+  if (reply.error_code === 409) {
+    return "Another process is reading this bot's updates (a webhook or a second API)";
+  }
+  return reply.description ?? `Telegram error ${reply.error_code ?? "unknown"}`;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function runPolling(): Promise<void> {
   try {
-    await fetch(`${TELEGRAM_API_BASE}/bot${token}/deleteWebhook`);
+    const cleared = await telegramGet<boolean>("deleteWebhook");
+    // Telegram accepted the token, so the bot is up before the first 25 s poll returns.
+    if (cleared.ok) markTelegramOk();
+    else logger.warn({ reason: replyError(cleared) }, "telegram webhook clear failed");
   } catch (error) {
     logger.warn({ reason: failureReason(error) }, "telegram webhook clear failed, polling anyway");
   }
   logger.info({ username: config.telegram.botUsername }, "telegram polling started");
   let offset = 0;
-  let offline = false;
+  let failing: string | null = null;
   let delay = 3_000;
   const lanes = new Map<string, Promise<void>>();
   const enqueue = (chatId: string, job: () => Promise<void>) => {
@@ -44,29 +90,35 @@ async function run(): Promise<void> {
     });
   };
   for (;;) {
-    const url = new URL(`${TELEGRAM_API_BASE}/bot${token}/getUpdates`);
-    url.searchParams.set("timeout", "25");
-    url.searchParams.set("offset", String(offset));
-    url.searchParams.set("allowed_updates", JSON.stringify(["message", "callback_query"]));
-    let payload: { ok?: boolean; result?: TelegramUpdate[] };
+    let reply: TelegramReply<TelegramUpdate[]>;
     try {
-      const response = await fetch(url);
-      payload = (await response.json()) as { ok?: boolean; result?: TelegramUpdate[] };
+      reply = await telegramGet<TelegramUpdate[]>("getUpdates", {
+        timeout: "25",
+        offset: String(offset),
+        allowed_updates: JSON.stringify(TELEGRAM_ALLOWED_UPDATES),
+      });
     } catch (error) {
-      if (!offline) {
-        logger.warn({ reason: failureReason(error) }, "telegram unreachable, retrying");
-        offline = true;
+      reply = { ok: false, description: `Telegram unreachable: ${failureReason(error)}` };
+    }
+    if (!reply.ok) {
+      // A refused poll returns at once. Without the wait this loop would spin.
+      const reason = replyError(reply);
+      markTelegramError(reason);
+      if (failing !== reason) {
+        logger.warn({ reason }, "telegram polling failing, retrying");
+        failing = reason;
       }
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await sleep(delay);
       delay = Math.min(delay * 2, 60_000);
       continue;
     }
-    if (offline) {
+    markTelegramOk();
+    if (failing) {
       logger.info({ username: config.telegram.botUsername }, "telegram polling resumed");
-      offline = false;
+      failing = null;
     }
     delay = 3_000;
-    for (const update of payload.result ?? []) {
+    for (const update of reply.result ?? []) {
       offset = update.update_id + 1;
       // Stop the button spinner before any earlier update finishes. A Gmail
       // sync must not sit in front of the next getUpdates.
@@ -75,6 +127,7 @@ async function run(): Promise<void> {
         update.callback_query?.message?.chat.id ??
           update.callback_query?.from.id ??
           update.message?.chat.id ??
+          update.my_chat_member?.chat.id ??
           "unknown",
       );
       enqueue(chatId, async () => {
@@ -85,5 +138,43 @@ async function run(): Promise<void> {
         }
       });
     }
+  }
+}
+
+type WebhookInfo = { url?: string; last_error_date?: number; last_error_message?: string };
+
+async function runWebhook(url: string): Promise<void> {
+  let registered = false;
+  for (;;) {
+    try {
+      if (!registered) {
+        const set = await telegramGet<boolean>("setWebhook", {
+          url,
+          secret_token: config.telegram.webhookSecret,
+          allowed_updates: JSON.stringify(TELEGRAM_ALLOWED_UPDATES),
+        });
+        if (!set.ok) throw new Error(replyError(set));
+        registered = true;
+        logger.info({ url }, "telegram webhook registered");
+      }
+      const info = await telegramGet<WebhookInfo>("getWebhookInfo");
+      if (!info.ok) throw new Error(replyError(info));
+      const result = info.result ?? {};
+      if (result.url !== url) {
+        registered = false;
+        throw new Error("Telegram's webhook points somewhere else; registering again");
+      }
+      const recentError =
+        result.last_error_date != null && Date.now() / 1000 - result.last_error_date < 300;
+      if (recentError) {
+        throw new Error(`Telegram cannot deliver to the webhook: ${result.last_error_message ?? "unknown error"}`);
+      }
+      markTelegramOk();
+    } catch (error) {
+      const reason = failureReason(error);
+      markTelegramError(reason);
+      logger.warn({ reason }, "telegram webhook unhealthy");
+    }
+    await sleep(WEBHOOK_CHECK_MS);
   }
 }
