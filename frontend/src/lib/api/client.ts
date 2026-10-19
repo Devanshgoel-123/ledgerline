@@ -170,6 +170,14 @@ export function createApiClient(token: string) {
 
     gmailStatus: () => requestJson<GmailStatus>("/api/gmail/status", auth),
 
+    confirmGmail: (pending: string) =>
+      requestJson<{ connected: boolean; email: string }>("/api/gmail/confirm", {
+        method: "POST",
+        ...auth,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pending }),
+      }),
+
     gmailConnectUrl: () =>
       requestJson<{ url: string }>("/api/gmail/connect", auth),
 
@@ -178,6 +186,12 @@ export function createApiClient(token: string) {
 
     createTelegramLink: () =>
       requestJson<TelegramStatus>("/api/telegram/link", {
+        method: "POST",
+        ...auth,
+      }),
+
+    sendTelegramTest: () =>
+      requestJson<TelegramStatus & { sent: boolean }>("/api/telegram/test", {
         method: "POST",
         ...auth,
       }),

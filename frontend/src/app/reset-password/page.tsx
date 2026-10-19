@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { resetPassword } from "@/lib/api";
+import { newLoginNonce, resetPassword } from "@/lib/api";
 
 function ResetPasswordForm() {
   // "code", not "token": the auth provider consumes ?token= as a session token.
@@ -25,7 +25,8 @@ function ResetPasswordForm() {
     try {
       const session = await resetPassword(token, password);
       // The fragment never reaches a server; the app picks the session up from it on load.
-      window.location.replace(`/#token=${encodeURIComponent(session)}`);
+      const handOff = new URLSearchParams({ token: session, nonce: newLoginNonce() });
+      window.location.replace(`/#${handOff.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reset the password. Try again.");
       setBusy(false);

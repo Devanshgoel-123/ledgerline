@@ -87,7 +87,10 @@ export class MemoryStore implements Store {
       (item) => item.tokenHash === tokenHash && !item.usedAt && item.expiresAt.getTime() > Date.now(),
     );
     if (!row) return null;
-    row.usedAt = new Date();
+    const now = new Date();
+    for (const item of this.passwordResets) {
+      if (item.userId === row.userId && !item.usedAt) item.usedAt = now;
+    }
     return row.userId;
   }
 

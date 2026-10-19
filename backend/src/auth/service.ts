@@ -82,10 +82,15 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     next(AppError.unauthorized());
     return;
   }
-  let payload: { sub: string; email: string; iat?: number; iatMs?: number };
+  let payload: { sub: string; email: string; iat?: number; iatMs?: number; purpose?: unknown };
   try {
     payload = jwt.verify(header.slice(7), config.jwtSecret) as typeof payload;
   } catch {
+    next(AppError.unauthorized("Invalid or expired token"));
+    return;
+  }
+  // OAuth state tokens share the signing key and travel in URLs. Only session tokens sign in.
+  if (payload.purpose !== undefined || typeof payload.sub !== "string" || typeof payload.email !== "string") {
     next(AppError.unauthorized("Invalid or expired token"));
     return;
   }

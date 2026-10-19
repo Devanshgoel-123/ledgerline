@@ -8,6 +8,7 @@ import {
   gmailConfigured,
 } from "../gmail/client.js";
 import { verifyAppleIdentityToken } from "./apple.js";
+import { emailRateLimiter } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 import {
   forgotPasswordBodySchema,
@@ -58,14 +59,19 @@ authRouter.post("/apple", async (req, res) => {
   });
 });
 
-authRouter.get("/google", (_req, res) => {
+authRouter.get("/google", (req, res) => {
   if (!gmailConfigured()) {
     throw AppError.serviceUnavailable(
       "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
     );
   }
+  // The browser that started sign-in keeps this nonce and accepts only a token that
+  // comes back with it, so a link carrying someone else's session is ignored.
+  const nonce = typeof req.query.nonce === "string" && /^[\w-]{16,64}$/.test(req.query.nonce)
+    ? req.query.nonce
+    : undefined;
   const state = jwt.sign(
-    { purpose: "google_login" },
+    { purpose: "google_login", ...(nonce ? { nonce } : {}) },
     config.jwtSecret,
     { expiresIn: "10m" },
   );
@@ -79,14 +85,14 @@ authRouter.post("/register", validate(registerBodySchema), async (req, res) => {
   res.status(201).json({ token: result.token });
 });
 
-authRouter.post("/login", validate(loginBodySchema), async (req, res) => {
+authRouter.post("/login", emailRateLimiter, validate(loginBodySchema), async (req, res) => {
   const body = req.body as LoginBody;
   const result = await loginUser(body);
   res.json({ token: result.token });
 });
 
 /** Email a reset link. Always the same answer, so it never reveals whether an account exists. */
-authRouter.post("/forgot", validate(forgotPasswordBodySchema), async (req, res) => {
+authRouter.post("/forgot", emailRateLimiter, validate(forgotPasswordBodySchema), async (req, res) => {
   await requestPasswordReset((req.body as { email: string }).email);
   res.json({ ok: true });
 });

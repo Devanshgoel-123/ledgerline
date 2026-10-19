@@ -11,7 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import { googleLoginUrl, type PasswordAuthMode } from "@/lib/api";
+import { googleLoginUrl, startGoogleLogin, type PasswordAuthMode } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ForgotPasswordForm } from "@/components/ForgotPasswordForm";
 
@@ -194,7 +194,11 @@ export function LoginPage({ authError, onContinue }: LoginPageProps) {
           <a
             className="cta google-cta login-google-btn"
             href={googleLoginUrl()}
-            onClick={() => onContinue?.()}
+            onClick={(event) => {
+              event.preventDefault();
+              onContinue?.();
+              startGoogleLogin();
+            }}
           >
             <GoogleMark />
             Continue with Google
