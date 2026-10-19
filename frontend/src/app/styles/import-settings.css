@@ -322,6 +322,12 @@
   border-color: color-mix(in srgb, var(--success) 32%, var(--border));
 }
 
+.status-pill.is-warn {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+}
+
 .profile-photo-row {
   display: flex;
   flex-wrap: wrap;

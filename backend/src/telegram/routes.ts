@@ -9,6 +9,7 @@ import {
   createTelegramLinkController,
   getTelegramStatusController,
   requestTelegramPhoneController,
+  sendTelegramTestController,
   telegramWebhookController,
   unlinkTelegramController,
 } from "./controller.js";
@@ -38,4 +39,5 @@ telegramRouter.post(
   validate(telegramCodeBodySchema),
   asyncHandler(confirmTelegramPhoneController),
 );
+telegramRouter.post("/test", asyncHandler(sendTelegramTestController));
 telegramRouter.post("/webhook", asyncHandler(telegramWebhookController));

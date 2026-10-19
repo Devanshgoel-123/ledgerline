@@ -4,12 +4,14 @@ import { TELEGRAM_SECRET_HEADER } from "../constants/telegram.js";
 import { AppError } from "../errors/AppError.js";
 import { logger } from "../logger/index.js";
 import type { TelegramUpdate } from "./client.js";
+import { markTelegramOk } from "./health.js";
 import {
   confirmTelegramPhone,
   createTelegramLink,
   getTelegramStatus,
   handleTelegramUpdate,
   requestTelegramPhone,
+  sendTelegramTest,
   telegramWebhookSecretMatches,
   unlinkTelegramAccount,
 } from "./service.js";
@@ -36,14 +38,20 @@ export const confirmTelegramPhoneController: RequestHandler = async (req, res) =
   res.json(await confirmTelegramPhone(req.user!.id, code));
 };
 
+export const sendTelegramTestController: RequestHandler = async (req, res) => {
+  res.json(await sendTelegramTest(req.user!.id));
+};
+
 export const telegramWebhookController: RequestHandler = async (req, res) => {
-  if (!config.telegram.enabled) {
-    throw AppError.serviceUnavailable("Telegram is not configured");
+  // In polling mode there is no webhook to call.
+  if (!config.telegram.enabled || !config.telegram.webhookUrl) {
+    throw AppError.notFound();
   }
   const secret = req.header(TELEGRAM_SECRET_HEADER);
   if (!telegramWebhookSecretMatches(secret)) {
     throw AppError.unauthorized("Invalid webhook secret");
   }
+  markTelegramOk();
   try {
     await handleTelegramUpdate(req.body as TelegramUpdate);
   } catch (error) {

@@ -49,6 +49,8 @@ const envSchema = z.object({
   DISABLE_INLINE_GMAIL_JOBS: z.enum(["0", "1"]).default("0"),
   POOLING_WORKER_SEPARATE: z.enum(["0", "1"]).default("0"),
   POOLING_WORKER_HOST: z.string().min(1).default("127.0.0.1"),
+  /** Bearer token for the worker's /status, /run, /probe and /backfill. Empty: loopback callers only. */
+  POOLING_WORKER_TOKEN: z.string().optional().default(""),
   POOLING_WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(5473),
   POOLING_WORKER_INTERVAL_MS: z.coerce.number().int().positive().default(6 * 60 * 60 * 1000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -58,9 +60,16 @@ const envSchema = z.object({
   DB_POOL_MAX: z.coerce.number().int().positive().default(20),
   DB_POOL_IDLE_MS: z.coerce.number().int().positive().default(30_000),
   DB_POOL_CONN_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
+  /**
+   * Proxy hops in front of the API whose X-Forwarded-For is trusted. 0 (default): the API
+   * faces clients directly and the header is ignored, so it cannot dodge rate limits.
+   */
+  TRUST_PROXY: z.string().optional().default("0"),
   TELEGRAM_BOT_TOKEN: z.string().optional().default(""),
   TELEGRAM_BOT_USERNAME: z.string().optional().default(""),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional().default(""),
+  /** Public https base URL Telegram can reach (an API domain or an ngrok URL). Empty: long-poll instead. */
+  TELEGRAM_WEBHOOK_URL: z.string().optional().default(""),
   /** smtp(s)://user:pass@host:port for password reset emails. Empty: links are only logged outside production. */
   SMTP_URL: z.string().optional().default(""),
   MAIL_FROM: z.string().optional().default("Ledgerline <no-reply@ledgerline.local>"),
@@ -95,6 +104,8 @@ export type AppConfig = {
   poolingWorker: {
     separateProcess: boolean;
     host: string;
+    /** Empty: control routes answer loopback callers only. */
+    token: string;
     port: number;
     intervalMs: number;
   };
@@ -110,17 +121,47 @@ export type AppConfig = {
     idleTimeoutMillis: number;
     connectionTimeoutMillis: number;
   };
+  /** Express "trust proxy": false, a hop count, or an address/CIDR list. */
+  trustProxy: boolean | number | string;
   telegram: {
     enabled: boolean;
     botToken: string;
     botUsername: string;
     webhookSecret: string;
+    /** Full webhook URL when Telegram pushes to us; null means this API long-polls. */
+    webhookUrl: string | null;
   };
   mail: {
     smtpUrl: string;
     from: string;
   };
 };
+
+function parseTrustProxy(raw: string): boolean | number | string {
+  const value = raw.trim().toLowerCase();
+  if (value === "" || value === "0" || value === "false") return false;
+  if (/^\d+$/.test(value)) return Number(value);
+  if (value === "true") {
+    throw new Error("TRUST_PROXY=true trusts any X-Forwarded-For. Set the number of proxy hops instead.");
+  }
+  return raw.trim();
+}
+
+/** `https://host[/base]` -> the API's webhook route, or null when unset. */
+function telegramWebhookTarget(raw: string): string | null {
+  const value = raw.trim().replace(/\/+$/, "");
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("TELEGRAM_WEBHOOK_URL must be a full https:// URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("TELEGRAM_WEBHOOK_URL must use https; Telegram only calls https webhooks");
+  }
+  return value.endsWith("/api/v1/telegram/webhook") ? value : `${value}/api/v1/telegram/webhook`;
+}
 
 function databaseHost(url: string): string {
   if (url === "memory") return "memory";
@@ -207,6 +248,13 @@ function loadConfig(): AppConfig {
     }
   }
 
+  const telegramWebhookUrl = telegramWebhookTarget(env.TELEGRAM_WEBHOOK_URL);
+  if (telegramWebhookUrl && env.TELEGRAM_WEBHOOK_SECRET.trim().length < 16) {
+    throw new Error(
+      "TELEGRAM_WEBHOOK_URL needs TELEGRAM_WEBHOOK_SECRET (16+ characters) so webhook calls can be verified.",
+    );
+  }
+
   const corsOrigins = env.CORS_ORIGINS.split(",")
     .map((s) => s.trim())
     .filter(Boolean);
@@ -257,6 +305,7 @@ function loadConfig(): AppConfig {
     poolingWorker: {
       separateProcess: env.POOLING_WORKER_SEPARATE === "1",
       host: env.POOLING_WORKER_HOST,
+      token: env.POOLING_WORKER_TOKEN.trim(),
       port: env.POOLING_WORKER_PORT,
       intervalMs: env.POOLING_WORKER_INTERVAL_MS,
     },
@@ -274,11 +323,13 @@ function loadConfig(): AppConfig {
       idleTimeoutMillis: env.DB_POOL_IDLE_MS,
       connectionTimeoutMillis: env.DB_POOL_CONN_TIMEOUT_MS,
     },
+    trustProxy: parseTrustProxy(env.TRUST_PROXY),
     telegram: {
       enabled: Boolean(env.TELEGRAM_BOT_TOKEN.trim()),
       botToken: env.TELEGRAM_BOT_TOKEN.trim(),
       botUsername: env.TELEGRAM_BOT_USERNAME.trim().replace(/^@/, ""),
       webhookSecret: env.TELEGRAM_WEBHOOK_SECRET.trim(),
+      webhookUrl: telegramWebhookUrl,
     },
   };
 }
