@@ -2,6 +2,7 @@ import http from "node:http";
 import { BACKFILL_DEFAULT_MAX_MESSAGES } from "../constants/index.js";
 import { sendersForBank } from "../helpers/gmailSenders.js";
 import { config } from "../config.js";
+import { controlAllowed } from "./controlAuth.js";
 import { closeStore, getStore } from "../db/index.js";
 import { gmailConfigured } from "../gmail/client.js";
 import { triggerPoolingDispatcher } from "../gmail/jobs.js";
@@ -28,6 +29,7 @@ process.on("unhandledRejection", (reason) => {
 
 const HOST = config.poolingWorker.host;
 const PORT = config.poolingWorker.port;
+
 const INTERVAL_MS = config.poolingWorker.intervalMs;
 const TICK_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -356,6 +358,12 @@ async function boot(): Promise<void> {
             tickCount,
             lastTickAt,
           });
+          return;
+        }
+
+        // /status lists every user's Google email; /run and /backfill scan every mailbox.
+        if (!controlAllowed(req)) {
+          json(res, 401, { error: "unauthorized" });
           return;
         }
 

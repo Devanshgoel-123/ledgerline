@@ -318,6 +318,8 @@ function parseLooseRow(
   };
 }
 
+const MAX_PDF_PAGES = 300;
+
 export async function extractTextFromPdf(
   data: Buffer,
   password = "",
@@ -330,6 +332,10 @@ export async function extractTextFromPdf(
 
   try {
     const pdf = await loadingTask.promise;
+    // Parsing runs on the API's event loop. A bank statement is a few dozen pages.
+    if (pdf.numPages > MAX_PDF_PAGES) {
+      throw new Error(`This PDF has ${pdf.numPages} pages. Statements over ${MAX_PDF_PAGES} pages are not supported.`);
+    }
     const pages: string[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
