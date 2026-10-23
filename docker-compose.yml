@@ -43,6 +43,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    # Waits for the bundled Postgres when the local-db profile is on; ignored
+    # when DATABASE_URL points at hosted Postgres instead.
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
     ports:
       - "${API_PORT:-4000}:4000"
     # Docker's embedded resolver (127.0.0.11) returns ENOTFOUND for the Neon
