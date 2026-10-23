@@ -6,6 +6,8 @@ A privacy-first, open-source expense tracker built for UPI users in India. Impor
 
 **Status:** Beta | Free and open source (MIT) | Self-host it with Docker (no public hosted instance yet)
 
+<sub>About the history: I built this in a private repo from July 2026 (206 commits). That history contained my own bank statements and transactions, so this public repo starts on 13 Oct 2026 from a cleaned snapshot, split into grouped commits. Everything after that is the real day-to-day history.</sub>
+
 ![Ledgerline overview: a month of spending, money in, and the daily chart, on the built-in sample data](docs/images/overview.png)
 
 <sub>The overview page with the built-in sample data (Welcome → Explore with sample data). Every number is made up.</sub>
