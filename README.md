@@ -51,8 +51,10 @@ Edit `.env` and set the two required secrets (generate them like this):
 JWT_SECRET=$(openssl rand -hex 32)        # paste the output
 ENCRYPTION_KEY=$(openssl rand -hex 32)    # must be 64 hex characters
 
-# Database: the default DATABASE_URL already points at the bundled Postgres.
-# If you change POSTGRES_PASSWORD, change it inside DATABASE_URL too.
+# Database: the default DATABASE_URL already points at the bundled Postgres,
+# which COMPOSE_PROFILES=local-db starts. If you change POSTGRES_PASSWORD,
+# change it inside DATABASE_URL too. Using hosted Postgres (Neon etc.)?
+# Set DATABASE_URL to it and delete the COMPOSE_PROFILES line.
 
 # Optional: Google OAuth & Telegram
 GOOGLE_CLIENT_ID=your-google-oauth-client-id
