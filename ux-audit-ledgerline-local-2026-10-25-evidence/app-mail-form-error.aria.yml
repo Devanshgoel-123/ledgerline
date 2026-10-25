@@ -1,0 +1,103 @@
+- alert: Import
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - strong: Overview
+    - text: Needs import
+    - strong: Lifestyle
+    - text: Needs import
+    - strong: Apps
+    - text: Needs import
+    - strong: People
+    - text: Needs import
+    - paragraph: Data
+    - strong: Transactions
+    - text: Needs import
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - paragraph: Import
+  - heading "Bank mail and statements" [level=2]
+  - paragraph: Scan bank alerts for 1 Oct 2026 – 25 Oct 2026. Newest mail first. Overview uses the same month.
+  - heading "Bank mail" [level=2]
+  - paragraph: Reads debit and credit alerts from the banks you pick. Amount is stored. This scan covers 1 Oct 2026 – 25 Oct 2026.
+  - paragraph: In your bank app, turn on email alerts for transactions. If those mails are off, a scan has nothing to import.
+  - form "Connect the mailbox that gets your bank alerts":
+    - heading "Connect the mailbox that gets your bank alerts" [level=3]
+    - group "Mail provider":
+      - text: Mail provider
+      - button "Gmail" [pressed]
+      - button "Yahoo Mail"
+      - button "iCloud Mail"
+      - button "Zoho Mail"
+      - button "Outlook"
+      - button "Other"
+    - paragraph:
+      - strong: Get an app password.
+      - text: It lets Ledgerline read mail without your real password, and you can revoke it any time.
+    - list:
+      - listitem:
+        - text: Turn on
+        - link "2-Step Verification":
+          - /url: https://myaccount.google.com/signinoptions/twosv
+        - text: for your Google account. App passwords only appear once it is on.
+      - listitem:
+        - text: Open
+        - link "myaccount.google.com/apppasswords":
+          - /url: https://myaccount.google.com/apppasswords
+        - text: ", type"
+        - strong: Ledgerline
+        - text: as the name, and choose Create.
+      - listitem: Copy the 16-letter password Google shows and paste it below. Spaces do not matter.
+    - text: Email address
+    - textbox "Email address":
+      - /placeholder: you@example.com
+      - text: someone@gmail.com
+    - text: App password
+    - textbox "App password":
+      - /placeholder: abcd efgh ijkl mnop
+      - text: abcd efgh ijkl mnop
+    - paragraph: Your password is encrypted and stored only on this computer. Ledgerline reads only mail from your bank's addresses and never changes your mailbox.
+    - alert: The email address or app password was not accepted. Check both and try again.
+    - button "Check and connect"
+  - text: Banks
+  - group "Banks":
+    - button "HDFC Bank" [pressed]
+    - button "State Bank of India early"
+    - button "ICICI Bank early"
+    - button "Axis Bank early"
+  - paragraph: Choose up to two banks. The logo shows on the ones you select.
+  - paragraph: "State Bank of India, ICICI Bank, Axis Bank are early: we have not tested their emails yet, so some payments may be missed. Check the totals, and add anything missing on the Transactions page."
+  - button "Scan bank mail" [disabled]
+  - button "Clear imported data"
+  - heading "Or upload a statement PDF" [level=2]
+  - paragraph: Optional. HDFC and ICICI statements, password-protected is fine.
+  - paragraph: Upload
+  - button "Drop your bank PDF here Password-protected UPI statements supported":
+    - paragraph: Drop your bank PDF here
+    - paragraph: Password-protected UPI statements supported
+  - text: PDF password
+  - textbox "PDF password Bank statements are usually locked. For HDFC the password is your customer ID; for ICICI it is in the email the statement came with.":
+    - /placeholder: Statement password
+  - text: Bank statements are usually locked. For HDFC the password is your customer ID; for ICICI it is in the email the statement came with.
+  - button "Import statement" [disabled]

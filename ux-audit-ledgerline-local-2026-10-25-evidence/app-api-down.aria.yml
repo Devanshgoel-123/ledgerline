@@ -1,0 +1,15 @@
+- alert
+- main:
+  - region "Ledgerline is not running":
+    - paragraph: Ledgerline
+    - heading "Ledgerline is not running" [level=1]
+    - paragraph: "This page talks to the Ledgerline service on your own computer, and it did not answer. In the folder where you installed Ledgerline, run:"
+    - code: ./ledgerline start
+    - paragraph:
+      - text: Already running?
+      - code: ./ledgerline status
+      - text: shows what is wrong, and
+      - code: ./ledgerline logs
+      - text: shows the details.
+    - paragraph: Could not reach the Ledgerline API on this computer. Make sure Ledgerline is running (./ledgerline status), then try again.
+    - button "Try again"

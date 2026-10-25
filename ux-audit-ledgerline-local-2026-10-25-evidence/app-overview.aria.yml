@@ -1,0 +1,308 @@
+- alert
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - link "Overview This month at a glance":
+      - /url: /overview
+      - strong: Overview
+      - text: This month at a glance
+    - link "Lifestyle Where life costs go":
+      - /url: /lifestyle
+      - strong: Lifestyle
+      - text: Where life costs go
+    - link "Apps Spending by app and shop":
+      - /url: /apps
+      - strong: Apps
+      - text: Spending by app and shop
+    - link "People Money sent to people":
+      - /url: /people
+      - strong: People
+      - text: Money sent to people
+    - paragraph: Data
+    - link "Transactions Every payment, searchable":
+      - /url: /transactions
+      - strong: Transactions
+      - text: Every payment, searchable
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - status:
+    - paragraph:
+      - strong: You are looking at sample data.
+      - text: These 20 transactions are made up so you can explore. Your real imports are kept separate.
+    - button "Remove sample data"
+  - paragraph: Overview
+  - heading "October 2026" [level=2]
+  - paragraph: ₹35,303 spent · ₹5,000 invested · ₹52,000 in · 17 payments
+  - tablist "Overview":
+    - tab "Spending" [selected]
+    - tab "Invested"
+  - paragraph: Total spent
+  - strong: ₹35,303
+  - paragraph: includes rent, less refunds investments stay off this number and the daily chart
+  - text: 17 payments 10 UPI payees Avg ₹1,081/day
+  - paragraph: Avg / day
+  - strong: ₹1,081
+  - paragraph: across days you spent · rent left out
+  - paragraph: Daily limit
+  - strong: Not set
+  - paragraph: Type the most you want to spend in a day
+  - text: Per day
+  - textbox "Daily spend limit in rupees":
+    - /placeholder: e.g. 1500 or 2,000
+  - button "Set limit" [disabled]
+  - paragraph: Money in
+  - strong: ₹52,000
+  - paragraph: salary and other credits · refunds lower spend instead
+  - paragraph: UPI payees
+  - strong: "10"
+  - paragraph: distinct handles
+  - region "Daily spend chart":
+    - heading "Daily spend" [level=2]
+    - paragraph: ₹17,303 by day · ₹52,000 in
+    - text: invested
+    - strong: ₹5,000
+    - text: rent
+    - strong: ₹18,000
+    - text: Averaging ₹1,081/day
+    - group "Daily spend by category":
+      - text: avg
+      - 'button "Thu, 1 Oct: ₹0, Typical"'
+      - 'button "Fri, 2 Oct: ₹389, Typical, ₹692 under the daily average"'
+      - 'button "Sat, 3 Oct: ₹1,240, Typical, 1.1× the daily average"'
+      - 'button "Sun, 4 Oct: ₹0, Typical"'
+      - 'button "Mon, 5 Oct: ₹215, Typical, ₹866 under the daily average"'
+      - 'button "Tue, 6 Oct: ₹640, Typical, ₹441 under the daily average"'
+      - 'button "Wed, 7 Oct: ₹0, Typical"'
+      - 'button "Thu, 8 Oct: ₹2,499, Spike, 2.3× the daily average"'
+      - 'button "Fri, 9 Oct: ₹120, Typical, ₹961 under the daily average"'
+      - 'button "Sat, 10 Oct: ₹3,000, Spike, 2.8× the daily average"'
+      - 'button "Sun, 11 Oct: ₹1,850, Above average, 1.7× the daily average"'
+      - 'button "Mon, 12 Oct: ₹340, Typical, ₹741 under the daily average"'
+      - 'button "Tue, 13 Oct: ₹1,500, Above average, 1.4× the daily average"'
+      - 'button "Wed, 14 Oct: ₹0, Typical"'
+      - 'button "Thu, 15 Oct: ₹899, Typical, ₹182 under the daily average"'
+      - 'button "Fri, 16 Oct: ₹450, Typical, ₹631 under the daily average"'
+      - 'button "Sat, 17 Oct: ₹0, Typical"'
+      - 'button "Sun, 18 Oct: ₹2,100, Above average, 1.9× the daily average"'
+      - 'button "Mon, 19 Oct: ₹600, Typical, ₹481 under the daily average"'
+      - 'button "Tue, 20 Oct: ₹0, Typical"'
+      - 'button "Wed, 21 Oct: ₹1,200, Typical, 1.1× the daily average"'
+      - 'button "Thu, 22 Oct: ₹0, Typical"'
+      - 'button "Fri, 23 Oct: ₹0, Typical"'
+      - 'button "Sat, 24 Oct: ₹560, Typical, ₹521 under the daily average"'
+      - 'button "Sun, 25 Oct: ₹0, Typical"'
+    - text: Typical Spike Above average Tallest
+    - list:
+      - listitem: Food
+      - listitem: grocery
+      - listitem: Travel
+      - listitem: Shopping
+      - listitem: Family
+      - listitem: pharmacy
+      - listitem: Outing
+      - listitem: salon
+      - listitem: dinner
+      - listitem: petrol
+    - table "Daily spend data":
+      - rowgroup:
+        - row "Date Amount Status":
+          - columnheader "Date"
+          - columnheader "Amount"
+          - columnheader "Status"
+      - rowgroup:
+        - row "Thu, 1 Oct ₹0 Typical":
+          - cell "Thu, 1 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Fri, 2 Oct ₹389 Typical":
+          - cell "Fri, 2 Oct"
+          - cell "₹389"
+          - cell "Typical"
+        - row "Sat, 3 Oct ₹1,240 Typical":
+          - cell "Sat, 3 Oct"
+          - cell "₹1,240"
+          - cell "Typical"
+        - row "Sun, 4 Oct ₹0 Typical":
+          - cell "Sun, 4 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Mon, 5 Oct ₹215 Typical":
+          - cell "Mon, 5 Oct"
+          - cell "₹215"
+          - cell "Typical"
+        - row "Tue, 6 Oct ₹640 Typical":
+          - cell "Tue, 6 Oct"
+          - cell "₹640"
+          - cell "Typical"
+        - row "Wed, 7 Oct ₹0 Typical":
+          - cell "Wed, 7 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Thu, 8 Oct ₹2,499 Spike":
+          - cell "Thu, 8 Oct"
+          - cell "₹2,499"
+          - cell "Spike"
+        - row "Fri, 9 Oct ₹120 Typical":
+          - cell "Fri, 9 Oct"
+          - cell "₹120"
+          - cell "Typical"
+        - row "Sat, 10 Oct ₹3,000 Spike":
+          - cell "Sat, 10 Oct"
+          - cell "₹3,000"
+          - cell "Spike"
+        - row "Sun, 11 Oct ₹1,850 Above average":
+          - cell "Sun, 11 Oct"
+          - cell "₹1,850"
+          - cell "Above average"
+        - row "Mon, 12 Oct ₹340 Typical":
+          - cell "Mon, 12 Oct"
+          - cell "₹340"
+          - cell "Typical"
+        - row "Tue, 13 Oct ₹1,500 Above average":
+          - cell "Tue, 13 Oct"
+          - cell "₹1,500"
+          - cell "Above average"
+        - row "Wed, 14 Oct ₹0 Typical":
+          - cell "Wed, 14 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Thu, 15 Oct ₹899 Typical":
+          - cell "Thu, 15 Oct"
+          - cell "₹899"
+          - cell "Typical"
+        - row "Fri, 16 Oct ₹450 Typical":
+          - cell "Fri, 16 Oct"
+          - cell "₹450"
+          - cell "Typical"
+        - row "Sat, 17 Oct ₹0 Typical":
+          - cell "Sat, 17 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Sun, 18 Oct ₹2,100 Above average":
+          - cell "Sun, 18 Oct"
+          - cell "₹2,100"
+          - cell "Above average"
+        - row "Mon, 19 Oct ₹600 Typical":
+          - cell "Mon, 19 Oct"
+          - cell "₹600"
+          - cell "Typical"
+        - row "Tue, 20 Oct ₹0 Typical":
+          - cell "Tue, 20 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Wed, 21 Oct ₹1,200 Typical":
+          - cell "Wed, 21 Oct"
+          - cell "₹1,200"
+          - cell "Typical"
+        - row "Thu, 22 Oct ₹0 Typical":
+          - cell "Thu, 22 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Fri, 23 Oct ₹0 Typical":
+          - cell "Fri, 23 Oct"
+          - cell "₹0"
+          - cell "Typical"
+        - row "Sat, 24 Oct ₹560 Typical":
+          - cell "Sat, 24 Oct"
+          - cell "₹560"
+          - cell "Typical"
+        - row "Sun, 25 Oct ₹0 Typical":
+          - cell "Sun, 25 Oct"
+          - cell "₹0"
+          - cell "Typical"
+  - heading "Rhythm" [level=2]
+  - paragraph:
+    - text: "Set a daily limit in Settings to see which days ran past it. Weekends run 117% higher than weekdays. Busiest days: Sat and Sun."
+    - link "Change limit":
+      - /url: /settings
+  - region "Spending heatmap":
+    - heading "Daily spending" [level=2]
+    - paragraph: Darker days are heavier debit totals
+    - paragraph: 16 active days
+    - text: Typical Above Heavy
+    - table "Daily spending heatmap data":
+      - rowgroup:
+        - row "Date Amount":
+          - columnheader "Date"
+          - columnheader "Amount"
+      - rowgroup:
+        - row "2026-10-02 ₹389":
+          - cell "2026-10-02"
+          - cell "₹389"
+        - row "2026-10-03 ₹1,240":
+          - cell "2026-10-03"
+          - cell "₹1,240"
+        - row "2026-10-05 ₹215":
+          - cell "2026-10-05"
+          - cell "₹215"
+        - row "2026-10-06 ₹640":
+          - cell "2026-10-06"
+          - cell "₹640"
+        - row "2026-10-08 ₹2,499":
+          - cell "2026-10-08"
+          - cell "₹2,499"
+        - row "2026-10-09 ₹120":
+          - cell "2026-10-09"
+          - cell "₹120"
+        - row "2026-10-10 ₹3,000":
+          - cell "2026-10-10"
+          - cell "₹3,000"
+        - row "2026-10-11 ₹1,850":
+          - cell "2026-10-11"
+          - cell "₹1,850"
+        - row "2026-10-12 ₹340":
+          - cell "2026-10-12"
+          - cell "₹340"
+        - row "2026-10-13 ₹1,500":
+          - cell "2026-10-13"
+          - cell "₹1,500"
+        - row "2026-10-15 ₹899":
+          - cell "2026-10-15"
+          - cell "₹899"
+        - row "2026-10-16 ₹450":
+          - cell "2026-10-16"
+          - cell "₹450"
+        - row "2026-10-18 ₹2,100":
+          - cell "2026-10-18"
+          - cell "₹2,100"
+        - row "2026-10-19 ₹600":
+          - cell "2026-10-19"
+          - cell "₹600"
+        - row "2026-10-21 ₹1,200":
+          - cell "2026-10-21"
+          - cell "₹1,200"
+        - row "2026-10-24 ₹560":
+          - cell "2026-10-24"
+          - cell "₹560"
+  - region "Monthly spending trend":
+    - heading "Spending trend" [level=2]
+    - paragraph: 4607.1% higher vs previous month
+    - group "Monthly spending trend with rises marked in yellow and red":
+      - text: avg
+      - 'button "September 2026: ₹750, Steady or lower"'
+      - 'button "October 2026: ₹35,303, Sharp rise"'
+    - text: Steady or lower Tallest
+    - list:
+      - listitem: September 2026 ₹750
+      - listitem: October 2026 ₹35,303

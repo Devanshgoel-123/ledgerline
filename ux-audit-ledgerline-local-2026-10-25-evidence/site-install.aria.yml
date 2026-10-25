@@ -1,0 +1,201 @@
+- link "Skip to content":
+  - /url: "#main"
+- navigation "Site":
+  - link "Ledgerline":
+    - /url: /
+  - link "Install":
+    - /url: /install
+  - link "Privacy":
+    - /url: /privacy
+  - link "GitHub":
+    - /url: https://github.com/Devanshgoel-123/ledgerline
+  - button "Switch to dark mode"
+- main:
+  - heading "Install Ledgerline" [level=1]
+  - paragraph: "Ledgerline runs on your own computer inside Docker. One command sets it up: it makes its own keys, starts its database, and opens in your browser. Nothing to sign up for."
+  - navigation "On this page":
+    - link "Get it":
+      - /url: "#get"
+    - link "First run":
+      - /url: "#first-run"
+    - link "Everyday commands":
+      - /url: "#everyday"
+    - link "Updates and backups":
+      - /url: "#data"
+    - link "Removing it":
+      - /url: "#remove"
+    - link "Troubleshooting":
+      - /url: "#trouble"
+  - region "Get it":
+    - heading "Get it" [level=2]
+    - tablist "Your computer":
+      - tab "macOS"
+      - tab "Windows (WSL)" [selected]
+      - tab "Linux"
+    - tabpanel "Windows (WSL)":
+      - heading "Before you start" [level=3]
+      - list:
+        - listitem:
+          - text: WSL with Ubuntu. In PowerShell as administrator, run wsl --install, then restart.
+          - link "WSL install guide":
+            - /url: https://learn.microsoft.com/windows/wsl/install
+        - listitem:
+          - text: Docker Desktop for Windows, with Settings › Resources › WSL integration turned on for Ubuntu.
+          - link "Get Docker Desktop":
+            - /url: https://docs.docker.com/desktop/setup/install/windows-install/
+        - listitem: Run every command below in the Ubuntu terminal, not in PowerShell.
+      - paragraph: "Open the Ubuntu app (WSL) and check that Docker answers:"
+      - code: $ docker compose version
+      - 'button "Copy: Check Docker"': Copy
+      - status
+      - heading "Then pick one way to get it" [level=3]
+      - region "One line":
+        - paragraph: One line
+        - paragraph: Downloads Ledgerline into a folder called ledgerline in your home folder, then starts it.
+        - code: $ curl -fsSL https://raw.githubusercontent.com/Devanshgoel-123/ledgerline/main/install.sh | sh
+        - 'button "Copy: One line on Windows (WSL)"': Copy
+        - status
+        - paragraph: "Read the script first if you like: open the address above in your browser."
+      - region "Clone with git":
+        - paragraph: Clone with git
+        - paragraph: Best if you want to follow updates or read the code.
+        - code: $ git clone https://github.com/Devanshgoel-123/ledgerline.git $ cd ledgerline $ ./ledgerline start
+        - 'button "Copy: Clone with git on Windows (WSL)"': Copy
+        - status
+      - region "Download the zip":
+        - paragraph: Download the zip
+        - paragraph: Download and unzip inside Ubuntu, so the files live where Docker runs fastest.
+        - code: $ curl -fsSLo ledgerline.zip https://github.com/Devanshgoel-123/ledgerline/archive/refs/heads/main.zip $ unzip ledgerline.zip $ cd ledgerline-main $ ./ledgerline start
+        - 'button "Copy: Download the zip on Windows (WSL)"': Copy
+        - status
+        - paragraph: If unzip is missing, install it with sudo apt install unzip.
+      - paragraph: If no browser opens, go to http://localhost:3000 in Edge or Chrome on Windows.
+  - region "What happens the first time":
+    - heading "What happens the first time" [level=2]
+    - list:
+      - listitem: Checks that Docker is installed and running, and says what to do if it is not.
+      - listitem: Creates a private settings file (.env) with random keys. There is nothing for you to fill in.
+      - listitem: "Builds Ledgerline and starts three parts on your computer: the database, the service that reads your statements, and the web app. The first build takes a few minutes; later starts take seconds."
+      - listitem: Waits until everything answers, then opens http://localhost:3000.
+    - paragraph:
+      - text: Then Ledgerline welcomes you. Import a statement PDF, connect bank mail, or look around with sample data first. You can come back any time at
+      - link "http://localhost:3000":
+        - /url: http://localhost:3000
+      - text: while it is running.
+  - region "Everyday commands":
+    - heading "Everyday commands" [level=2]
+    - paragraph:
+      - text: Run these in a terminal from the Ledgerline folder (
+      - code: cd ~/ledgerline
+      - text: if you used the one-line install). Ledgerline keeps running in the background until you stop it or restart your computer; after a restart, run
+      - code: ./ledgerline start
+      - text: .
+    - table "Ledgerline commands":
+      - caption: Ledgerline commands
+      - rowgroup:
+        - row "Command What it does":
+          - columnheader "Command"
+          - columnheader "What it does"
+      - rowgroup:
+        - row "./ledgerline start Start Ledgerline and open it. Safe to run any time.":
+          - cell "./ledgerline start":
+            - code: ./ledgerline start
+          - cell "Start Ledgerline and open it. Safe to run any time."
+        - row "./ledgerline open Open it in your browser.":
+          - cell "./ledgerline open":
+            - code: ./ledgerline open
+          - cell "Open it in your browser."
+        - row "./ledgerline stop Stop it. Your data stays.":
+          - cell "./ledgerline stop":
+            - code: ./ledgerline stop
+          - cell "Stop it. Your data stays."
+        - row "./ledgerline status Show whether each part is running and healthy.":
+          - cell "./ledgerline status":
+            - code: ./ledgerline status
+          - cell "Show whether each part is running and healthy."
+        - row "./ledgerline logs Show what Ledgerline is doing, for troubleshooting.":
+          - cell "./ledgerline logs":
+            - code: ./ledgerline logs
+          - cell "Show what Ledgerline is doing, for troubleshooting."
+        - row "./ledgerline update Get the latest version and restart. Your data stays.":
+          - cell "./ledgerline update":
+            - code: ./ledgerline update
+          - cell "Get the latest version and restart. Your data stays."
+        - row "./ledgerline backup Save a copy of your data to the backups folder.":
+          - cell "./ledgerline backup":
+            - code: ./ledgerline backup
+          - cell "Save a copy of your data to the backups folder."
+        - row "./ledgerline restore <file> Put back a saved copy.":
+          - cell "./ledgerline restore <file>":
+            - code: ./ledgerline restore <file>
+          - cell "Put back a saved copy."
+        - row "./ledgerline uninstall Remove Ledgerline. Asks before deleting your data.":
+          - cell "./ledgerline uninstall":
+            - code: ./ledgerline uninstall
+          - cell "Remove Ledgerline. Asks before deleting your data."
+  - region "Updates and backups":
+    - heading "Updates and backups" [level=2]
+    - paragraph: Updating downloads the latest version, rebuilds it and restarts. Your transactions, rules and settings stay.
+    - code: $ ./ledgerline update
+    - 'button "Copy: Update Ledgerline"': Copy
+    - status
+    - paragraph: A backup is a single file in the backups folder. Keep a copy somewhere safe, such as an encrypted drive; it holds your financial history.
+    - code: $ ./ledgerline backup
+    - 'button "Copy: Back up your data"': Copy
+    - status
+    - paragraph:
+      - text: To put a backup back, run
+      - code: ./ledgerline restore backups/
+      - text: followed by the file name.
+  - region "Removing it":
+    - heading "Removing it" [level=2]
+    - paragraph: This stops Ledgerline and removes what it installed in Docker. It asks before deleting your data, so you can keep it for later. Delete the Ledgerline folder afterwards if you want it gone completely.
+    - code: $ ./ledgerline uninstall
+    - 'button "Copy: Remove Ledgerline"': Copy
+    - status
+  - region "Troubleshooting":
+    - heading "Troubleshooting" [level=2]
+    - region "“Docker is not running”":
+      - heading "“Docker is not running”" [level=3]
+      - paragraph: "Open Docker Desktop and wait until it says it is running, then run ./ledgerline start again. On Linux, start the service:"
+      - code: $ sudo systemctl start docker
+      - 'button "Copy: “Docker is not running”"': Copy
+      - status
+    - region "“permission denied” when running ./ledgerline":
+      - heading "“permission denied” when running ./ledgerline" [level=3]
+      - paragraph: "The file lost its run permission, usually after unzipping. Give it back, then start again:"
+      - code: $ chmod +x ledgerline $ ./ledgerline start
+      - 'button "Copy: “permission denied” when running ./ledgerline"': Copy
+      - status
+    - region "Port 3000 or 4000 is already in use":
+      - heading "Port 3000 or 4000 is already in use" [level=3]
+      - paragraph: "Another program is using a port Ledgerline needs. Either quit that program, or give Ledgerline other ports: open the .env file in the Ledgerline folder, set WEB_PORT (and API_PORT) to free numbers, then start again. Ledgerline then opens at the new port."
+      - code: $ lsof -nP -iTCP:3000 -sTCP:LISTEN $ echo WEB_PORT=3001 >> .env $ ./ledgerline start
+      - 'button "Copy: Port 3000 or 4000 is already in use"': Copy
+      - status
+    - region "The page says “Ledgerline is not running”":
+      - heading "The page says “Ledgerline is not running”" [level=3]
+      - paragraph: "The web page loaded but the service behind it did not answer. Check each part, then start it again:"
+      - code: $ ./ledgerline status $ ./ledgerline start
+      - 'button "Copy: The page says “Ledgerline is not running”"': Copy
+      - status
+    - region "Something else went wrong":
+      - heading "Something else went wrong" [level=3]
+      - paragraph:
+        - text: Look at what Ledgerline is doing. When you ask for help, copy the last lines, and check them first for anything personal.
+        - link "Open an issue on GitHub":
+          - /url: https://github.com/Devanshgoel-123/ledgerline/issues
+        - text: .
+      - code: $ ./ledgerline logs
+      - 'button "Copy: Something else went wrong"': Copy
+      - status
+- contentinfo:
+  - paragraph: Ledgerline is free and open source under the MIT licence.
+  - navigation "Footer":
+    - link "Install":
+      - /url: /install
+    - link "Privacy":
+      - /url: /privacy
+    - link "Source code":
+      - /url: https://github.com/Devanshgoel-123/ledgerline
+- alert

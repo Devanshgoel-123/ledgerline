@@ -1,0 +1,292 @@
+- alert
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - link "Overview This month at a glance":
+      - /url: /overview
+      - strong: Overview
+      - text: This month at a glance
+    - link "Lifestyle Where life costs go":
+      - /url: /lifestyle
+      - strong: Lifestyle
+      - text: Where life costs go
+    - link "Apps Spending by app and shop":
+      - /url: /apps
+      - strong: Apps
+      - text: Spending by app and shop
+    - link "People Money sent to people":
+      - /url: /people
+      - strong: People
+      - text: Money sent to people
+    - paragraph: Data
+    - link "Transactions Every payment, searchable":
+      - /url: /transactions
+      - strong: Transactions
+      - text: Every payment, searchable
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - status:
+    - paragraph:
+      - strong: You are looking at sample data.
+      - text: These 20 transactions are made up so you can explore. Your real imports are kept separate.
+    - button "Remove sample data"
+  - paragraph: Apps
+  - heading "October 2026" [level=2]
+  - paragraph:
+    - text: Move an app between categories here. To capture per-vendor totals, open
+    - link "Transactions":
+      - /url: /transactions
+    - text: and set Category + App on each spend.
+  - heading "Food" [level=2]
+  - paragraph: 3 apps
+  - article:
+    - strong: Blinkit
+    - paragraph: ₹1,240 · 1 txn
+    - text: Category
+    - combobox "Category for Blinkit":
+      - option "Food" [selected]
+      - option "Shopping"
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Blinkit":
+      - listitem "blinkit"
+    - textbox "Add a UPI id for Blinkit":
+      - /placeholder: name@bank
+    - button "Add"
+  - article:
+    - strong: Swiggy
+    - paragraph: ₹839 · 2 txns
+    - text: Category
+    - combobox "Category for Swiggy":
+      - option "Food" [selected]
+      - option "Shopping"
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Swiggy":
+      - listitem "swiggy"
+    - textbox "Add a UPI id for Swiggy":
+      - /placeholder: name@bank
+    - button "Add"
+  - article:
+    - strong: Zomato
+    - paragraph: ₹640 · 1 txn
+    - text: Category
+    - combobox "Category for Zomato":
+      - option "Food" [selected]
+      - option "Shopping"
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Zomato":
+      - listitem "zomato"
+    - textbox "Add a UPI id for Zomato":
+      - /placeholder: name@bank
+    - button "Add"
+  - heading "Shopping" [level=2]
+  - paragraph: 2 apps
+  - article:
+    - strong: Myntra
+    - paragraph: ₹2,499 · 1 txn
+    - text: Category
+    - combobox "Category for Myntra":
+      - option "Food"
+      - option "Shopping" [selected]
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Myntra":
+      - listitem "myntra"
+    - textbox "Add a UPI id for Myntra":
+      - /placeholder: name@bank
+    - button "Add"
+  - article:
+    - strong: Amazon
+    - paragraph: ₹1,801 · 1 txn
+    - text: Category
+    - combobox "Category for Amazon":
+      - option "Food"
+      - option "Shopping" [selected]
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Amazon":
+      - listitem "amazon"
+    - textbox "Add a UPI id for Amazon":
+      - /placeholder: name@bank
+    - button "Add"
+  - heading "Travel" [level=2]
+  - paragraph: 2 apps
+  - article:
+    - strong: Rapido
+    - paragraph: ₹340 · 1 txn
+    - text: Category
+    - combobox "Category for Rapido":
+      - option "Rides" [selected]
+      - option "Food"
+      - option "Shopping"
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Rapido":
+      - listitem "rapido"
+    - textbox "Add a UPI id for Rapido":
+      - /placeholder: name@bank
+    - button "Add"
+  - article:
+    - strong: Uber
+    - paragraph: ₹215 · 1 txn
+    - text: Category
+    - combobox "Category for Uber":
+      - option "Rides" [selected]
+      - option "Food"
+      - option "Shopping"
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments"
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Uber":
+      - listitem "uber"
+    - textbox "Add a UPI id for Uber":
+      - /placeholder: name@bank
+    - button "Add"
+  - heading "Investments" [level=2]
+  - paragraph: 1 app
+  - article:
+    - text: Z
+    - strong: Zerodha
+    - paragraph: ₹5,000 · 1 txn
+    - text: Category
+    - combobox "Category for Zerodha":
+      - option "Food"
+      - option "Shopping"
+      - option "Travel"
+      - option "Healthcare"
+      - option "Family"
+      - option "Outing"
+      - option "Investments" [selected]
+      - option "Banks"
+      - option "Furniture"
+      - option "Rent"
+      - option "Cook & maid"
+      - option "Household"
+      - option "Other"
+    - text: UPI ids
+    - list "UPI ids for Zerodha":
+      - listitem "zerodha"
+      - listitem "zerodhabroking"
+    - textbox "Add a UPI id for Zerodha":
+      - /placeholder: name@bank
+    - button "Add"
+  - button "Show 61 apps with no spending this month"
+  - heading "Add an app" [level=2]
+  - paragraph: New vendors show up here and in the transaction pickers
+  - text: Name
+  - textbox "Name":
+    - /placeholder: e.g. Zepto
+  - text: Category
+  - combobox "Category":
+    - option "Food" [selected]
+    - option "Shopping"
+    - option "Travel"
+    - option "Healthcare"
+    - option "Family"
+    - option "Outing"
+    - option "Investments"
+    - option "Banks"
+    - option "Furniture"
+    - option "Rent"
+    - option "Cook & maid"
+    - option "Household"
+    - option "Other"
+  - button "Add app"
+  - heading "Add a category" [level=2]
+  - paragraph: Healthcare and Family are already there. Add your own when a spend does not fit.
+  - text: Category name
+  - textbox "Category name":
+    - /placeholder: e.g. Pets
+  - button "Add category"

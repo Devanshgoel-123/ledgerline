@@ -1,0 +1,197 @@
+- link "Skip to content":
+  - /url: "#main"
+- navigation "Site":
+  - link "Ledgerline":
+    - /url: /
+  - link "Install":
+    - /url: /install
+  - link "Privacy":
+    - /url: /privacy
+  - link "GitHub":
+    - /url: https://github.com/Devanshgoel-123/ledgerline
+  - button "Switch to dark mode"
+- main:
+  - region "Your UPI spending, sorted on your own computer.":
+    - heading "Your UPI spending, sorted on your own computer." [level=1]
+    - paragraph: Ledgerline reads your bank statements and alert emails, names each payment, and shows your month by category, app and person. It runs on your computer. There is no account to create, and nothing is sent to us.
+    - link "Install Ledgerline":
+      - /url: "#install"
+    - link "How your data stays private":
+      - /url: /privacy
+    - paragraph: Free and open source. Works on macOS, Windows (with WSL) and Linux. Needs Docker.
+    - figure "Statement lines as your bank prints them, and what Ledgerline makes of them. Made-up examples.":
+      - list:
+        - listitem:
+          - code: UPI-SWIGGY-swiggy@ybl-YESB0000001-402981734512-UPI
+          - text: Swiggy Food ₹349
+        - listitem:
+          - code: UPI-RAPIDO-rapido.bike@axisbank-UTIB0000100-402981739021-UPI
+          - text: Rapido Rides ₹86
+        - listitem:
+          - code: UPI-NIKHIL SHARMA-nikhil.s@oksbi-SBIN0001234-402981740115-UPI
+          - text: Nikhil Sharma People ₹500
+      - text: Statement lines as your bank prints them, and what Ledgerline makes of them. Made-up examples.
+  - region "What it reads":
+    - heading "What it reads" [level=2]
+    - term: Statement PDFs
+    - definition: "HDFC and ICICI. Locked PDFs are fine: the password is used once and never saved. Every line is checked against the running balance before it is added."
+    - term: Bank alert emails, if you want them
+    - definition: Connect your mailbox with an app password. Ledgerline reads only mail from your bank’s addresses and never changes your mailbox. HDFC alerts are tested; SBI, ICICI and Axis are early.
+    - term: Payments you add
+    - definition: Cash, UPI Lite, a bank Ledgerline does not read yet. Type them in and they count like everything else.
+  - region "What you see":
+    - heading "What you see" [level=2]
+    - term: Overview
+    - definition: Money out, money in, your daily average, and the days you went over a limit you set.
+    - term: Lifestyle
+    - definition: Spending by category. Open one to see exactly who or what it went to.
+    - term: Apps
+    - definition: Every app and shop you paid this month, with its UPI IDs.
+    - term: People
+    - definition: Money you sent to and got from people, kept apart from shopping.
+    - term: Transactions
+    - definition: Search, fix a category once and it sticks, split a bill so only your share counts, export to CSV.
+  - region "What it cannot see":
+    - heading "What it cannot see" [level=2]
+    - paragraph: "A tracker is only useful if you trust the total. These payments never reach a bank statement Ledgerline reads, so add them by hand:"
+    - term: UPI Lite
+    - definition: Your bank shows the top-up, not each small payment.
+    - term: RuPay credit cards on UPI
+    - definition: These land on your card statement, which Ledgerline does not read yet.
+    - term: Cash
+    - definition: Nothing records it but you.
+    - term: Other banks
+    - definition: Statements from banks other than HDFC and ICICI are not read yet.
+  - region "Private because there is nowhere else for it to go":
+    - heading "Private because there is nowhere else for it to go" [level=2]
+    - term: No account
+    - definition: Nothing to sign up for, no email asked, no password to leak.
+    - term: Stays on your computer
+    - definition: Your transactions live in a database on your own disk. There is no Ledgerline server.
+    - term: Answers only you
+    - definition: The Ledgerline service listens only on this computer and refuses requests from other websites.
+    - term: No tracking
+    - definition: No analytics, no telemetry, on this website or in the app.
+    - term: Yours to take or erase
+    - definition: Export every transaction to CSV, back up the database, or erase everything in one step.
+    - paragraph:
+      - text: "One exception: the optional Telegram bot sends reminders through Telegram. It is off unless you turn it on."
+      - link "Read the privacy notes":
+        - /url: /privacy
+      - text: .
+  - region "Install it":
+    - heading "Install it" [level=2]
+    - paragraph:
+      - text: Every way below ends with the same command,
+      - code: ./ledgerline start
+      - text: ", which sets everything up for you."
+    - tablist "Your computer":
+      - tab "macOS"
+      - tab "Windows (WSL)" [selected]
+      - tab "Linux"
+    - tabpanel "Windows (WSL)":
+      - heading "Before you start" [level=3]
+      - list:
+        - listitem:
+          - text: WSL with Ubuntu. In PowerShell as administrator, run wsl --install, then restart.
+          - link "WSL install guide":
+            - /url: https://learn.microsoft.com/windows/wsl/install
+        - listitem:
+          - text: Docker Desktop for Windows, with Settings › Resources › WSL integration turned on for Ubuntu.
+          - link "Get Docker Desktop":
+            - /url: https://docs.docker.com/desktop/setup/install/windows-install/
+        - listitem: Run every command below in the Ubuntu terminal, not in PowerShell.
+      - paragraph: "Open the Ubuntu app (WSL) and check that Docker answers:"
+      - code: $ docker compose version
+      - 'button "Copy: Check Docker"': Copy
+      - status
+      - heading "Then pick one way to get it" [level=3]
+      - region "One line":
+        - paragraph: One line
+        - paragraph: Downloads Ledgerline into a folder called ledgerline in your home folder, then starts it.
+        - code: $ curl -fsSL https://raw.githubusercontent.com/Devanshgoel-123/ledgerline/main/install.sh | sh
+        - 'button "Copy: One line on Windows (WSL)"': Copy
+        - status
+        - paragraph: "Read the script first if you like: open the address above in your browser."
+      - region "Clone with git":
+        - paragraph: Clone with git
+        - paragraph: Best if you want to follow updates or read the code.
+        - code: $ git clone https://github.com/Devanshgoel-123/ledgerline.git $ cd ledgerline $ ./ledgerline start
+        - 'button "Copy: Clone with git on Windows (WSL)"': Copy
+        - status
+      - region "Download the zip":
+        - paragraph: Download the zip
+        - paragraph: Download and unzip inside Ubuntu, so the files live where Docker runs fastest.
+        - code: $ curl -fsSLo ledgerline.zip https://github.com/Devanshgoel-123/ledgerline/archive/refs/heads/main.zip $ unzip ledgerline.zip $ cd ledgerline-main $ ./ledgerline start
+        - 'button "Copy: Download the zip on Windows (WSL)"': Copy
+        - status
+        - paragraph: If unzip is missing, install it with sudo apt install unzip.
+      - paragraph: If no browser opens, go to http://localhost:3000 in Edge or Chrome on Windows.
+    - heading "What happens the first time" [level=3]
+    - list:
+      - listitem: Checks that Docker is installed and running, and says what to do if it is not.
+      - listitem: Creates a private settings file (.env) with random keys. There is nothing for you to fill in.
+      - listitem: "Builds Ledgerline and starts three parts on your computer: the database, the service that reads your statements, and the web app. The first build takes a few minutes; later starts take seconds."
+      - listitem: Waits until everything answers, then opens http://localhost:3000.
+    - heading "After that" [level=3]
+    - paragraph:
+      - text: Run these from the Ledgerline folder. If you used the one-line install, that is the ledgerline folder in your home folder (
+      - code: cd ~/ledgerline
+      - text: ).
+    - table "Everyday commands":
+      - caption: Everyday commands
+      - rowgroup:
+        - row "Command What it does":
+          - columnheader "Command"
+          - columnheader "What it does"
+      - rowgroup:
+        - row "./ledgerline start Start Ledgerline and open it. Safe to run any time.":
+          - cell "./ledgerline start":
+            - code: ./ledgerline start
+          - cell "Start Ledgerline and open it. Safe to run any time."
+        - row "./ledgerline open Open it in your browser.":
+          - cell "./ledgerline open":
+            - code: ./ledgerline open
+          - cell "Open it in your browser."
+        - row "./ledgerline stop Stop it. Your data stays.":
+          - cell "./ledgerline stop":
+            - code: ./ledgerline stop
+          - cell "Stop it. Your data stays."
+        - row "./ledgerline status Show whether each part is running and healthy.":
+          - cell "./ledgerline status":
+            - code: ./ledgerline status
+          - cell "Show whether each part is running and healthy."
+        - row "./ledgerline logs Show what Ledgerline is doing, for troubleshooting.":
+          - cell "./ledgerline logs":
+            - code: ./ledgerline logs
+          - cell "Show what Ledgerline is doing, for troubleshooting."
+    - paragraph:
+      - text: Updates, backups, removing it, and fixes for common problems are in the
+      - link "full install guide":
+        - /url: /install
+      - text: .
+  - region "Questions":
+    - heading "Questions" [level=2]
+    - group: Is it really free? +
+    - group: Does my data leave my computer? +
+    - group: Do I need to sign up? +
+    - group: Which banks work? +
+    - group: What does it miss? +
+    - group: How do I update, back up or remove it? +
+    - group: Can I use it on my phone? +
+    - group: What do I need to run it? +
+    - paragraph:
+      - text: Something else?
+      - link "Ask on GitHub":
+        - /url: https://github.com/Devanshgoel-123/ledgerline/issues
+      - text: .
+- contentinfo:
+  - paragraph: Ledgerline is free and open source under the MIT licence.
+  - navigation "Footer":
+    - link "Install":
+      - /url: /install
+    - link "Privacy":
+      - /url: /privacy
+    - link "Source code":
+      - /url: https://github.com/Devanshgoel-123/ledgerline
+- alert

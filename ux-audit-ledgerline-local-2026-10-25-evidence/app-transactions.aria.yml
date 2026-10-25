@@ -1,0 +1,445 @@
+- alert
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - link "Overview This month at a glance":
+      - /url: /overview
+      - strong: Overview
+      - text: This month at a glance
+    - link "Lifestyle Where life costs go":
+      - /url: /lifestyle
+      - strong: Lifestyle
+      - text: Where life costs go
+    - link "Apps Spending by app and shop":
+      - /url: /apps
+      - strong: Apps
+      - text: Spending by app and shop
+    - link "People Money sent to people":
+      - /url: /people
+      - strong: People
+      - text: Money sent to people
+    - paragraph: Data
+    - link "Transactions Every payment, searchable":
+      - /url: /transactions
+      - strong: Transactions
+      - text: Every payment, searchable
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - status:
+    - paragraph:
+      - strong: You are looking at sample data.
+      - text: These 20 transactions are made up so you can explore. Your real imports are kept separate.
+    - button "Remove sample data"
+  - button "Add expense"
+  - heading "Transactions" [level=2]
+  - paragraph: 20 of 20 rows · 2 credits
+  - button "Date ↓"
+  - button "Amount"
+  - button "Merchant"
+  - button "Category"
+  - text: Search transactions
+  - searchbox "Search transactions"
+  - group "Debit or credit":
+    - button "All"
+    - button "Debits"
+    - button "Credits"
+  - button "All categories"
+  - button "Unclassified"
+  - text: From
+  - textbox "From"
+  - text: To
+  - textbox "To"
+  - text: Min ₹
+  - spinbutton "Min ₹"
+  - text: Max ₹
+  - spinbutton "Max ₹"
+  - table:
+    - rowgroup:
+      - row "Date Merchant / narration Where it went UPI Amount":
+        - columnheader "Date"
+        - columnheader "Merchant / narration"
+        - columnheader "Where it went"
+        - columnheader "UPI"
+        - columnheader "Amount"
+    - rowgroup:
+      - row "24 Oct 1 txn":
+        - cell "24 Oct 1 txn":
+          - strong: 24 Oct
+          - text: 1 txn
+      - row "24 Oct I Indian Oil Split Petrol (sample) Choose app Unlabeled — −₹560.00 Delete":
+        - cell "24 Oct"
+        - cell "I Indian Oil Split Petrol (sample)":
+          - text: I Indian Oil
+          - button "Split"
+          - text: Petrol (sample)
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "—"
+        - cell "−₹560.00 Delete":
+          - text: −₹560.00
+          - button "Delete"
+      - row "23 Oct 1 txn":
+        - cell "23 Oct 1 txn":
+          - strong: 23 Oct
+          - text: 1 txn
+      - row "23 Oct A Amazon Amazon refund (sample) S Shopping Shopping amazon@apl +₹299.00 Delete":
+        - cell "23 Oct"
+        - cell "A Amazon Amazon refund (sample)"
+        - cell "S Shopping Shopping":
+          - button "S Shopping Shopping":
+            - text: S
+            - strong: Shopping
+            - emphasis: Shopping
+        - cell "amazon@apl"
+        - cell "+₹299.00 Delete":
+          - text: +₹299.00
+          - button "Delete"
+      - row "21 Oct 1 txn":
+        - cell "21 Oct 1 txn":
+          - strong: 21 Oct
+          - text: 1 txn
+      - row "21 Oct D Dinner with friends Split Dinner (sample) Choose app Unlabeled — −₹1,200.00 Delete":
+        - cell "21 Oct"
+        - cell "D Dinner with friends Split Dinner (sample)":
+          - text: D Dinner with friends
+          - button "Split"
+          - text: Dinner (sample)
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "—"
+        - cell "−₹1,200.00 Delete":
+          - text: −₹1,200.00
+          - button "Delete"
+      - row "19 Oct 1 txn":
+        - cell "19 Oct 1 txn":
+          - strong: 19 Oct
+          - text: 1 txn
+      - row "19 Oct S Salon Split Haircut (sample) Choose app Unlabeled — −₹600.00 Delete":
+        - cell "19 Oct"
+        - cell "S Salon Split Haircut (sample)":
+          - text: S Salon
+          - button "Split"
+          - text: Haircut (sample)
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "—"
+        - cell "−₹600.00 Delete":
+          - text: −₹600.00
+          - button "Delete"
+      - row "18 Oct 1 txn":
+        - cell "18 Oct 1 txn":
+          - strong: 18 Oct
+          - text: 1 txn
+      - row "18 Oct A Amazon Split Amazon order (sample) S Shopping Shopping amazon@apl −₹2,100.00 Delete":
+        - cell "18 Oct"
+        - cell "A Amazon Split Amazon order (sample)":
+          - text: A Amazon
+          - button "Split"
+          - text: Amazon order (sample)
+        - cell "S Shopping Shopping":
+          - button "S Shopping Shopping":
+            - text: S
+            - strong: Shopping
+            - emphasis: Shopping
+        - cell "amazon@apl"
+        - cell "−₹2,100.00 Delete":
+          - text: −₹2,100.00
+          - button "Delete"
+      - row "16 Oct 1 txn":
+        - cell "16 Oct 1 txn":
+          - strong: 16 Oct
+          - text: 1 txn
+      - row "16 Oct S Swiggy Split Swiggy order (sample) F Food Food swiggy@icici −₹450.00 Delete":
+        - cell "16 Oct"
+        - cell "S Swiggy Split Swiggy order (sample)":
+          - text: S Swiggy
+          - button "Split"
+          - text: Swiggy order (sample)
+        - cell "F Food Food":
+          - button "F Food Food":
+            - text: F
+            - strong: Food
+            - emphasis: Food
+        - cell "swiggy@icici"
+        - cell "−₹450.00 Delete":
+          - text: −₹450.00
+          - button "Delete"
+      - row "15 Oct 1 txn":
+        - cell "15 Oct 1 txn":
+          - strong: 15 Oct
+          - text: 1 txn
+      - row "15 Oct B BigBasket Split BigBasket groceries (sample) Choose app Unlabeled bigbasket@icici −₹899.00 Delete":
+        - cell "15 Oct"
+        - cell "B BigBasket Split BigBasket groceries (sample)":
+          - text: B BigBasket
+          - button "Split"
+          - text: BigBasket groceries (sample)
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "bigbasket@icici"
+        - cell "−₹899.00 Delete":
+          - text: −₹899.00
+          - button "Delete"
+      - row "13 Oct 1 txn":
+        - cell "13 Oct 1 txn":
+          - strong: 13 Oct
+          - text: 1 txn
+      - row "13 Oct P PVR Split Movie night (sample) O Outing Outing pvr@icici −₹1,500.00 Delete":
+        - cell "13 Oct"
+        - cell "P PVR Split Movie night (sample)":
+          - text: P PVR
+          - button "Split"
+          - text: Movie night (sample)
+        - cell "O Outing Outing":
+          - button "O Outing Outing":
+            - text: O
+            - strong: Outing
+            - emphasis: Outing
+        - cell "pvr@icici"
+        - cell "−₹1,500.00 Delete":
+          - text: −₹1,500.00
+          - button "Delete"
+      - row "12 Oct 1 txn":
+        - cell "12 Oct 1 txn":
+          - strong: 12 Oct
+          - text: 1 txn
+      - row "12 Oct R Rapido Split Rapido ride (sample) Rides Travel rapido@axl −₹340.00 Delete":
+        - cell "12 Oct"
+        - cell "R Rapido Split Rapido ride (sample)":
+          - text: R Rapido
+          - button "Split"
+          - text: Rapido ride (sample)
+        - cell "Rides Travel":
+          - button "Rides Travel":
+            - strong: Rides
+            - emphasis: Travel
+        - cell "rapido@axl"
+        - cell "−₹340.00 Delete":
+          - text: −₹340.00
+          - button "Delete"
+      - row "11 Oct 1 txn":
+        - cell "11 Oct 1 txn":
+          - strong: 11 Oct
+          - text: 1 txn
+      - row "11 Oct A Apollo Pharmacy Split Medicines (sample) Choose app Unlabeled apollopharmacy@icici −₹1,850.00 Delete":
+        - cell "11 Oct"
+        - cell "A Apollo Pharmacy Split Medicines (sample)":
+          - text: A Apollo Pharmacy
+          - button "Split"
+          - text: Medicines (sample)
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "apollopharmacy@icici"
+        - cell "−₹1,850.00 Delete":
+          - text: −₹1,850.00
+          - button "Delete"
+      - row "10 Oct 1 txn":
+        - cell "10 Oct 1 txn":
+          - strong: 10 Oct
+          - text: 1 txn
+      - row "10 Oct M Mom Split Sent to Mom (sample) M Mom Family — −₹3,000.00 Delete":
+        - cell "10 Oct"
+        - cell "M Mom Split Sent to Mom (sample)":
+          - text: M Mom
+          - button "Split"
+          - text: Sent to Mom (sample)
+        - cell "M Mom Family":
+          - button "M Mom Family":
+            - text: M
+            - strong: Mom
+            - emphasis: Family
+        - cell "—"
+        - cell "−₹3,000.00 Delete":
+          - text: −₹3,000.00
+          - button "Delete"
+      - row "9 Oct 1 txn":
+        - cell "9 Oct 1 txn":
+          - strong: 9 Oct
+          - text: 1 txn
+      - row "9 Oct C Chai point Split Tea and snacks (sample) F Food Food — −₹120.00 Delete":
+        - cell "9 Oct"
+        - cell "C Chai point Split Tea and snacks (sample)":
+          - text: C Chai point
+          - button "Split"
+          - text: Tea and snacks (sample)
+        - cell "F Food Food":
+          - button "F Food Food":
+            - text: F
+            - strong: Food
+            - emphasis: Food
+        - cell "—"
+        - cell "−₹120.00 Delete":
+          - text: −₹120.00
+          - button "Delete"
+      - row "8 Oct 1 txn":
+        - cell "8 Oct 1 txn":
+          - strong: 8 Oct
+          - text: 1 txn
+      - row "8 Oct M Myntra Split Myntra order (sample) S Shopping Shopping myntra@ybl −₹2,499.00 Delete":
+        - cell "8 Oct"
+        - cell "M Myntra Split Myntra order (sample)":
+          - text: M Myntra
+          - button "Split"
+          - text: Myntra order (sample)
+        - cell "S Shopping Shopping":
+          - button "S Shopping Shopping":
+            - text: S
+            - strong: Shopping
+            - emphasis: Shopping
+        - cell "myntra@ybl"
+        - cell "−₹2,499.00 Delete":
+          - text: −₹2,499.00
+          - button "Delete"
+      - row "6 Oct 1 txn":
+        - cell "6 Oct 1 txn":
+          - strong: 6 Oct
+          - text: 1 txn
+      - row "6 Oct Z Zomato Split Zomato dinner (sample) F Food Food zomato@hdfcbank −₹640.00 Delete":
+        - cell "6 Oct"
+        - cell "Z Zomato Split Zomato dinner (sample)":
+          - text: Z Zomato
+          - button "Split"
+          - text: Zomato dinner (sample)
+        - cell "F Food Food":
+          - button "F Food Food":
+            - text: F
+            - strong: Food
+            - emphasis: Food
+        - cell "zomato@hdfcbank"
+        - cell "−₹640.00 Delete":
+          - text: −₹640.00
+          - button "Delete"
+      - row "5 Oct 1 txn":
+        - cell "5 Oct 1 txn":
+          - strong: 5 Oct
+          - text: 1 txn
+      - row "5 Oct U Uber Split Uber ride (sample) Rides Travel uber@axisbank −₹215.00 Delete":
+        - cell "5 Oct"
+        - cell "U Uber Split Uber ride (sample)":
+          - text: U Uber
+          - button "Split"
+          - text: Uber ride (sample)
+        - cell "Rides Travel":
+          - button "Rides Travel":
+            - strong: Rides
+            - emphasis: Travel
+        - cell "uber@axisbank"
+        - cell "−₹215.00 Delete":
+          - text: −₹215.00
+          - button "Delete"
+      - row "4 Oct 1 txn":
+        - cell "4 Oct 1 txn":
+          - strong: 4 Oct
+          - text: 1 txn
+      - row "4 Oct Z Zerodha Split Monthly SIP (sample) I Investments Investments zerodha@hdfcbank −₹5,000.00 Delete":
+        - cell "4 Oct"
+        - cell "Z Zerodha Split Monthly SIP (sample)":
+          - text: Z Zerodha
+          - button "Split"
+          - text: Monthly SIP (sample)
+        - cell "I Investments Investments":
+          - button "I Investments Investments":
+            - text: I
+            - strong: Investments
+            - emphasis: Investments
+        - cell "zerodha@hdfcbank"
+        - cell "−₹5,000.00 Delete":
+          - text: −₹5,000.00
+          - button "Delete"
+      - row "3 Oct 1 txn":
+        - cell "3 Oct 1 txn":
+          - strong: 3 Oct
+          - text: 1 txn
+      - row "3 Oct B Blinkit Split Blinkit groceries (sample) Choose app Unlabeled blinkit@hdfcbank −₹1,240.00 Delete":
+        - cell "3 Oct"
+        - cell "B Blinkit Split Blinkit groceries (sample)":
+          - text: B Blinkit
+          - button "Split"
+          - text: Blinkit groceries (sample)
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "blinkit@hdfcbank"
+        - cell "−₹1,240.00 Delete":
+          - text: −₹1,240.00
+          - button "Delete"
+      - row "2 Oct 1 txn":
+        - cell "2 Oct 1 txn":
+          - strong: 2 Oct
+          - text: 1 txn
+      - row "2 Oct S Swiggy Split Swiggy order (sample) F Food Food swiggy@icici −₹389.00 Delete":
+        - cell "2 Oct"
+        - cell "S Swiggy Split Swiggy order (sample)":
+          - text: S Swiggy
+          - button "Split"
+          - text: Swiggy order (sample)
+        - cell "F Food Food":
+          - button "F Food Food":
+            - text: F
+            - strong: Food
+            - emphasis: Food
+        - cell "swiggy@icici"
+        - cell "−₹389.00 Delete":
+          - text: −₹389.00
+          - button "Delete"
+      - row "1 Oct 2 txns":
+        - cell "1 Oct 2 txns":
+          - strong: 1 Oct
+          - text: 2 txns
+      - row "1 Oct S Salary Salary credit (sample) Choose app Unlabeled — +₹52,000.00 Delete":
+        - cell "1 Oct"
+        - cell "S Salary Salary credit (sample)"
+        - cell "Choose app Unlabeled":
+          - button "Choose app Unlabeled":
+            - strong: Choose app
+            - emphasis: Unlabeled
+        - cell "—"
+        - cell "+₹52,000.00 Delete":
+          - text: +₹52,000.00
+          - button "Delete"
+      - row "1 Oct R Rent Split Monthly rent (sample) Rent Rent — −₹18,000.00 Delete":
+        - cell "1 Oct"
+        - cell "R Rent Split Monthly rent (sample)":
+          - text: R Rent
+          - button "Split"
+          - text: Monthly rent (sample)
+        - cell "Rent Rent":
+          - button "Rent Rent":
+            - strong: Rent
+            - emphasis: Rent
+        - cell "—"
+        - cell "−₹18,000.00 Delete":
+          - text: −₹18,000.00
+          - button "Delete"

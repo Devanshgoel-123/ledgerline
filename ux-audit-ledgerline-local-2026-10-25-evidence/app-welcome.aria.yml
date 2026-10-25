@@ -1,0 +1,21 @@
+- alert
+- banner:
+  - heading "Welcome to Ledgerline" [level=1]
+  - paragraph: See where your money goes each month. Everything you add stays on this computer. Start with your own statement, or look around with sample data first.
+- button "Import your transactions Upload an HDFC or ICICI statement PDF, or connect bank alert emails. Takes about a minute. Import a statement":
+  - strong: Import your transactions
+  - text: Upload an HDFC or ICICI statement PDF, or connect bank alert emails. Takes about a minute. Import a statement
+- button "Explore with sample data Adds a month of made-up transactions, clearly labelled. Remove them in one click whenever you are ready. Add sample data":
+  - strong: Explore with sample data
+  - text: Adds a month of made-up transactions, clearly labelled. Remove them in one click whenever you are ready. Add sample data
+- link "See how your data stays private What Ledgerline keeps on this computer, what it reads, and how to erase it. Read the privacy notes":
+  - /url: /privacy
+  - strong: See how your data stays private
+  - text: What Ledgerline keeps on this computer, what it reads, and how to erase it. Read the privacy notes
+- heading "What Ledgerline does" [level=2]
+- list:
+  - listitem: Reads payments from HDFC and ICICI statement PDFs, and from bank alert emails if you connect your mailbox
+  - listitem: Sorts spending into categories like food, travel, and shopping
+  - listitem: Splits bills with friends so only your share counts
+  - listitem: Flags days that go over a daily limit you set
+- paragraph: "Free and open source. No account and no tracking: your data stays in a database on this computer, and you can erase it any time from Settings."

@@ -1,0 +1,27 @@
+- navigation "Site":
+  - link "Ledgerline":
+    - /url: /
+  - link "Install":
+    - /url: /install
+  - link "Privacy":
+    - /url: /privacy
+  - link "GitHub":
+    - /url: https://github.com/Devanshgoel-123/ledgerline
+  - button "Switch to dark mode"
+- main:
+  - heading "This page opens on your own computer" [level=1]
+  - paragraph: "You are on the Ledgerline website. Your ledger is not here: Ledgerline runs on your computer and keeps your data there. Install it, then open this page at http://localhost:3000."
+  - link "Install Ledgerline":
+    - /url: /install
+  - link "What is Ledgerline?":
+    - /url: /
+- contentinfo:
+  - paragraph: Ledgerline is free and open source under the MIT licence.
+  - navigation "Footer":
+    - link "Install":
+      - /url: /install
+    - link "Privacy":
+      - /url: /privacy
+    - link "Source code":
+      - /url: https://github.com/Devanshgoel-123/ledgerline
+- alert

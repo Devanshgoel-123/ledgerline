@@ -1,0 +1,188 @@
+- alert
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - link "Overview This month at a glance":
+      - /url: /overview
+      - strong: Overview
+      - text: This month at a glance
+    - link "Lifestyle Where life costs go":
+      - /url: /lifestyle
+      - strong: Lifestyle
+      - text: Where life costs go
+    - link "Apps Spending by app and shop":
+      - /url: /apps
+      - strong: Apps
+      - text: Spending by app and shop
+    - link "People Money sent to people":
+      - /url: /people
+      - strong: People
+      - text: Money sent to people
+    - paragraph: Data
+    - link "Transactions Every payment, searchable":
+      - /url: /transactions
+      - strong: Transactions
+      - text: Every payment, searchable
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - status:
+    - paragraph:
+      - strong: You are looking at sample data.
+      - text: These 20 transactions are made up so you can explore. Your real imports are kept separate.
+    - button "Remove sample data"
+  - paragraph: Lifestyle
+  - heading "October 2026" [level=2]
+  - paragraph: What kind of life is your spending creating?
+  - region "Category breakdown":
+    - heading "Category breakdown" [level=2]
+    - paragraph: Adds up to ₹35,303 spent, rent included, less refunds
+    - list:
+      - listitem:
+        - 'button "Rent: ₹18,000, 51% of total, Largest share"': Rent ₹18,000 51% , Largest share
+      - listitem:
+        - 'button "Other: ₹6,349, 18% of total, Smaller share"': Other ₹6,349 18%
+      - listitem:
+        - 'button "Shopping: ₹4,300, 12% of total, Smaller share"': Shopping ₹4,300 12%
+      - listitem:
+        - 'button "Family: ₹3,000, 8% of total, Smaller share"': Family ₹3,000 8%
+      - listitem:
+        - 'button "Food: ₹1,599, 5% of total, Smaller share"': Food ₹1,599 5%
+      - listitem:
+        - 'button "Outing: ₹1,500, 4% of total, Smaller share"': Outing ₹1,500 4%
+      - listitem:
+        - 'button "Travel: ₹555, 2% of total, Smaller share"': Travel ₹555 2%
+    - table "Category breakdown data":
+      - rowgroup:
+        - row "Item Amount Share of total":
+          - columnheader "Item"
+          - columnheader "Amount"
+          - columnheader "Share of total"
+      - rowgroup:
+        - row "Rent ₹18,000 51%":
+          - cell "Rent"
+          - cell "₹18,000"
+          - cell "51%"
+        - row "Other ₹6,349 18%":
+          - cell "Other"
+          - cell "₹6,349"
+          - cell "18%"
+        - row "Shopping ₹4,300 12%":
+          - cell "Shopping"
+          - cell "₹4,300"
+          - cell "12%"
+        - row "Family ₹3,000 8%":
+          - cell "Family"
+          - cell "₹3,000"
+          - cell "8%"
+        - row "Food ₹1,599 5%":
+          - cell "Food"
+          - cell "₹1,599"
+          - cell "5%"
+        - row "Outing ₹1,500 4%":
+          - cell "Outing"
+          - cell "₹1,500"
+          - cell "4%"
+        - row "Travel ₹555 2%":
+          - cell "Travel"
+          - cell "₹555"
+          - cell "2%"
+  - region "Monthly spending trend":
+    - heading "Spending trend" [level=2]
+    - paragraph: 4607.1% higher vs previous month
+    - group "Monthly spending trend with rises marked in yellow and red":
+      - text: avg
+      - 'button "September 2026: ₹750, Steady or lower"'
+      - 'button "October 2026: ₹35,303, Sharp rise"'
+    - text: Steady or lower Tallest
+    - list:
+      - listitem: September 2026 ₹750
+      - listitem: October 2026 ₹35,303
+  - region "Top merchants":
+    - heading "Top merchants" [level=2]
+    - paragraph: Where lifestyle spend concentrates
+    - list:
+      - listitem:
+        - 'button "Myntra: ₹2,499, 7% of total, Smaller share"': Myntra Shopping · 1 transaction · Last paid 8 Oct ₹2,499 7%
+      - listitem:
+        - 'button "Apollo Pharmacy: ₹1,850, 5% of total, Smaller share"': Apollo Pharmacy Other · 1 transaction · Last paid 11 Oct ₹1,850 5%
+      - listitem:
+        - 'button "Amazon: ₹1,801, 5% of total, Smaller share"': Amazon Shopping · 1 transaction · Last paid 23 Oct ₹1,801 5%
+      - listitem:
+        - 'button "PVR: ₹1,500, 4% of total, Smaller share"': PVR Outing · 1 transaction · Last paid 13 Oct ₹1,500 4%
+      - listitem:
+        - 'button "Blinkit: ₹1,240, 4% of total, Smaller share"': Blinkit Other · 1 transaction · Last paid 3 Oct ₹1,240 4%
+      - listitem:
+        - 'button "Dinner with friends: ₹1,200, 3% of total, Smaller share"': Dinner with friends Other · 1 transaction · Last paid 21 Oct ₹1,200 3%
+      - listitem:
+        - 'button "BigBasket: ₹899, 3% of total, Smaller share"': BigBasket Other · 1 transaction · Last paid 15 Oct ₹899 3%
+      - listitem:
+        - 'button "Swiggy: ₹839, 2% of total, Smaller share"': Swiggy Food · 2 transactions · Last paid 16 Oct ₹839 2%
+    - table "Top merchants data":
+      - rowgroup:
+        - row "Item Amount Share of total":
+          - columnheader "Item"
+          - columnheader "Amount"
+          - columnheader "Share of total"
+      - rowgroup:
+        - row "Myntra ₹2,499 7%":
+          - cell "Myntra"
+          - cell "₹2,499"
+          - cell "7%"
+        - row "Apollo Pharmacy ₹1,850 5%":
+          - cell "Apollo Pharmacy"
+          - cell "₹1,850"
+          - cell "5%"
+        - row "Amazon ₹1,801 5%":
+          - cell "Amazon"
+          - cell "₹1,801"
+          - cell "5%"
+        - row "PVR ₹1,500 4%":
+          - cell "PVR"
+          - cell "₹1,500"
+          - cell "4%"
+        - row "Blinkit ₹1,240 4%":
+          - cell "Blinkit"
+          - cell "₹1,240"
+          - cell "4%"
+        - row "Dinner with friends ₹1,200 3%":
+          - cell "Dinner with friends"
+          - cell "₹1,200"
+          - cell "3%"
+        - row "BigBasket ₹899 3%":
+          - cell "BigBasket"
+          - cell "₹899"
+          - cell "3%"
+        - row "Swiggy ₹839 2%":
+          - cell "Swiggy"
+          - cell "₹839"
+          - cell "2%"
+  - heading "Spending rhythm" [level=2]
+  - paragraph: Patterns from your daily totals
+  - list:
+    - listitem: "Most active spending days: Sat + Sun"
+    - listitem: Average weekend spend is 117% higher than weekdays (₹1,750 vs ₹805/day)
+    - listitem:
+      - text: 17 payments this period ·
+      - link "View all":
+        - /url: /transactions

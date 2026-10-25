@@ -1,0 +1,28 @@
+- main:
+  - navigation "Site":
+    - link "Ledgerline":
+      - /url: /
+    - link "Install":
+      - /url: /install
+    - link "Privacy":
+      - /url: /privacy
+    - link "GitHub":
+      - /url: https://github.com/Devanshgoel-123/ledgerline
+    - button "Switch to dark mode"
+  - paragraph: Lost in the ledger
+  - heading "Page not found" [level=1]
+  - heading "This page wandered off." [level=2]
+  - paragraph: There is no page at this address. Go back to the start, or open the install guide.
+  - link "Go to the start":
+    - /url: /
+  - link "Install guide":
+    - /url: /install
+  - paragraph: Ledgerline is free and open source under the MIT licence.
+  - navigation "Footer":
+    - link "Install":
+      - /url: /install
+    - link "Privacy":
+      - /url: /privacy
+    - link "Source code":
+      - /url: https://github.com/Devanshgoel-123/ledgerline
+- alert
