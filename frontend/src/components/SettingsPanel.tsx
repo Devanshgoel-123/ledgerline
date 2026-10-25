@@ -406,7 +406,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
               >
                 Disconnect
               </button>
-            ) : telegram?.verify?.codeSent ? null : (
+            ) : telegram?.verify?.codeSent || telegram?.configured === false ? null : (
               <button
                 type="button"
                 className="ghost"

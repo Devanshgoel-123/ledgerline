@@ -2,6 +2,7 @@ import { ImapFlow, type MessageStructureObject, type SearchObject } from "imapfl
 import { decryptSecret } from "../crypto/secrets.js";
 import type { MailConnectionRow } from "../db/types.js";
 import { AppError } from "../errors/AppError.js";
+import { logger } from "../logger/index.js";
 import {
   addIsoDays,
   clampPoolingAfter,
@@ -57,8 +58,13 @@ const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 type ImapAuth = { host: string; port: number; user: string; pass: string };
 
-function newClient(auth: ImapAuth): ImapFlow {
-  return new ImapFlow({
+/**
+ * An IMAP client. Its socket can fail long after the call that used it has
+ * returned (a timeout a minute after a refused login), and an unheard "error"
+ * event would crash the API, so every client gets a listener.
+ */
+export function newClient(auth: ImapAuth): ImapFlow {
+  const client = new ImapFlow({
     host: auth.host,
     port: auth.port,
     secure: auth.port === 993,
@@ -70,6 +76,10 @@ function newClient(auth: ImapAuth): ImapFlow {
     socketTimeout: SOCKET_TIMEOUT_MS,
     clientInfo: { name: "Ledgerline" },
   });
+  client.on("error", (error: unknown) => {
+    logger.warn({ err: error, host: auth.host }, "mail server connection error");
+  });
+  return client;
 }
 
 /** Plain-English reason an IMAP login failed, for the connect form. */
@@ -114,6 +124,7 @@ async function checkImapLogin(auth: ImapAuth): Promise<void> {
   try {
     await client.connect();
   } catch (error) {
+    client.close();
     throw AppError.badRequest(describeLoginError(error, auth.host));
   }
   await client.logout().catch(() => client.close());
@@ -344,6 +355,7 @@ const openImapMailbox: MailboxOpener = async (connection) => {
   try {
     await client.connect();
   } catch (error) {
+    client.close();
     throw new Error(describeLoginError(error, connection.host));
   }
   try {

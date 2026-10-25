@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { after, before, describe, it } from "node:test";
 import { createApp } from "../../src/app.js";
-import { setMailServerForTests } from "../../src/bankMail/mailbox.js";
+import { newClient, setMailServerForTests } from "../../src/bankMail/mailbox.js";
 import { decryptSecret } from "../../src/crypto/secrets.js";
 import { resetStoreForTests } from "../../src/db/index.js";
 import { MemoryStore } from "../../src/db/memory.js";
@@ -189,5 +189,15 @@ describe("bank mail over IMAP", () => {
     // Reconnecting the same mailbox keeps where the last scan stopped.
     await call<Status>("POST", "/api/mail/connect", { email: "me@gmail.com", provider: "gmail", password: "new-pass" });
     assert.equal((await store.getMailConnection(userId))?.lastScannedOn, "2026-09-30");
+  });
+});
+
+describe("IMAP client errors", () => {
+  it("a socket error after a refused login does not crash the API", () => {
+    // A wrong app password used to leave a client whose socket timed out a minute
+    // later with no "error" listener: an uncaught exception that stopped the API.
+    const client = newClient({ host: "127.0.0.1", port: 1, user: "a@example.com", pass: "x" });
+    assert.doesNotThrow(() => client.emit("error", new Error("Socket timeout")));
+    client.close();
   });
 });

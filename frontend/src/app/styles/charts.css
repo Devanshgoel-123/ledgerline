@@ -257,6 +257,12 @@
   outline: none;
 }
 
+.lollipop:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 70%, transparent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .lollipop-mark {
   width: 72%;
   max-width: 34px;
@@ -968,4 +974,9 @@
     transform: none;
     transition: none;
   }
+}
+
+.chart-scale-note {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
 }

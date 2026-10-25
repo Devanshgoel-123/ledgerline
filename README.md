@@ -73,19 +73,19 @@ starts.
 
 ## Using it
 
-1. Open <http://localhost:3000>. The welcome screen offers three ways in: import
-   a statement, look around with sample data, or connect your bank mail.
+1. Open <http://localhost:3000>. The welcome screen offers three things: import
+   a statement, look around with sample data, or read how your data stays private.
 2. **Statement PDFs.** Go to **Import** and choose an HDFC or ICICI statement.
    Password-protected files are fine; for HDFC the password is usually your
    customer ID. The password is used once and never saved. Each line is checked
    against the running balance before it's added, and uploading the same file
    twice adds nothing.
-3. **Bank alert emails (optional).** Under **Import → Bank mail**, enter your
+3. **Bank alert emails (optional).** Under **Import → Bank alert emails**, enter your
    email address and an *app password* from your mail provider. Ledgerline
    connects over IMAP, reads only mail from your bank's addresses, and never
    changes your mailbox. The app password is encrypted with the key in your
    `.env` and stored only in your local database. Ledgerline rescans every 6
-   hours, or when you press **Scan now**.
+   hours, or when you press **Scan bank mail**.
 4. **Things your bank can't see.** UPI Lite payments, cash and other wallets
    don't appear in statements or alerts. Add them under **Transactions → Add
    expense**.

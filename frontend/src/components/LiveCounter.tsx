@@ -28,6 +28,16 @@ export function LiveCounter({
     const from = continueFromPrevious ? fromRef.current : 0;
     const to = value;
 
+    // People who ask for less motion get the real number at once.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      frame = requestAnimationFrame(() => {
+        displayRef.current = to;
+        fromRef.current = to;
+        setDisplay(to);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
       // Smooth ease-out cubic for money / tally add-ups

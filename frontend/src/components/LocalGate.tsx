@@ -1,6 +1,7 @@
 "use client";
 
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { NETWORK_ERROR_MESSAGE } from "@/lib/api/http";
 import { useProfile } from "@/lib/profile";
 
 /** Shows the app once the Ledgerline API on this computer answers; otherwise says how to start it. */
@@ -14,7 +15,6 @@ export function LocalGate({ children }: { children: React.ReactNode }) {
     <main className="login-screen">
       <div className="login-screen-bg" aria-hidden />
       <section className="login-loading-card api-down" aria-labelledby="api-down-title">
-        <p className="brand compact">Ledgerline</p>
         <h1 id="api-down-title" className="ui-header">Ledgerline is not running</h1>
         <p className="meta">
           This page talks to the Ledgerline service on your own computer, and it did not answer.
@@ -27,7 +27,8 @@ export function LocalGate({ children }: { children: React.ReactNode }) {
           Already running? <code>./ledgerline status</code> shows what is wrong, and{" "}
           <code>./ledgerline logs</code> shows the details.
         </p>
-        {error ? <p className="meta api-down-detail">{error}</p> : null}
+        {/* The usual "could not reach" error repeats the steps above; show only something new. */}
+        {error && error !== NETWORK_ERROR_MESSAGE ? <p className="meta api-down-detail">{error}</p> : null}
         <button type="button" className="cta" onClick={retry}>
           Try again
         </button>

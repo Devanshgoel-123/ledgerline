@@ -201,7 +201,7 @@ export function BankPoolingPanel({
   return (
     <SpotlightCard className="panel">
       <header className="panel-head">
-        <h2 className="ui-header">Bank mail</h2>
+        <h2 className="ui-header">Bank alert emails (optional)</h2>
         <p className="meta">
           Reads debit and credit alerts from the banks you pick. Amount is stored.{" "}
           {mail?.lastScannedOn

@@ -28,7 +28,7 @@ export type TelegramStatus = {
 
 export function telegramConnectHint(status: TelegramStatus): string {
   if (!status.configured) {
-    return "Telegram is not enabled on this server yet.";
+    return "Telegram is off. To use it, create a bot with @BotFather, add TELEGRAM_BOT_TOKEN to the .env file in your Ledgerline folder, then run ./ledgerline start. It is the one feature that sends data off this computer, to Telegram.";
   }
   if (status.linked && status.connection === "bot_offline") {
     return `Linked, but the bot is not receiving messages on this server, so it will not reply. ${status.bot?.problem ?? ""}`.trim();

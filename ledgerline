@@ -84,7 +84,7 @@ env_get() {
 }
 
 env_set_if_missing() {
-  if [ -z "$(env_get "$1")" ]; then
+  if [ -n "$2" ] && [ -z "$(env_get "$1")" ]; then
     printf '%s=%s\n' "$1" "$2" >>"$ENV_FILE"
   fi
 }
@@ -253,7 +253,8 @@ cmd_restore() {
 
 cmd_update() {
   find_compose
-  if [ -n "$(compose ps -q postgres 2>/dev/null)" ]; then
+  # Back up whenever there is data, running or not; backup starts Postgres itself.
+  if docker volume inspect "${PROJECT}_ledgerline_pg" >/dev/null 2>&1; then
     cmd_backup
   fi
   step "Getting the latest Ledgerline"

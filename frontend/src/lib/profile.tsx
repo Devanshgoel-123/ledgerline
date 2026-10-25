@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createApiClient } from "@/lib/api/client";
+import { isSiteMode } from "@/lib/config";
 import type { LocalProfile } from "@/lib/api/types";
 
 interface ProfileContextValue {
@@ -25,6 +26,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    // The public website has no API and must never reach into a visitor's computer.
+    if (isSiteMode) return;
     let cancelled = false;
     void createApiClient()
       .fetchMe()

@@ -53,3 +53,27 @@ describe("the start page", () => {
     expect(screen.getByRole("link", { name: "Install Ledgerline" })).toHaveAttribute("href", "/install");
   });
 });
+
+describe("the profile on the public site", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("never calls an API, so visitors' computers are never contacted", async () => {
+    vi.stubEnv("NEXT_PUBLIC_LEDGERLINE_MODE", "site");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+    const { ProfileProvider } = await import("@/lib/profile");
+    render(
+      <ProfileProvider>
+        <p>landing</p>
+      </ProfileProvider>,
+    );
+    await screen.findByText("landing");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
