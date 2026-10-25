@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { after, before, describe, it } from "node:test";
 import { createApp } from "../../src/app.js";
-import { signToken } from "../../src/auth/service.js";
+import { localHeaders } from "../helpers/local.js";
 import { resetStoreForTests } from "../../src/db/index.js";
 import { MemoryStore } from "../../src/db/memory.js";
 
@@ -22,10 +22,9 @@ describe("uploading a password-protected statement", () => {
     resetStoreForTests(store);
     const user = await store.createUser({
       email: "pdf@example.com",
-      passwordHash: "x",
       displayName: null,
     });
-    token = signToken({ id: user.id, email: user.email });
+    token = user.id;
     server = createApp().listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
@@ -38,7 +37,7 @@ describe("uploading a password-protected statement", () => {
     form.append("password", password);
     const res = await fetch(`${base}/api/parse`, {
       method: "POST",
-      headers: { authorization: `Bearer ${token}` },
+      headers: localHeaders(token),
       body: form,
     });
     const body = (await res.json()) as { error?: { code?: string; message?: string } };

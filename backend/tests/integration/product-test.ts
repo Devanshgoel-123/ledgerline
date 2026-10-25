@@ -1,5 +1,5 @@
 /**
- * Productization smoke tests: auth tenancy, rules, dedup, providers, crypto.
+ * Productization smoke tests: rules, dedup, providers, crypto.
  * Uses in-memory store (DATABASE_URL=memory).
  */
 
@@ -9,7 +9,6 @@ async function main() {
   process.env.ENCRYPTION_KEY =
     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-  const { loginUser, registerUser } = await import("../../src/auth/service.js");
   const {
     decryptSecret,
     encryptSecret,
@@ -29,8 +28,6 @@ async function main() {
 
   const store = new MemoryStore();
   await store.migrate();
-  await store.seedInvite("test-invite", 10);
-  await store.seedInvite("iso-invite", 5);
   resetStoreForTests(store);
 
   const secret = encryptSecret("refresh-token-xyz");
@@ -38,33 +35,7 @@ async function main() {
     throw new Error("encrypt/decrypt failed");
   }
 
-  const registered = await registerUser({
-    email: "beta@example.com",
-    password: "password123",
-    inviteCode: "test-invite",
-    displayName: "Beta",
-  });
-  if (!registered.token) throw new Error("missing token");
-  const loggedIn = await loginUser({
-    email: "beta@example.com",
-    password: "password123",
-  });
-  if (loggedIn.user.id !== registered.user.id) {
-    throw new Error("login user mismatch");
-  }
-
-  try {
-    await registerUser({
-      email: "other@example.com",
-      password: "password123",
-      inviteCode: "nope",
-    });
-    throw new Error("bad invite should fail");
-  } catch (error) {
-    if (!(error instanceof Error) || !/invite/i.test(error.message)) {
-      throw error;
-    }
-  }
+  const registered = { user: await store.createUser({ email: "beta@example.com", displayName: "Beta" }) };
 
   const providers = await store.listProviders(registered.user.id);
   const categories = await store.listCategories(registered.user.id);
@@ -186,15 +157,9 @@ async function main() {
     throw new Error(`Dedup failed: ${JSON.stringify({ first, second })}`);
   }
 
-  const user2 = await registerUser({
-    email: "two@example.com",
-    password: "password123",
-    inviteCode: "iso-invite",
-  });
   const user1Tx = await store.listTransactions(registered.user.id);
-  const user2Tx = await store.listTransactions(user2.user.id);
-  if (user1Tx.length !== 1 || user2Tx.length !== 0) {
-    throw new Error("tenancy isolation failed");
+  if (user1Tx.length !== 1) {
+    throw new Error("expected one transaction after dedup");
   }
 
   const sample = `

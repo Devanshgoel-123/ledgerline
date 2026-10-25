@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { AuthProvider } from "@/lib/auth";
+import { ProfileProvider } from "@/lib/profile";
 import { ThemeProvider } from "@/lib/theme";
 import "./globals.css";
 
@@ -63,7 +63,7 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <ProfileProvider>{children}</ProfileProvider>
         </ThemeProvider>
       </body>
     </html>

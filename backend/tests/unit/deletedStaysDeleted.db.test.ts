@@ -5,6 +5,7 @@ import { processAlertMessage } from "../../src/gmail/poolingService.js";
 import { unrecordedLines } from "../../src/statementMatch/match.js";
 import { hdfcStatement } from "../helpers/statementPdf.js";
 import { startTestApp } from "../helpers/testApp.js";
+import { localHeaders } from "../helpers/local.js";
 
 const row = (date: string, amount: number, key: string, extra: Partial<NewTransactionInput> = {}): NewTransactionInput => ({
   importId: null, accountId: null, date, time: null, description: `UPI-${key}`, amount, type: "debit",
@@ -50,7 +51,7 @@ describe("a deleted payment stays deleted", () => {
   const upload = async (token: string, pdf: Buffer) => {
     const form = new FormData();
     form.append("file", new Blob([pdf], { type: "application/pdf" }), "s.pdf");
-    const res = await fetch(`${app.base}/api/parse`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: form });
+    const res = await fetch(`${app.base}/api/parse`, { method: "POST", headers: localHeaders(token), body: form });
     return (await res.json()) as { report: { added: number; previouslyDeleted: number; alreadyRecorded: number } };
   };
 

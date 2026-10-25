@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DailyLimitForm, useSaveDailyLimit } from "@/components/DailyLimitForm";
-import { useAuth } from "@/lib/auth";
+import { useProfile } from "@/lib/profile";
 import { useApi } from "@/lib/useApi";
 import { useDashboard } from "@/lib/dashboard-context";
 import { pathForView } from "@/lib/dashboardViews";
@@ -52,7 +52,7 @@ function ruleMatchLabel(rule: Record<string, unknown>): string {
 export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
   const api = useApi();
   const { data } = useDashboard();
-  const { logout, destroyAccount, user, saveProfile } = useAuth();
+  const { eraseAllData, profile: user, saveProfile } = useProfile();
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [avatarBusy, setAvatarBusy] = useState(false);
   const saveLimit = useSaveDailyLimit();
@@ -158,7 +158,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
     <div className="settings-sections">
       <header>
         <p className="stat-kicker mb-2">Settings</p>
-        <h2 className="month-label">Limits and account</h2>
+        <h2 className="month-label">Limits and your data</h2>
       </header>
 
       {(message || error) && (
@@ -200,7 +200,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
           <div className="settings-row">
             <div>
               <h3 className="ui-header">{user?.displayName?.trim() || "Your name"}</h3>
-              <p className="meta">{avatarBusy ? "Saving photo…" : user?.email}</p>
+              <p className="meta">{avatarBusy ? "Saving photo…" : "Only stored on this computer"}</p>
             </div>
             <div className="settings-row-end">
               <button
@@ -586,8 +586,8 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
       ) : null}
 
       <section className="settings-section">
-        <h3 className="ui-header">Account</h3>
-        <p className="meta">Session and privacy controls.</p>
+        <h3 className="ui-header">Your data</h3>
+        <p className="meta">Everything below lives in the database on this computer.</p>
         <div className="settings-actions">
           <button
             type="button"
@@ -603,7 +603,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
             onClick={async () => {
               if (
                 !confirm(
-                  "Delete every imported transaction and mail record? Your account and Gmail stay. Download a copy first if you may want it later.",
+                  "Delete every imported transaction and mail record? Your settings and mailbox connection stay. Download a copy first if you may want it later.",
                 )
               ) {
                 return;
@@ -612,7 +612,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
                 setError(null);
                 const result = await api.clearImportedData();
                 setMessage(
-                  `Removed ${result.deleted.transactions} transactions from this account.`,
+                  `Removed ${result.deleted.transactions} transactions.`,
                 );
                 onChanged?.();
               } catch (err) {
@@ -624,18 +624,15 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
           >
             Clear imported data
           </button>
-          <button type="button" className="ghost" onClick={logout}>
-            Log out
-          </button>
           <Link href="/privacy" className="ghost">
-            Privacy policy
+            How your data stays private
           </Link>
           <button
             type="button"
             className="ghost"
             onClick={() => setShowDanger((v) => !v)}
           >
-            {showDanger ? "Hide delete options" : "Delete account…"}
+            {showDanger ? "Hide erase options" : "Erase everything…"}
           </button>
         </div>
         {showDanger ? (
@@ -648,25 +645,29 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
             }}
           >
             <p className="meta" style={{ color: "inherit", marginBottom: "0.65rem" }}>
-              This permanently deletes your account and financial data. It cannot be undone.
+              This erases every transaction, rule, mailbox connection and Telegram link that
+              Ledgerline keeps on this computer, and starts fresh. It cannot be undone.
               Download your transactions first if you want a copy.
             </p>
             <button
               type="button"
               className="ghost"
               onClick={async () => {
-                if (!confirm("Delete your account and all financial data? This cannot be undone.")) return;
+                if (!confirm("Erase everything Ledgerline keeps on this computer? This cannot be undone.")) return;
                 try {
                   setError(null);
-                  await destroyAccount();
+                  await eraseAllData();
+                  setShowDanger(false);
+                  setMessage("Everything was erased. Ledgerline is starting fresh.");
+                  onChanged?.();
                 } catch (err) {
                   setError(
-                    err instanceof Error ? err.message : "Could not delete the account. Try again.",
+                    err instanceof Error ? err.message : "Could not erase your data. Try again.",
                   );
                 }
               }}
             >
-              Confirm delete account
+              Erase everything
             </button>
           </div>
         ) : null}

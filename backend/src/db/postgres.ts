@@ -8,7 +8,7 @@ import * as s from "./schema.js";
 import { PostgresGmailRepository } from "./postgres/gmailRepository.js";
 import { PostgresImportRepository } from "./postgres/importRepository.js";
 import { mapAccount } from "./postgres/shared.js";
-import { deletedEmail, SCRUBBED_USER, UNLINKED_TELEGRAM } from "./userScrub.js";
+import { deletedEmail, SCRUBBED_USER } from "./userScrub.js";
 import { withoutShadowedGlobals } from "./providerScope.js";
 import type {
   AccountRow,
@@ -52,8 +52,6 @@ const mapUser = (r: typeof s.users.$inferSelect): UserRow => ({
   telegramPhoneChatId: r.telegramPhoneChatId ?? null,
   telegramPhoneAttempts: r.telegramPhoneAttempts ?? 0,
   telegramPhoneSentAt: r.telegramPhoneSentAt ? iso(r.telegramPhoneSentAt) : null,
-  emailVerifiedAt: r.emailVerifiedAt ? iso(r.emailVerifiedAt) : null,
-  sessionsValidAfter: r.sessionsValidAfter ? iso(r.sessionsValidAfter) : null,
   createdAt: iso(r.createdAt),
   deletedAt: r.deletedAt ? iso(r.deletedAt) : null,
 });
@@ -174,80 +172,21 @@ export class PostgresStore implements Store {
   query<R extends pg.QueryResultRow = any>(text: string, values?: unknown[]) {
     return this.pool.query<R>(text, values);
   }
-  async createUser(i: {
-    email: string;
-    passwordHash: string;
-    displayName?: string | null;
-    emailVerified?: boolean;
-  }) {
+  async createUser(i: { email: string; displayName?: string | null }) {
     const [r] = await this.db
       .insert(s.users)
-      .values({
-        email: i.email.toLowerCase(),
-        passwordHash: i.passwordHash,
-        displayName: i.displayName ?? null,
-        emailVerifiedAt: i.emailVerified ? new Date() : null,
-      })
+      .values({ email: i.email.toLowerCase(), displayName: i.displayName ?? null })
       .returning();
     return mapUser(r);
   }
-  async createPasswordReset(userId: string, tokenHash: string, expiresAt: Date) {
-    await this.db.insert(s.passwordResetTokens).values({ userId, tokenHash, expiresAt });
-  }
-  async consumePasswordReset(tokenHash: string) {
+  async findFirstUser() {
     const [r] = await this.db
-      .update(s.passwordResetTokens)
-      .set({ usedAt: new Date() })
-      .where(
-        and(
-          eq(s.passwordResetTokens.tokenHash, tokenHash),
-          isNull(s.passwordResetTokens.usedAt),
-          sql`${s.passwordResetTokens.expiresAt} > now()`,
-        ),
-      )
-      .returning({ userId: s.passwordResetTokens.userId });
-    if (!r) return null;
-    // Any other link mailed to this account stops working too.
-    await this.db
-      .update(s.passwordResetTokens)
-      .set({ usedAt: new Date() })
-      .where(and(eq(s.passwordResetTokens.userId, r.userId), isNull(s.passwordResetTokens.usedAt)));
-    return r.userId;
-  }
-  async resetPassword(userId: string, passwordHash: string) {
-    const now = new Date();
-    const [r] = await this.db
-      .update(s.users)
-      .set({
-        passwordHash,
-        emailVerifiedAt: sql`coalesce(${s.users.emailVerifiedAt}, now())`,
-        sessionsValidAfter: now,
-      })
-      .where(and(eq(s.users.id, userId), isNull(s.users.deletedAt)))
-      .returning();
+      .select()
+      .from(s.users)
+      .where(isNull(s.users.deletedAt))
+      .orderBy(asc(s.users.createdAt))
+      .limit(1);
     return r ? mapUser(r) : null;
-  }
-  async claimAccountWithGoogle(userId: string, passwordHash: string) {
-    const now = new Date();
-    return this.db.transaction(async (tx) => {
-      const [r] = await tx
-        .update(s.users)
-        // Whoever held the password may have linked their own chat or mailbox.
-        .set({ passwordHash, emailVerifiedAt: now, sessionsValidAfter: now, ...UNLINKED_TELEGRAM })
-        .where(and(eq(s.users.id, userId), isNull(s.users.deletedAt)))
-        .returning();
-      if (!r) return null;
-      await tx.delete(s.telegramPrompts).where(eq(s.telegramPrompts.userId, userId));
-      await tx
-        .delete(s.gmailConnections)
-        .where(
-          and(
-            eq(s.gmailConnections.userId, userId),
-            sql`lower(${s.gmailConnections.googleEmail}) <> lower(${r.email})`,
-          ),
-        );
-      return mapUser(r);
-    });
   }
   async findUserByEmail(email: string) {
     const [r] = await this.db
@@ -257,22 +196,6 @@ export class PostgresStore implements Store {
         and(eq(s.users.email, email.toLowerCase()), isNull(s.users.deletedAt)),
       )
       .limit(1);
-    return r ? mapUser(r) : null;
-  }
-  async findUserByAppleSub(appleSub: string) {
-    const [r] = await this.db
-      .select()
-      .from(s.users)
-      .where(and(eq(s.users.appleSub, appleSub), isNull(s.users.deletedAt)))
-      .limit(1);
-    return r ? mapUser(r) : null;
-  }
-  async setAppleSub(userId: string, appleSub: string) {
-    const [r] = await this.db
-      .update(s.users)
-      .set({ appleSub })
-      .where(and(eq(s.users.id, userId), isNull(s.users.deletedAt)))
-      .returning();
     return r ? mapUser(r) : null;
   }
   async findUserById(id: string) {
@@ -318,46 +241,6 @@ export class PostgresStore implements Store {
       .update(s.users)
       .set({ deletedAt: new Date() })
       .where(eq(s.users.id, userId));
-  }
-  async consumeInvite(code: string) {
-    const r = await this.db
-      .update(s.invites)
-      .set({ usedCount: sql`${s.invites.usedCount}+1` })
-      .where(
-        and(
-          eq(s.invites.code, code),
-          sql`${s.invites.usedCount}<${s.invites.maxUses}`,
-        ),
-      )
-      .returning({ code: s.invites.code });
-    return !!r.length;
-  }
-  async seedInvite(code: string, maxUses = 100) {
-    await this.db
-      .insert(s.invites)
-      .values({ code, maxUses })
-      .onConflictDoNothing();
-  }
-  async listAllowedEmails() {
-    const rows = await this.db
-      .select({ email: s.allowedEmails.email })
-      .from(s.allowedEmails)
-      .orderBy(asc(s.allowedEmails.email));
-    return rows.map((row) => row.email);
-  }
-  async approveEmail(email: string) {
-    const normalized = email.trim().toLowerCase();
-    await this.db
-      .insert(s.allowedEmails)
-      .values({ email: normalized })
-      .onConflictDoNothing();
-  }
-  async revokeEmail(email: string) {
-    const rows = await this.db
-      .delete(s.allowedEmails)
-      .where(eq(s.allowedEmails.email, email.trim().toLowerCase()))
-      .returning({ email: s.allowedEmails.email });
-    return rows.length > 0;
   }
   async listCategories(userId: string) {
     return (
@@ -1145,7 +1028,7 @@ export class PostgresStore implements Store {
       const now = new Date();
       await tx
         .update(s.users)
-        .set({ ...SCRUBBED_USER, email: deletedEmail(userId), deletedAt: now, sessionsValidAfter: now })
+        .set({ ...SCRUBBED_USER, email: deletedEmail(userId), deletedAt: now })
         .where(eq(s.users.id, userId));
     });
   }

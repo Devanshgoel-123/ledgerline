@@ -15,7 +15,6 @@ interface AppShellProps {
   onNavigate: (view: DashboardView) => void;
   monthControl: React.ReactNode;
   hasAnyData: boolean;
-  userEmail?: string | null;
   avatarUrl?: string | null;
   displayName?: string | null;
   fetchError?: string | null;
@@ -27,7 +26,6 @@ export function AppShell({
   onNavigate,
   monthControl,
   hasAnyData,
-  userEmail,
   avatarUrl,
   displayName,
   fetchError,
@@ -59,7 +57,6 @@ export function AppShell({
           setSidebarOpen(false);
         }}
         onClose={() => setSidebarOpen(false)}
-        userEmail={userEmail}
         avatarUrl={avatarUrl}
         displayName={displayName}
         hasAnyData={hasAnyData}

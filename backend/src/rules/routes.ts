@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "../auth/service.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
 import { validate } from "../middleware/validate.js";
@@ -9,7 +8,6 @@ import { matchRule, UPI_BLOCK_TAG } from "./engine.js";
 import { ruleClassificationSource } from "../enums/index.js";
 
 export const rulesRouter = Router();
-rulesRouter.use(requireAuth);
 
 rulesRouter.get("/", async (req, res) => {
   const store = await getStore();

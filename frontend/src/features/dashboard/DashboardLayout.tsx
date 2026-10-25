@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AuthGate } from "@/components/AuthGate";
+import { LocalGate } from "@/components/LocalGate";
 import { AppShell } from "@/components/layout/AppShell";
 import { SampleDataBanner } from "@/components/SampleDataBanner";
 import { ImportNotice } from "@/components/ImportNotice";
@@ -15,12 +15,12 @@ import {
   viewFromPath,
   type DashboardView,
 } from "@/lib/dashboardViews";
-import { useAuth } from "@/lib/auth";
+import { useProfile } from "@/lib/profile";
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
+  const { profile } = useProfile();
   const {
     month,
     setMonth,
@@ -76,9 +76,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       onNavigate={navigate}
       monthControl={monthControl}
       hasAnyData={hasAnyData}
-      userEmail={user?.email}
-      avatarUrl={user?.avatarUrl}
-      displayName={user?.displayName}
+      displayName={profile?.displayName}
+      avatarUrl={profile?.avatarUrl}
       fetchError={DATA_OPTIONAL_VIEWS.includes(view) ? fetchError : null}
     >
       <SampleDataBanner />
@@ -90,10 +89,10 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGate>
+    <LocalGate>
       <DashboardProvider>
         <DashboardLayoutInner>{children}</DashboardLayoutInner>
       </DashboardProvider>
-    </AuthGate>
+    </LocalGate>
   );
 }

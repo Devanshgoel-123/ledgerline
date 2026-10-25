@@ -10,7 +10,6 @@ import { BankPoolingPanel } from "@/components/BankPoolingPanel";
 import { OnboardingWelcome } from "@/components/OnboardingWelcome";
 import { useDashboard } from "@/lib/dashboard-context";
 import { createApiClient } from "@/lib/api/client";
-import { useAuth } from "@/lib/auth";
 import { LedgerlineFadeContent } from "@/components/animations/LedgerlineFadeContent";
 import { Panel, PanelHead } from "@/components/ui/Panel";
 import {
@@ -42,7 +41,6 @@ export function ImportPage() {
   } = useDashboard();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { token } = useAuth();
   const [banner, setBanner] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
   // Coming from the home welcome screen (?start=1) means the user already chose to import.
@@ -80,10 +78,10 @@ export function ImportPage() {
   }, [paramsKey]);
 
   const handleTryDemo = async () => {
-    if (!token || loadingDemo) return;
+    if (loadingDemo) return;
     setLoadingDemo(true);
     try {
-      const client = createApiClient(token);
+      const client = createApiClient();
       await client.loadDemoData();
       await refreshStatus();
       refresh();
@@ -147,13 +145,12 @@ export function ImportPage() {
             <button
               type="button"
               className="cta"
-              disabled={confirmingGmail || !token}
+              disabled={confirmingGmail}
               onClick={async () => {
-                if (!token) return;
                 setConfirmingGmail(true);
                 setBannerError(null);
                 try {
-                  const result = await createApiClient(token).confirmGmail(pendingGmail.pending);
+                  const result = await createApiClient().confirmGmail(pendingGmail.pending);
                   setBanner(`Gmail connected (${result.email}). Scan bank mail below.`);
                   setGmailVersion((v) => v + 1);
                   refresh();

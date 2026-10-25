@@ -1,13 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
-import { loginOrRegisterWithGoogle, requireAuth } from "../auth/service.js";
 import { config } from "../config.js";
 import { encryptSecret } from "../crypto/secrets.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
-import { tenantContext } from "../middleware/tenantContext.js";
 import {
   enablePoolingBodySchema,
   gmailBackfillBodySchema,
@@ -32,20 +30,10 @@ import {
   gmailPushController,
   syncGmailController,
 } from "./controller.js";
-import { holdGmailConnection, sameVerifiedEmail, takeGmailConnection } from "./pendingConnect.js";
+import { holdGmailConnection, takeGmailConnection } from "./pendingConnect.js";
 import { persistGoogleConnection } from "./service.js";
 
 export const gmailRouter = Router();
-
-const PUBLIC_GMAIL_PATHS = new Set(["/callback", "/push"]);
-
-gmailRouter.use((req, res, next) => {
-  if (PUBLIC_GMAIL_PATHS.has(req.path)) {
-    next();
-    return;
-  }
-  requireAuth(req, res, (err?: unknown) => (err ? next(err) : tenantContext(req, res, next)));
-});
 
 gmailRouter.get("/status", asyncHandler(getGmailStatusController));
 gmailRouter.get("/connect", asyncHandler(getGmailConnectController));
@@ -118,46 +106,6 @@ export async function handleGmailOAuthCallback(
     purpose = payload.purpose;
     returnToApp = payload.returnTo === "app";
 
-    if (payload.purpose === "google_login") {
-      const tokens = await exchangeCode(code);
-      const result = await loginOrRegisterWithGoogle({
-        email: tokens.email,
-        displayName: tokens.name,
-      });
-      const store = await getStore();
-      const existing = await store.getGmailConnection(result.user.id);
-      if (tokens.refreshToken || existing) {
-        await store.upsertGmailConnection({
-          userId: result.user.id,
-          googleEmail: tokens.email,
-          refreshTokenEncrypted: tokens.refreshToken
-            ? encryptSecret(tokens.refreshToken)
-            : existing?.refreshTokenEncrypted ?? "",
-          accessTokenEncrypted: tokens.accessToken
-            ? encryptSecret(tokens.accessToken)
-            : existing?.accessTokenEncrypted ?? null,
-          tokenExpiry: tokens.expiry ?? existing?.tokenExpiry ?? null,
-          historyId: existing?.historyId ?? null,
-          watchExpiration: existing?.watchExpiration ?? null,
-          lastSyncAt: existing?.lastSyncAt ?? null,
-          lastScannedOn: existing?.lastScannedOn ?? null,
-          disconnectedAt: null,
-        });
-        const connection = await store.getGmailConnection(result.user.id);
-        if (connection) await ensureHistoryId(connection);
-        await store.audit(result.user.id, "gmail.connected", {
-          email: tokens.email,
-          source: "google_login",
-        });
-      }
-      const url = new URL(config.frontendUrl);
-      const hash = new URLSearchParams({ token: result.token });
-      if (payload.nonce) hash.set("nonce", payload.nonce);
-      url.hash = hash.toString();
-      res.redirect(url.toString());
-      return;
-    }
-
     if (payload.purpose !== "gmail_connect" || !payload.sub) {
       res.status(400).send("Invalid state");
       return;
@@ -187,7 +135,7 @@ export async function handleGmailOAuthCallback(
       return;
     }
     const owner = await store.findUserById(payload.sub);
-    if (!sameVerifiedEmail(owner, tokens.email)) {
+    if (owner?.email.toLowerCase() !== tokens.email.toLowerCase()) {
       if (payload.returnTo === "app") {
         res.redirect(
           appGmailRedirect(
@@ -212,10 +160,6 @@ export async function handleGmailOAuthCallback(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "OAuth failed";
-    if (purpose === "google_login") {
-      redirectAuthError(res, message);
-      return;
-    }
     res.redirect(
       returnToApp
         ? appGmailRedirect("error", message)

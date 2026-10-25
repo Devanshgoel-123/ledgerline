@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatScanWindowLabel } from "@/constants/pooling";
 import { useApi } from "@/lib/useApi";
-import { useAuth } from "@/lib/auth";
 import { useDashboard } from "@/lib/dashboard-context";
 import type { StatementMatchJob } from "@/lib/api/client";
 import type { Provider } from "@/lib/api/types";
@@ -172,7 +171,6 @@ function GapTable({
 
 export function StatementMatchPage() {
   const api = useApi();
-  const { token } = useAuth();
   const { data, refresh } = useDashboard();
   const [password, setPassword] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -299,7 +297,6 @@ export function StatementMatchPage() {
   );
 
   useEffect(() => {
-    if (!token) return;
     const finished = takeFinishedMatchJob();
     if (finished) {
       // A job that finished while the page was away: apply it after this render.
@@ -308,11 +305,11 @@ export function StatementMatchPage() {
     }
     const jobId = savedMatchJobId();
     if (!jobId) return;
-    return watchMatchJob(jobId, token, onMatchJob);
-  }, [token, onMatchJob]);
+    return watchMatchJob(jobId, onMatchJob);
+  }, [onMatchJob]);
 
   async function approveMany(items: Suggestion[]) {
-    if (!api || !preview || !token) return;
+    if (!api || !preview) return;
     const ready = items.filter((item) => choices[item.upiId]);
     if (ready.length === 0) {
       setError("Choose a vendor for each row you want to approve");
@@ -332,7 +329,7 @@ export function StatementMatchPage() {
       setJob(started);
       setSelected([]);
       setMessage(null);
-      watchMatchJob(started.id, token, onMatchJob);
+      watchMatchJob(started.id, onMatchJob);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start that approval");
     } finally {

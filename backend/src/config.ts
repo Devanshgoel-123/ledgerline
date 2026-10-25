@@ -22,7 +22,9 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
   LOG_PRETTY: z.enum(["0", "1"]).default("1"),
-  CORS_ORIGINS: z.string().default("http://localhost:3000"),
+  CORS_ORIGINS: z.string().default("http://localhost:3000,http://127.0.0.1:3000"),
+  /** Host names the API answers to. There is no sign-in, so keep this to this computer. */
+  LEDGERLINE_ALLOWED_HOSTS: z.string().default("localhost,127.0.0.1,[::1]"),
   DATABASE_URL: z.string().min(1).default("memory"),
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
   ENCRYPTION_KEY: z
@@ -32,15 +34,11 @@ const envSchema = z.object({
       "ENCRYPTION_KEY must be 64 hex characters (32 bytes)",
     ),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
-  ALLOW_ANON_PARSE: z.enum(["0", "1"]).default("0"),
-  APPLE_BUNDLE_ID: z.string().min(1).default("com.ledgerline.ios"),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
   GOOGLE_REDIRECT_URI: z
     .string()
     .default("http://localhost:4000/api/v1/auth/google/callback"),
-  GOOGLE_ALLOWED_EMAILS: z.string().optional().default(""),
-  ADMIN_EMAILS: z.string().optional().default(""),
   GMAIL_PUBSUB_TOPIC: z.string().optional().default(""),
   /** Audience set on the Pub/Sub push subscription's OIDC token (usually the push URL). */
   GMAIL_PUSH_AUDIENCE: z.string().optional().default(""),
@@ -55,7 +53,6 @@ const envSchema = z.object({
   POOLING_WORKER_INTERVAL_MS: z.coerce.number().int().positive().default(6 * 60 * 60 * 1000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
-  RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(15),
   DB_POOL_MAX: z.coerce.number().int().positive().default(20),
   DB_POOL_IDLE_MS: z.coerce.number().int().positive().default(30_000),
@@ -70,9 +67,6 @@ const envSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().optional().default(""),
   /** Public https base URL Telegram can reach (an API domain or an ngrok URL). Empty: long-poll instead. */
   TELEGRAM_WEBHOOK_URL: z.string().optional().default(""),
-  /** smtp(s)://user:pass@host:port for password reset emails. Empty: links are only logged outside production. */
-  SMTP_URL: z.string().optional().default(""),
-  MAIL_FROM: z.string().optional().default("Ledgerline <no-reply@ledgerline.local>"),
 });
 
 export type AppConfig = {
@@ -83,14 +77,16 @@ export type AppConfig = {
   logLevel: z.infer<typeof envSchema>["LOG_LEVEL"];
   logPretty: boolean;
   corsOrigins: string[];
+  local: {
+    /** Lower-case host names (no port) that the API answers to. */
+    allowedHosts: string[];
+  };
   databaseUrl: string;
   databaseHost: string;
   useMemoryStore: boolean;
   jwtSecret: string;
   encryptionKey: string;
   frontendUrl: string;
-  appleBundleId: string;
-  allowAnonParse: boolean;
   google: {
     clientId: string;
     clientSecret: string;
@@ -98,7 +94,6 @@ export type AppConfig = {
     pubsubTopic: string;
     pushAudience: string;
     pushServiceAccount: string;
-    allowedEmails: string[];
     inlineJobsEnabled: boolean;
   };
   poolingWorker: {
@@ -109,11 +104,9 @@ export type AppConfig = {
     port: number;
     intervalMs: number;
   };
-  adminEmails: string[];
   rateLimit: {
     windowMs: number;
     max: number;
-    authMax: number;
     uploadMax: number;
   };
   dbPool: {
@@ -130,10 +123,6 @@ export type AppConfig = {
     webhookSecret: string;
     /** Full webhook URL when Telegram pushes to us; null means this API long-polls. */
     webhookUrl: string | null;
-  };
-  mail: {
-    smtpUrl: string;
-    from: string;
   };
 };
 
@@ -231,11 +220,6 @@ function loadConfig(): AppConfig {
         "DATABASE_URL=memory is not allowed in production. Use PostgreSQL.",
       );
     }
-    if (env.ALLOW_ANON_PARSE === "1") {
-      throw new Error(
-        "ALLOW_ANON_PARSE=1 is not allowed in production.",
-      );
-    }
     if (env.GMAIL_PUBSUB_TOPIC && (!env.GMAIL_PUSH_AUDIENCE || !env.GMAIL_PUSH_SERVICE_ACCOUNT)) {
       throw new Error(
         "GMAIL_PUBSUB_TOPIC needs GMAIL_PUSH_AUDIENCE and GMAIL_PUSH_SERVICE_ACCOUNT so push requests can be verified.",
@@ -279,15 +263,17 @@ function loadConfig(): AppConfig {
     logLevel: env.LOG_LEVEL,
     logPretty,
     corsOrigins,
+    local: {
+      allowedHosts: env.LEDGERLINE_ALLOWED_HOSTS.split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+    },
     databaseUrl: env.DATABASE_URL,
     databaseHost: databaseHost(env.DATABASE_URL),
     useMemoryStore: env.DATABASE_URL === "memory",
     jwtSecret: env.JWT_SECRET,
     encryptionKey: env.ENCRYPTION_KEY,
     frontendUrl: env.FRONTEND_URL,
-    mail: { smtpUrl: env.SMTP_URL.trim(), from: env.MAIL_FROM },
-    appleBundleId: env.APPLE_BUNDLE_ID,
-    allowAnonParse: env.ALLOW_ANON_PARSE === "1",
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
@@ -295,9 +281,6 @@ function loadConfig(): AppConfig {
       pubsubTopic: env.GMAIL_PUBSUB_TOPIC,
       pushAudience: env.GMAIL_PUSH_AUDIENCE,
       pushServiceAccount: env.GMAIL_PUSH_SERVICE_ACCOUNT.trim().toLowerCase(),
-      allowedEmails: env.GOOGLE_ALLOWED_EMAILS.split(",")
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean),
       inlineJobsEnabled:
         env.DISABLE_INLINE_GMAIL_JOBS !== "1" &&
         env.POOLING_WORKER_SEPARATE !== "1",
@@ -309,13 +292,9 @@ function loadConfig(): AppConfig {
       port: env.POOLING_WORKER_PORT,
       intervalMs: env.POOLING_WORKER_INTERVAL_MS,
     },
-    adminEmails: env.ADMIN_EMAILS.split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean),
     rateLimit: {
       windowMs: env.RATE_LIMIT_WINDOW_MS,
       max: env.RATE_LIMIT_MAX,
-      authMax: env.RATE_LIMIT_AUTH_MAX,
       uploadMax: env.RATE_LIMIT_UPLOAD_MAX,
     },
     dbPool: {

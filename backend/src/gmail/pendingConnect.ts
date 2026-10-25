@@ -28,11 +28,3 @@ export function takeGmailConnection(nonce: string, userId: string): GoogleTokens
   return entry.tokens;
 }
 
-export function sameVerifiedEmail(
-  user: { email: string; emailVerifiedAt: string | null } | null,
-  googleEmail: string,
-): boolean {
-  return Boolean(
-    user?.emailVerifiedAt && user.email.trim().toLowerCase() === googleEmail.trim().toLowerCase(),
-  );
-}

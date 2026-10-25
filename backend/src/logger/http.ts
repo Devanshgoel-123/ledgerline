@@ -4,7 +4,7 @@ const QUIET_PATHS = new Set([
   "/live",
   "/health",
   "/api/health",
-  "/api/telegram/webhook",
+  "/api/v1/telegram/webhook",
 ]);
 
 export function isQuietRequest(path: string): boolean {

@@ -19,7 +19,6 @@ interface SidebarProps {
   current: DashboardView;
   onNavigate: (view: DashboardView) => void;
   onClose: () => void;
-  userEmail?: string | null;
   avatarUrl?: string | null;
   displayName?: string | null;
   hasAnyData?: boolean;
@@ -30,7 +29,6 @@ export function Sidebar({
   current,
   onNavigate,
   onClose,
-  userEmail,
   avatarUrl,
   displayName,
   hasAnyData = true,
@@ -62,15 +60,13 @@ export function Sidebar({
           <div className="sidebar-brand-row">
             <img className="sidebar-logo" src="/logo.svg" alt="" width={28} height={28} />
             <UserAvatar
-              initials={userInitials({ email: userEmail, displayName })}
+              initials={userInitials({ displayName })}
               src={avatarUrl}
-              title={displayName ?? userEmail ?? undefined}
+              title={displayName ?? undefined}
             />
             <div className="sidebar-brand-copy">
               <p className="brand compact">Ledgerline</p>
-              <p className="meta sidebar-email" title={userEmail ?? undefined}>
-                {userEmail ?? "Signed in"}
-              </p>
+              <p className="meta sidebar-email">Private · on this computer</p>
             </div>
           </div>
           <button

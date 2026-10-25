@@ -1,6 +1,5 @@
 import { Router } from "express";
 import multer from "multer";
-import { requireAuth } from "../auth/service.js";
 import { mutationRateLimiter, uploadRateLimiter } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 import { uuidParamSchema } from "../validators/common.js";
@@ -31,7 +30,6 @@ const upload = multer({
 
 export const importRouter = Router();
 
-importRouter.use(requireAuth);
 
 importRouter.get("/dashboard", validate(dashboardQuerySchema, "query"), getDashboardController);
 

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { deletedEmail, SCRUBBED_USER, UNLINKED_TELEGRAM } from "./userScrub.js";
+import { deletedEmail, SCRUBBED_USER } from "./userScrub.js";
 import { withoutShadowedGlobals } from "./providerScope.js";
 import type {
   DeletedTransactionRow,
@@ -38,8 +38,6 @@ function definedOnly<T extends object>(patch: T): Partial<T> {
 
 export class MemoryStore implements Store {
   users = new Map<string, UserRow>();
-  invites = new Map<string, { code: string; maxUses: number; usedCount: number }>();
-  allowedEmails = new Set<string>();
   categories: CategoryRow[] = [];
   bankPresets: BankPresetRow[] = [];
   providers: ProviderRow[] = [];
@@ -76,58 +74,12 @@ export class MemoryStore implements Store {
     // no-op
   }
 
-  passwordResets: Array<{ userId: string; tokenHash: string; expiresAt: Date; usedAt: Date | null }> = [];
 
-  async createPasswordReset(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    this.passwordResets.push({ userId, tokenHash, expiresAt, usedAt: null });
-  }
 
-  async consumePasswordReset(tokenHash: string): Promise<string | null> {
-    const row = this.passwordResets.find(
-      (item) => item.tokenHash === tokenHash && !item.usedAt && item.expiresAt.getTime() > Date.now(),
-    );
-    if (!row) return null;
-    const now = new Date();
-    for (const item of this.passwordResets) {
-      if (item.userId === row.userId && !item.usedAt) item.usedAt = now;
-    }
-    return row.userId;
-  }
 
-  async resetPassword(userId: string, passwordHash: string): Promise<UserRow | null> {
-    const user = this.users.get(userId);
-    if (!user || user.deletedAt) return null;
-    const now = new Date().toISOString();
-    user.passwordHash = passwordHash;
-    user.emailVerifiedAt = user.emailVerifiedAt ?? now;
-    user.sessionsValidAfter = now;
-    return user;
-  }
 
-  async claimAccountWithGoogle(userId: string, passwordHash: string): Promise<UserRow | null> {
-    const user = this.users.get(userId);
-    if (!user || user.deletedAt) return null;
-    const now = new Date().toISOString();
-    user.passwordHash = passwordHash;
-    user.emailVerifiedAt = now;
-    user.sessionsValidAfter = now;
-    // Whoever held the password may have linked their own chat or mailbox.
-    Object.assign(user, UNLINKED_TELEGRAM);
-    this.telegramPrompts = this.telegramPrompts.filter((prompt) => prompt.userId !== userId);
-    this.gmail = this.gmail.filter(
-      (connection) =>
-        connection.userId !== userId ||
-        connection.googleEmail.toLowerCase() === user.email.toLowerCase(),
-    );
-    return user;
-  }
 
-  async createUser(input: {
-    email: string;
-    passwordHash: string;
-    displayName?: string | null;
-    emailVerified?: boolean;
-  }): Promise<UserRow> {
+  async createUser(input: { email: string; displayName?: string | null }): Promise<UserRow> {
     const email = input.email.toLowerCase();
     if ([...this.users.values()].some((u) => u.email === email && !u.deletedAt)) {
       throw new Error("Email already registered");
@@ -135,8 +87,6 @@ export class MemoryStore implements Store {
     const user: UserRow = {
       id: randomUUID(),
       email,
-      passwordHash: input.passwordHash,
-      appleSub: null,
       displayName: input.displayName ?? null,
       avatarUrl: null,
       dailySpendLimit: null,
@@ -154,8 +104,6 @@ export class MemoryStore implements Store {
       telegramPhoneChatId: null,
       telegramPhoneAttempts: 0,
       telegramPhoneSentAt: null,
-      emailVerifiedAt: input.emailVerified ? new Date().toISOString() : null,
-      sessionsValidAfter: null,
       createdAt: nowIso(),
       deletedAt: null,
     };
@@ -163,18 +111,14 @@ export class MemoryStore implements Store {
     return user;
   }
 
-  async findUserByAppleSub(appleSub: string): Promise<UserRow | null> {
-    return (
-      [...this.users.values()].find((user) => user.appleSub === appleSub && !user.deletedAt) ??
-      null
-    );
-  }
 
-  async setAppleSub(userId: string, appleSub: string): Promise<UserRow | null> {
-    const user = this.users.get(userId);
-    if (!user || user.deletedAt) return null;
-    user.appleSub = appleSub;
-    return user;
+
+  async findFirstUser(): Promise<UserRow | null> {
+    return (
+      [...this.users.values()]
+        .filter((u) => !u.deletedAt)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0] ?? null
+    );
   }
 
   async findUserByEmail(email: string): Promise<UserRow | null> {
@@ -219,31 +163,10 @@ export class MemoryStore implements Store {
     if (user) user.deletedAt = nowIso();
   }
 
-  async consumeInvite(code: string): Promise<boolean> {
-    const invite = this.invites.get(code);
-    if (!invite) return false;
-    if (invite.usedCount >= invite.maxUses) return false;
-    invite.usedCount += 1;
-    return true;
-  }
 
-  async seedInvite(code: string, maxUses = 100): Promise<void> {
-    if (!this.invites.has(code)) {
-      this.invites.set(code, { code, maxUses, usedCount: 0 });
-    }
-  }
 
-  async listAllowedEmails(): Promise<string[]> {
-    return [...this.allowedEmails].sort();
-  }
 
-  async approveEmail(email: string): Promise<void> {
-    this.allowedEmails.add(email.trim().toLowerCase());
-  }
 
-  async revokeEmail(email: string): Promise<boolean> {
-    return this.allowedEmails.delete(email.trim().toLowerCase());
-  }
 
   async listCategories(userId: string): Promise<CategoryRow[]> {
     return this.categories
@@ -1190,7 +1113,6 @@ export class MemoryStore implements Store {
       Object.assign(user, SCRUBBED_USER, {
         email: deletedEmail(userId),
         deletedAt: user.deletedAt ?? now,
-        sessionsValidAfter: now,
       });
     }
   }

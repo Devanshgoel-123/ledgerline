@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { after, before, describe, it } from "node:test";
 import { createApp } from "../../src/app.js";
-import { signToken } from "../../src/auth/service.js";
+import { localHeaders } from "../helpers/local.js";
 import { resetStoreForTests } from "../../src/db/index.js";
 import { MemoryStore } from "../../src/db/memory.js";
 
@@ -17,7 +17,7 @@ describe("statements from Gmail that need a password", () => {
     const store = new MemoryStore();
     await store.migrate();
     resetStoreForTests(store);
-    const user = await store.createUser({ email: "locked@example.com", passwordHash: "x", displayName: null });
+    const user = await store.createUser({ email: "locked@example.com", displayName: null });
     const locked = await store.createImport({
       userId: user.id,
       accountId: null,
@@ -41,7 +41,7 @@ describe("statements from Gmail that need a password", () => {
       errorMessage: "PDF password required",
     });
     lockedId = locked.id;
-    auth = { authorization: `Bearer ${signToken({ id: user.id, email: user.email })}` };
+    auth = localHeaders(user);
     server = createApp().listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });

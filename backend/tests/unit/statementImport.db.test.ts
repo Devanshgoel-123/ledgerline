@@ -4,6 +4,7 @@ import { PostgresStore } from "../../src/db/postgres.js";
 import type { NewTransactionInput } from "../../src/db/types.js";
 import { hdfcStatement } from "../helpers/statementPdf.js";
 import { startTestApp } from "../helpers/testApp.js";
+import { localHeaders } from "../helpers/local.js";
 
 type Report = {
   duplicate: boolean;
@@ -45,7 +46,7 @@ describe("statement upload", () => {
     form.append("file", new Blob([pdf], { type: "application/pdf" }), "statement.pdf");
     const res = await fetch(`${app.base}/api/parse`, {
       method: "POST",
-      headers: { authorization: `Bearer ${token}` },
+      headers: localHeaders(token),
       body: form,
     });
     return { status: res.status, body: (await res.json()) as { report: Report; error?: unknown } };

@@ -20,9 +20,6 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull().unique(),
-    passwordHash: text("password_hash").notNull(),
-    /** Stable Sign in with Apple subject. Null for accounts that never used the iOS app. */
-    appleSub: text("apple_sub"),
     displayName: text("display_name"),
     avatarUrl: text("avatar_url"),
     dailySpendLimit: numeric("daily_spend_limit"),
@@ -44,10 +41,6 @@ export const users = pgTable(
     telegramPhoneChatId: text("telegram_phone_chat_id"),
     telegramPhoneAttempts: integer("telegram_phone_attempts").notNull().default(0),
     telegramPhoneSentAt: timestamp("telegram_phone_sent_at", { withTimezone: true }),
-    /** Set when Google sign-in proves the address. Email/password sign-up leaves it null. */
-    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
-    /** Session tokens issued before this are rejected. */
-    sessionsValidAfter: timestamp("sessions_valid_after", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
@@ -55,7 +48,6 @@ export const users = pgTable(
     index("users_deleted_idx").on(t.deletedAt),
     uniqueIndex("users_telegram_chat_idx").on(t.telegramChatId),
     uniqueIndex("users_telegram_link_token_idx").on(t.telegramLinkToken),
-    uniqueIndex("users_apple_sub_idx").on(t.appleSub),
   ],
 );
 
@@ -108,22 +100,6 @@ export const providers = pgTable(
     index("providers_user_idx").on(t.userId),
     index("providers_name_idx").on(t.canonicalName),
   ],
-);
-
-/** Single-use password reset links; only the token's SHA-256 is kept. */
-export const passwordResetTokens = pgTable(
-  "password_reset_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    tokenHash: text("token_hash").notNull().unique(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    usedAt: timestamp("used_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [index("password_reset_tokens_user_idx").on(t.userId, t.createdAt)],
 );
 
 export const userRules = pgTable(

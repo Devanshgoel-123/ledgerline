@@ -1,6 +1,6 @@
 "use client";
 
-export function LoginLoading({ text = "Restoring your session…" }: { text?: string }) {
+export function LoadingScreen({ text = "Opening your ledger…" }: { text?: string }) {
   return (
     <main className="login-screen login-screen-loading">
       <div className="login-screen-bg" aria-hidden />

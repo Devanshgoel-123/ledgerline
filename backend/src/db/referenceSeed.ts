@@ -166,17 +166,6 @@ export async function seedMemoryReferenceData(store: MemoryStore): Promise<void>
   const investments = store.categories.find((category) => category.slug === "investments" && category.isGlobal);
   if (investments) investments.blurb = "Brokers · SIPs · mutual funds · Grow";
 
-  for (const match of sql.matchAll(
-    /INSERT INTO invites \(code, max_uses\)\s*VALUES\s*\(([^)]+)\)/g,
-  )) {
-    for (const row of match[1].split("),(")) {
-      const parts = row.replace(/[()]/g, "").split(",").map((s) => s.trim());
-      const code = parts[0].replace(/^'|'$/g, "");
-      const maxUses = Number(parts[1]);
-      await store.seedInvite(code, maxUses);
-    }
-  }
-
   for (const brand of INDIA_RETAIL_BRANDS) {
     await store.upsertProvider({
       userId: null,

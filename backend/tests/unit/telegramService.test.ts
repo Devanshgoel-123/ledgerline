@@ -24,7 +24,6 @@ async function setupUser() {
   await store.migrate();
   const user = await store.createUser({
     email: "tg@example.com",
-    passwordHash: "hash",
     displayName: "Tg",
   });
   resetStoreForTests(store);
@@ -752,7 +751,6 @@ describe("telegram phone link", () => {
     const { store, user } = await setupUser();
     const other = await store.createUser({
       email: "other@example.com",
-      passwordHash: "hash",
     });
     await requestTelegramPhone(user.id, "9876543210", async () => undefined);
     await assert.rejects(

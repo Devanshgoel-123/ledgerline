@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "../auth/service.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
@@ -12,7 +11,6 @@ import { ownProviderFor } from "./ownCopy.js";
 import { resolveProviderLogo } from "./registry.js";
 
 export const providersRouter = Router();
-providersRouter.use(requireAuth);
 
 providersRouter.get("/", async (req, res) => {
   const store = await getStore();
