@@ -152,7 +152,7 @@ export interface ImportRow {
   source: ImportSource;
   status: ImportStatus;
   filename: string | null;
-  gmailMessageId: string | null;
+  mailMessageId: string | null;
   attachmentHash: string | null;
   bankAdapter: string | null;
   errorMessage: string | null;
@@ -214,17 +214,22 @@ export interface StatementLineRow {
 
 export type NewStatementLineInput = Omit<StatementLineRow, "id" | "userId" | "matchedTransactionId">;
 
-export interface GmailConnectionRow {
+export interface MailConnectionRow {
   id: string;
   userId: string;
-  googleEmail: string;
-  refreshTokenEncrypted: string;
-  accessTokenEncrypted: string | null;
-  tokenExpiry: string | null;
-  historyId: string | null;
-  watchExpiration: string | null;
+  /** Mailbox address; also the IMAP user name. */
+  email: string;
+  /** Provider preset id, e.g. "gmail" or "custom". */
+  provider: string;
+  host: string;
+  port: number;
+  /**
+   * App password, encrypted with ENCRYPTION_KEY. Null when it has to be entered again,
+   * e.g. a mailbox carried over from the old Google sign-in.
+   */
+  passwordEncrypted: string | null;
   lastSyncAt: string | null;
-  /** Inclusive IST calendar day already query-scanned. Null until the first full scan. */
+  /** Inclusive IST calendar day already scanned. Null until the first full scan. */
   lastScannedOn: string | null;
   disconnectedAt: string | null;
 }
@@ -233,7 +238,7 @@ export interface MailMessageRow {
   id: string;
   userId: string;
   accountId: string | null;
-  gmailMessageId: string;
+  mailMessageId: string;
   fromAddress: string;
   subject: string;
   receivedAt: string | null;
@@ -379,7 +384,7 @@ export interface Store {
         | "errorMessage"
         | "bankAdapter"
         | "attachmentHash"
-        | "gmailMessageId"
+        | "mailMessageId"
         | "filename"
         | "accountId"
       >
@@ -391,9 +396,9 @@ export interface Store {
     userId: string,
     attachmentHash: string,
   ): Promise<ImportRow | null>;
-  findImportByGmailMessage(
+  findImportByMailMessage(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<ImportRow | null>;
 
   insertTransactions(
@@ -495,20 +500,20 @@ export interface Store {
     matches: Array<{ lineId: string; transactionId: string | null }>,
   ): Promise<void>;
 
-  upsertGmailConnection(
-    input: Omit<GmailConnectionRow, "id"> & { id?: string },
-  ): Promise<GmailConnectionRow>;
-  getGmailConnection(userId: string): Promise<GmailConnectionRow | null>;
-  disconnectGmail(userId: string): Promise<void>;
-  listActiveGmailConnections(): Promise<GmailConnectionRow[]>;
+  upsertMailConnection(
+    input: Omit<MailConnectionRow, "id"> & { id?: string },
+  ): Promise<MailConnectionRow>;
+  getMailConnection(userId: string): Promise<MailConnectionRow | null>;
+  disconnectMail(userId: string): Promise<void>;
+  listActiveMailConnections(): Promise<MailConnectionRow[]>;
   listPoolingAccounts(): Promise<AccountRow[]>;
 
   upsertMailMessage(
     input: Omit<MailMessageRow, "id" | "createdAt"> & { id?: string },
   ): Promise<MailMessageRow>;
-  findMailMessageByGmailId(
+  findMailMessageById(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<MailMessageRow | null>;
   listMailMessages(
     userId: string,
@@ -584,7 +589,7 @@ export interface Store {
   expireTelegramPrompt(promptId: string): Promise<TelegramPromptRow | null>;
 
   audit(userId: string | null, action: string, meta?: Record<string, unknown>): Promise<void>;
-  /** Wipe imported mail/transactions. Keeps the user, Gmail, and bank setup. */
+  /** Wipe imported mail/transactions. Keeps the profile, mailbox connection, and bank setup. */
   clearUserRecords(userId: string): Promise<ClearedUserRecords>;
   deleteUserData(userId: string): Promise<void>;
 }

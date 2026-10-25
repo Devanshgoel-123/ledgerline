@@ -1,0 +1,328 @@
+#!/usr/bin/env bash
+# Ledgerline: start, stop, update and back up the app on this computer.
+# Everything runs in Docker and listens on 127.0.0.1 only. Run ./ledgerline help.
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+REPO_URL="https://github.com/Devanshgoel-123/ledgerline"
+ARCHIVE_URL="$REPO_URL/archive/refs/heads/main.tar.gz"
+ENV_FILE="$ROOT/.env"
+BACKUP_DIR="$ROOT/backups"
+WAIT_SECONDS="${LEDGERLINE_WAIT_SECONDS:-600}"
+# Docker project name: containers, images and the data volume are named after it.
+PROJECT="${LEDGERLINE_PROJECT:-ledgerline}"
+
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; RESET=$'\033[0m'
+else
+  BOLD=""; DIM=""; RED=""; GREEN=""; YELLOW=""; RESET=""
+fi
+
+say() { printf '%s\n' "$*"; }
+step() { printf '%s==>%s %s\n' "$BOLD" "$RESET" "$*"; }
+ok() { printf '%s✓%s %s\n' "$GREEN" "$RESET" "$*"; }
+warn() { printf '%s!%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
+die() {
+  printf '%s✗ %s%s\n' "$RED" "$1" "$RESET" >&2
+  shift
+  for line in "$@"; do printf '  %s\n' "$line" >&2; done
+  exit 1
+}
+
+# ---------------------------------------------------------------- docker
+
+COMPOSE=()
+
+find_compose() {
+  command -v docker >/dev/null 2>&1 || die "Docker is not installed." \
+    "Ledgerline runs inside Docker. Install it, then run ./ledgerline start again:" \
+    "  macOS / Windows: Docker Desktop  https://docs.docker.com/desktop/" \
+    "  Linux:           Docker Engine   https://docs.docker.com/engine/install/" \
+    "On Windows, run Ledgerline from a WSL (Ubuntu) terminal with Docker Desktop's WSL integration on."
+
+  local info
+  if ! info="$(docker info 2>&1)"; then
+    case "$info" in
+      *"permission denied"*)
+        die "Docker is running, but this user may not use it." \
+          "Add yourself to the docker group, then log out and back in:" \
+          "  sudo usermod -aG docker \"\$USER\"" ;;
+      *)
+        die "Docker is installed but not running." \
+          "Start Docker Desktop (or 'sudo systemctl start docker' on Linux), wait until it says it is running," \
+          "then run ./ledgerline start again." ;;
+    esac
+  fi
+
+  if docker compose version >/dev/null 2>&1; then
+    COMPOSE=(docker compose)
+  elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE=(docker-compose)
+  else
+    die "Docker Compose is missing." "Install the Compose plugin: https://docs.docker.com/compose/install/"
+  fi
+}
+
+compose() { "${COMPOSE[@]}" -p "$PROJECT" --project-directory "$ROOT" -f "$ROOT/docker-compose.yml" "$@"; }
+
+# ---------------------------------------------------------------- settings
+
+random_hex() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'
+  fi
+}
+
+env_get() {
+  [ -f "$ENV_FILE" ] || return 0
+  sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1
+}
+
+env_set_if_missing() {
+  if [ -z "$(env_get "$1")" ]; then
+    printf '%s=%s\n' "$1" "$2" >>"$ENV_FILE"
+  fi
+}
+
+ensure_env() {
+  if [ ! -f "$ENV_FILE" ]; then
+    step "First run: creating .env with random secrets (nothing to edit)"
+    umask 077
+    cat >"$ENV_FILE" <<'EOF'
+# Ledgerline settings for this computer. Created by ./ledgerline start.
+# Keep this file: ENCRYPTION_KEY unlocks the mail app password stored in your database.
+EOF
+  fi
+  # Earlier installs called the app secret JWT_SECRET; keep its value.
+  env_set_if_missing APP_SECRET "$(env_get JWT_SECRET)"
+  env_set_if_missing APP_SECRET "$(random_hex)"
+  env_set_if_missing ENCRYPTION_KEY "$(random_hex)"
+  env_set_if_missing POSTGRES_PASSWORD "$(random_hex)"
+  env_set_if_missing WEB_PORT 3000
+  env_set_if_missing API_PORT 4000
+  chmod 600 "$ENV_FILE" 2>/dev/null || true
+}
+
+web_port() { local p; p="$(env_get WEB_PORT)"; printf '%s' "${p:-3000}"; }
+api_port() { local p; p="$(env_get API_PORT)"; printf '%s' "${p:-4000}"; }
+app_url() { printf 'http://localhost:%s' "$(web_port)"; }
+
+# ---------------------------------------------------------------- checks
+
+port_busy() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+  elif command -v nc >/dev/null 2>&1; then
+    nc -z 127.0.0.1 "$1" >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
+check_ports() {
+  # Ports held by Ledgerline's own containers are fine.
+  if [ -n "$(compose ps -q --status running 2>/dev/null)" ]; then return 0; fi
+  local name port
+  for name in WEB_PORT API_PORT; do
+    port="$(env_get "$name")"
+    if port_busy "$port"; then
+      die "Port $port is already in use by another program." \
+        "Stop that program, or pick another port: set $name=<free port> in .env," \
+        "then run ./ledgerline start again."
+    fi
+  done
+}
+
+http_ok() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsS -o /dev/null --max-time 3 "$1" 2>/dev/null
+  else
+    wget -q -O /dev/null --timeout=3 "$1" 2>/dev/null
+  fi
+}
+
+wait_until_ready() {
+  local api web waited=0
+  api="http://127.0.0.1:$(api_port)/ready"
+  web="http://127.0.0.1:$(web_port)/"
+  printf 'Waiting for Ledgerline to answer'
+  while [ "$waited" -lt "$WAIT_SECONDS" ]; do
+    if http_ok "$api" && http_ok "$web"; then
+      printf '\n'
+      return 0
+    fi
+    printf '.'
+    sleep 3
+    waited=$((waited + 3))
+  done
+  printf '\n'
+  die "Ledgerline did not start within $((WAIT_SECONDS / 60)) minutes." \
+    "See what went wrong with: ./ledgerline logs" \
+    "Check each part with:     ./ledgerline status"
+}
+
+open_browser() {
+  local url; url="$(app_url)"
+  if [ -n "${LEDGERLINE_NO_BROWSER:-}" ]; then return 0; fi
+  if grep -qi microsoft /proc/version 2>/dev/null; then
+    (command -v wslview >/dev/null 2>&1 && wslview "$url") || cmd.exe /c start "$url" >/dev/null 2>&1 || true
+  elif command -v open >/dev/null 2>&1; then
+    open "$url" >/dev/null 2>&1 || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" >/dev/null 2>&1 || true
+  fi
+}
+
+# ---------------------------------------------------------------- commands
+
+cmd_start() {
+  find_compose
+  ensure_env
+  check_ports
+  if [ -z "$(docker images -q "$PROJECT-web" 2>/dev/null)" ]; then
+    step "Building Ledgerline. The first time takes a few minutes; later starts are quick."
+  else
+    step "Starting Ledgerline"
+  fi
+  compose up -d --build --remove-orphans
+  wait_until_ready
+  ok "Ledgerline is running at $(app_url)"
+  say "${DIM}Only this computer can open it. Stop it with ./ledgerline stop.${RESET}"
+  open_browser
+}
+
+cmd_stop() {
+  find_compose
+  step "Stopping Ledgerline (your data is kept)"
+  compose stop
+  ok "Stopped. Start again with ./ledgerline start"
+}
+
+cmd_status() {
+  find_compose
+  compose ps
+  say ""
+  if http_ok "http://127.0.0.1:$(api_port)/ready"; then ok "API answering on port $(api_port)"; else warn "API not answering on port $(api_port)"; fi
+  if http_ok "http://127.0.0.1:$(web_port)/"; then ok "Web app at $(app_url)"; else warn "Web app not answering on port $(web_port)"; fi
+}
+
+cmd_logs() {
+  find_compose
+  compose logs --tail=200 -f "$@"
+}
+
+cmd_open() {
+  open_browser
+  say "$(app_url)"
+}
+
+cmd_backup() {
+  find_compose
+  mkdir -p "$BACKUP_DIR"
+  local file
+  file="$BACKUP_DIR/ledgerline-$(date +%Y%m%d-%H%M%S).sql.gz"
+  step "Backing up your data"
+  compose up -d postgres >/dev/null
+  compose exec -T postgres pg_dump -U ledgerline -d ledgerline --clean --if-exists | gzip >"$file"
+  chmod 600 "$file" 2>/dev/null || true
+  ok "Saved $file"
+  say "${DIM}A restore on another computer also needs this folder's .env (it unlocks the saved mail password).${RESET}"
+}
+
+cmd_restore() {
+  local file="${1:-}"
+  if [ -z "$file" ] || [ ! -f "$file" ]; then
+    die "Give the backup file to restore." "Example: ./ledgerline restore backups/ledgerline-20260101-120000.sql.gz"
+  fi
+  find_compose
+  printf 'This replaces everything in Ledgerline with %s. Type RESTORE to continue: ' "$file"
+  local answer; read -r answer
+  [ "$answer" = "RESTORE" ] || die "Nothing changed."
+  compose up -d postgres >/dev/null
+  compose stop api web >/dev/null 2>&1 || true
+  step "Restoring"
+  gunzip -c "$file" | compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U ledgerline -d ledgerline >/dev/null
+  ok "Restored"
+  cmd_start
+}
+
+cmd_update() {
+  find_compose
+  if [ -n "$(compose ps -q postgres 2>/dev/null)" ]; then
+    cmd_backup
+  fi
+  step "Getting the latest Ledgerline"
+  if [ -d "$ROOT/.git" ] && command -v git >/dev/null 2>&1; then
+    git -C "$ROOT" pull --ff-only || die "Could not update with git." "If you changed files here, commit or stash them first."
+  else
+    local tmp; tmp="$(mktemp -d)"
+    curl -fsSL "$ARCHIVE_URL" | tar -xz -C "$tmp" || die "Could not download $ARCHIVE_URL"
+    local src; src="$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+    # Copy the new release over this folder; .env and backups/ are not in it, so they stay.
+    (cd "$src" && tar -cf - .) | tar -xf - -C "$ROOT"
+    rm -rf "$tmp"
+  fi
+  chmod +x "$ROOT/ledgerline"
+  exec "$ROOT/ledgerline" start
+}
+
+cmd_uninstall() {
+  find_compose
+  step "Removing Ledgerline's containers"
+  compose down --remove-orphans
+  printf 'Also delete all your Ledgerline data (transactions, rules, mail settings)? Type DELETE to erase it, or press Enter to keep it: '
+  local answer; read -r answer || answer=""
+  if [ "$answer" = "DELETE" ]; then
+    compose down -v
+    ok "Your data was erased."
+  else
+    ok "Your data was kept. ./ledgerline start brings everything back."
+  fi
+  say "You can now delete this folder: $ROOT"
+}
+
+cmd_help() {
+  cat <<EOF
+${BOLD}Ledgerline${RESET}: your UPI spending, on your own computer.
+
+Usage: ./ledgerline <command>
+
+  start            Set up on first run, start everything, open $(app_url)
+  stop             Stop Ledgerline (your data is kept)
+  status           Show whether each part is running
+  logs [service]   Follow the logs (service: web, api or postgres)
+  open             Open Ledgerline in your browser
+  update           Back up, get the latest version, restart
+  backup           Save your data to ./backups
+  restore <file>   Replace your data with a backup
+  uninstall        Remove the containers; asks before deleting your data
+  help             Show this help
+
+Settings live in .env (ports: WEB_PORT, API_PORT; optional TELEGRAM_BOT_TOKEN).
+EOF
+}
+
+main() {
+  local command="${1:-help}"
+  [ $# -gt 0 ] && shift
+  case "$command" in
+    start|up) cmd_start ;;
+    stop|down) cmd_stop ;;
+    status|ps) cmd_status ;;
+    logs) cmd_logs "$@" ;;
+    open) cmd_open ;;
+    update|upgrade) cmd_update ;;
+    backup) cmd_backup ;;
+    restore) cmd_restore "$@" ;;
+    uninstall) cmd_uninstall ;;
+    help|-h|--help) cmd_help ;;
+    *) cmd_help; die "Unknown command: $command" ;;
+  esac
+}
+
+main "$@"

@@ -170,7 +170,7 @@ export const imports = pgTable(
     source: text("source").notNull(),
     status: text("status").notNull(),
     filename: text("filename"),
-    gmailMessageId: text("gmail_message_id"),
+    mailMessageId: text("mail_message_id"),
     attachmentHash: text("attachment_hash"),
     bankAdapter: text("bank_adapter"),
     errorMessage: text("error_message"),
@@ -179,7 +179,7 @@ export const imports = pgTable(
   },
   (t) => [
     index("imports_user_idx").on(t.userId, t.createdAt),
-    unique("imports_user_gmail").on(t.userId, t.gmailMessageId),
+    unique("imports_user_mail").on(t.userId, t.mailMessageId),
     unique("imports_user_hash").on(t.userId, t.attachmentHash),
   ],
 );
@@ -209,7 +209,7 @@ export const transactions = pgTable(
     categorySlug: text("category_slug"),
     classificationSource: text("classification_source").notNull().default("parser"),
     fingerprint: text("fingerprint").notNull(),
-    /** Gmail id of the alert that created the row; one row per alert. */
+    /** Mail id of the alert that created the row; one row per alert. */
     mailMessageId: text("mail_message_id"),
     /** `mail` (alert) or `statement` (gap filled from a balance-checked statement line). */
     origin: text("origin").notNull().default("mail"),
@@ -297,20 +297,21 @@ export const statementLines = pgTable(
   ],
 );
 
-export const gmailConnections = pgTable("gmail_connections", {
+/** The mailbox Ledgerline reads bank mail from, over IMAP with an app password. */
+export const mailConnections = pgTable("mail_connections", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
-  googleEmail: text("google_email").notNull(),
-  refreshTokenEncrypted: text("refresh_token_encrypted").notNull(),
-  accessTokenEncrypted: text("access_token_encrypted"),
-  tokenExpiry: timestamp("token_expiry", { withTimezone: true }),
-  historyId: text("history_id"),
-  watchExpiration: timestamp("watch_expiration", { withTimezone: true }),
+  email: text("email").notNull(),
+  provider: text("provider").notNull(),
+  host: text("host").notNull(),
+  port: integer("port").notNull(),
+  /** Encrypted app password. Null until it is entered (again). */
+  passwordEncrypted: text("password_encrypted"),
   lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
-  /** Inclusive IST day (YYYY-MM-DD) the mailbox was fully query-scanned through. */
+  /** Inclusive IST day (YYYY-MM-DD) the mailbox was fully scanned through. */
   lastScannedOn: date("last_scanned_on"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
@@ -326,7 +327,7 @@ export const mailMessages = pgTable(
     accountId: uuid("account_id").references(() => accounts.id, {
       onDelete: "set null",
     }),
-    gmailMessageId: text("gmail_message_id").notNull(),
+    mailMessageId: text("message_id").notNull(),
     fromAddress: text("from_address").notNull().default(""),
     subject: text("subject").notNull().default(""),
     receivedAt: timestamp("received_at", { withTimezone: true }),
@@ -337,7 +338,7 @@ export const mailMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique("mail_messages_user_gmail").on(t.userId, t.gmailMessageId),
+    unique("mail_messages_user_message").on(t.userId, t.mailMessageId),
     unique("mail_messages_user_fp").on(t.userId, t.fingerprint),
     index("mail_messages_user_received_idx").on(t.userId, t.receivedAt),
   ],

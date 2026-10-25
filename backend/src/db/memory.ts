@@ -6,7 +6,7 @@ import type {
   AccountRow,
   BankPresetRow,
   CategoryRow,
-  GmailConnectionRow,
+  MailConnectionRow,
   ImportRow,
   ListTransactionsOptions,
   MailMessageRow,
@@ -47,7 +47,7 @@ export class MemoryStore implements Store {
   transactions: TransactionRow[] = [];
   deleted: Array<DeletedTransactionRow & { userId: string }> = [];
   statementLines: StatementLineRow[] = [];
-  gmail: GmailConnectionRow[] = [];
+  mailConnections: MailConnectionRow[] = [];
   mailMessages: MailMessageRow[] = [];
   poolingRuns: PoolingRunRow[] = [];
   telegramPrompts: TelegramPromptRow[] = [];
@@ -431,13 +431,13 @@ export class MemoryStore implements Store {
     );
   }
 
-  async findImportByGmailMessage(
+  async findImportByMailMessage(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<ImportRow | null> {
     return (
       this.imports.find(
-        (i) => i.userId === userId && i.gmailMessageId === gmailMessageId,
+        (i) => i.userId === userId && i.mailMessageId === mailMessageId,
       ) ?? null
     );
   }
@@ -679,48 +679,39 @@ export class MemoryStore implements Store {
     }
   }
 
-  async upsertGmailConnection(
-    input: Omit<GmailConnectionRow, "id"> & { id?: string },
-  ): Promise<GmailConnectionRow> {
-    const existing = this.gmail.find((g) => g.userId === input.userId);
+  async upsertMailConnection(
+    input: Omit<MailConnectionRow, "id"> & { id?: string },
+  ): Promise<MailConnectionRow> {
+    const existing = this.mailConnections.find((g) => g.userId === input.userId);
     if (existing) {
-      const keepRefresh =
-        !input.refreshTokenEncrypted && existing.refreshTokenEncrypted
-          ? existing.refreshTokenEncrypted
-          : input.refreshTokenEncrypted;
-      Object.assign(existing, input, {
-        id: existing.id,
-        refreshTokenEncrypted: keepRefresh,
-        historyId: input.historyId ?? existing.historyId,
-        disconnectedAt: null,
-      });
+      Object.assign(existing, input, { id: existing.id, disconnectedAt: null });
       return existing;
     }
-    const row: GmailConnectionRow = {
+    const row: MailConnectionRow = {
       ...input,
       id: input.id ?? randomUUID(),
+      disconnectedAt: null,
     };
-    this.gmail.push(row);
+    this.mailConnections.push(row);
     return row;
   }
 
-  async getGmailConnection(userId: string): Promise<GmailConnectionRow | null> {
+  async getMailConnection(userId: string): Promise<MailConnectionRow | null> {
     return (
-      this.gmail.find((g) => g.userId === userId && !g.disconnectedAt) ?? null
+      this.mailConnections.find((g) => g.userId === userId && !g.disconnectedAt) ?? null
     );
   }
 
-  async disconnectGmail(userId: string): Promise<void> {
-    const row = this.gmail.find((g) => g.userId === userId);
+  async disconnectMail(userId: string): Promise<void> {
+    const row = this.mailConnections.find((g) => g.userId === userId);
     if (row) {
       row.disconnectedAt = nowIso();
-      row.refreshTokenEncrypted = "";
-      row.accessTokenEncrypted = null;
+      row.passwordEncrypted = null;
     }
   }
 
-  async listActiveGmailConnections(): Promise<GmailConnectionRow[]> {
-    return this.gmail.filter((g) => !g.disconnectedAt);
+  async listActiveMailConnections(): Promise<MailConnectionRow[]> {
+    return this.mailConnections.filter((g) => !g.disconnectedAt);
   }
 
   async listPoolingAccounts(): Promise<AccountRow[]> {
@@ -732,7 +723,7 @@ export class MemoryStore implements Store {
   ): Promise<MailMessageRow> {
     const existing = this.mailMessages.find(
       (m) =>
-        m.userId === input.userId && m.gmailMessageId === input.gmailMessageId,
+        m.userId === input.userId && m.mailMessageId === input.mailMessageId,
     );
     if (existing) {
       Object.assign(existing, input, { id: existing.id });
@@ -747,13 +738,13 @@ export class MemoryStore implements Store {
     return row;
   }
 
-  async findMailMessageByGmailId(
+  async findMailMessageById(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<MailMessageRow | null> {
     return (
       this.mailMessages.find(
-        (m) => m.userId === userId && m.gmailMessageId === gmailMessageId,
+        (m) => m.userId === userId && m.mailMessageId === mailMessageId,
       ) ?? null
     );
   }
@@ -1080,7 +1071,7 @@ export class MemoryStore implements Store {
         account.poolingStartedAt = null;
       }
     }
-    for (const connection of this.gmail) {
+    for (const connection of this.mailConnections) {
       if (connection.userId === userId) connection.lastScannedOn = null;
     }
     return {
@@ -1101,7 +1092,7 @@ export class MemoryStore implements Store {
     this.accounts = this.accounts.filter((a) => a.userId !== userId);
     this.providers = this.providers.filter((p) => p.userId !== userId);
     this.categories = this.categories.filter((c) => c.userId !== userId);
-    this.gmail = this.gmail.filter((g) => g.userId !== userId);
+    this.mailConnections = this.mailConnections.filter((g) => g.userId !== userId);
     this.mailMessages = this.mailMessages.filter((m) => m.userId !== userId);
     this.poolingRuns = this.poolingRuns.filter((r) => r.userId !== userId);
     this.telegramPrompts = this.telegramPrompts.filter((p) => p.userId !== userId);

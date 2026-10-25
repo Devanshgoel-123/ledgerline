@@ -1,6 +1,6 @@
 import type {
   AccountRow,
-  GmailConnectionRow,
+  MailConnectionRow,
   ImportRow,
   MailMessageRow,
   PoolingRunMode,
@@ -34,7 +34,7 @@ export function mapImport(row: Record<string, unknown>): ImportRow {
     source: row.source as ImportRow["source"],
     status: row.status as ImportRow["status"],
     filename: (row.filename as string | null) ?? null,
-    gmailMessageId: (row.gmailMessageId as string | null) ?? null,
+    mailMessageId: (row.mailMessageId as string | null) ?? null,
     attachmentHash: (row.attachmentHash as string | null) ?? null,
     bankAdapter: (row.bankAdapter as string | null) ?? null,
     errorMessage: (row.errorMessage as string | null) ?? null,
@@ -93,22 +93,17 @@ export function mapStatementLine(row: Record<string, unknown>): StatementLineRow
   };
 }
 
-export function mapGmailConnection(
+export function mapMailConnection(
   row: Record<string, unknown>,
-): GmailConnectionRow {
+): MailConnectionRow {
   return {
     id: String(row.id),
     userId: String(row.userId),
-    googleEmail: String(row.googleEmail),
-    refreshTokenEncrypted: String(row.refreshTokenEncrypted),
-    accessTokenEncrypted: (row.accessTokenEncrypted as string | null) ?? null,
-    tokenExpiry: row.tokenExpiry
-      ? new Date(row.tokenExpiry as Date | string).toISOString()
-      : null,
-    historyId: (row.historyId as string | null) ?? null,
-    watchExpiration: row.watchExpiration
-      ? new Date(row.watchExpiration as Date | string).toISOString()
-      : null,
+    email: String(row.email),
+    provider: String(row.provider),
+    host: String(row.host),
+    port: Number(row.port),
+    passwordEncrypted: (row.passwordEncrypted as string | null) ?? null,
     lastSyncAt: row.lastSyncAt
       ? new Date(row.lastSyncAt as Date | string).toISOString()
       : null,
@@ -126,7 +121,7 @@ export function mapMailMessage(row: Record<string, unknown>): MailMessageRow {
     id: String(row.id),
     userId: String(row.userId),
     accountId: (row.accountId as string | null) ?? null,
-    gmailMessageId: String(row.gmailMessageId),
+    mailMessageId: String(row.mailMessageId),
     fromAddress: String(row.fromAddress ?? ""),
     subject: String(row.subject ?? ""),
     receivedAt: row.receivedAt

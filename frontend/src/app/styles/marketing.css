@@ -35,11 +35,6 @@
   background: var(--surface);
 }
 
-.landing {
-  text-align: center;
-  padding-top: 1.5rem;
-}
-
 .brand {
   font-size: clamp(2.8rem, 7vw, 4rem);
   margin: 0 0 0.9rem;
@@ -49,15 +44,6 @@
 .brand.compact {
   font-size: 1.05rem;
   margin: 0 0 0.2rem;
-}
-
-.brand-block {
-  max-width: 40rem;
-  margin: 0 auto 1.75rem;
-}
-
-.brand-block h1 {
-  margin: 0 0 0.75rem;
 }
 
 .lede {
@@ -81,37 +67,4 @@
   color: var(--primary);
   font-size: 0.78rem;
   font-weight: 600;
-}
-
-.google-cta {
-  width: 100%;
-  background: var(--surface-elevated);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-}
-
-.google-cta:hover:not(:disabled) {
-  background: var(--bg-muted);
-  color: var(--foreground);
-}
-
-.google-mark {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.foot-note {
-  margin-top: 1.4rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.foot-note a {
-  color: var(--primary);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }

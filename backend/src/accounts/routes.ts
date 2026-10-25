@@ -13,7 +13,7 @@ accountsRouter.get("/bank-presets", async (_req, res) => {
   res.json({
     presets,
     notice:
-      "Only these bank sender addresses are used in Gmail search. We never scrape or store non-bank mail.",
+      "Only mail from these bank sender addresses is read. Other mail is never opened or stored.",
   });
 });
 

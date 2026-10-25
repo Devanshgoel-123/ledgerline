@@ -35,7 +35,7 @@ describe("pooling scan window", () => {
     expect(months[months.length - 1]).toBe("2026-01");
   });
 
-  it("asks Gmail for the same backfill cap the API uses", () => {
+  it("asks the mailbox for the same backfill cap the API uses", () => {
     expect(BACKFILL_DEFAULT_MAX_MESSAGES).toBe(2000);
   });
 

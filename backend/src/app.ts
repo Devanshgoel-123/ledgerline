@@ -3,7 +3,7 @@ import multer from "multer";
 import { healthRouter } from "./api/health.js";
 import { config } from "./config.js";
 import { errorHandler, notFoundHandler } from "./errors/errorHandler.js";
-import { gmailRouter } from "./gmail/routes.js";
+import { mailRouter } from "./bankMail/routes.js";
 import { uploadImportController } from "./imports/controller.js";
 import { importRouter } from "./imports/routes.js";
 import { globalRateLimiter, uploadRateLimiter } from "./middleware/rateLimit.js";
@@ -66,7 +66,7 @@ export function createApp(): express.Application {
   app.use("/api/rules", rulesRouter);
   app.use("/api/providers", providersRouter);
   app.use("/api/preferences", preferencesRouter);
-  app.use("/api/gmail", gmailRouter);
+  app.use("/api/mail", mailRouter);
   app.use("/api/telegram", telegramRouter);
   app.use("/api/statement-match", statementMatchRouter);
   app.use("/api/demo", demoRouter);

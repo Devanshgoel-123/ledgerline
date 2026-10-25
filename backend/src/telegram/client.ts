@@ -93,7 +93,7 @@ export async function registerTelegramCommands(): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       commands: [
-        { command: "sync", description: "Sync Gmail" },
+        { command: "sync", description: "Scan bank mail" },
         { command: "status", description: "Today, this month, and your limit" },
         { command: "today", description: "What you spent today" },
         { command: "month", description: "Money out and money in this month" },

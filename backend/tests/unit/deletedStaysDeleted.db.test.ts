@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import type { GmailConnectionRow, NewTransactionInput } from "../../src/db/types.js";
-import { processAlertMessage } from "../../src/gmail/poolingService.js";
+import type { NewTransactionInput } from "../../src/db/types.js";
+import { processAlertMessage } from "../../src/bankMail/poolingService.js";
 import { unrecordedLines } from "../../src/statementMatch/match.js";
 import { hdfcStatement } from "../helpers/statementPdf.js";
 import { startTestApp } from "../helpers/testApp.js";
 import { localHeaders } from "../helpers/local.js";
+import { fakeMailbox } from "../helpers/fakeMailbox.js";
 
 const row = (date: string, amount: number, key: string, extra: Partial<NewTransactionInput> = {}): NewTransactionInput => ({
   importId: null, accountId: null, date, time: null, description: `UPI-${key}`, amount, type: "debit",
@@ -84,7 +85,7 @@ describe("a deleted payment stays deleted", () => {
     const result = await processAlertMessage({
       userId: user.id,
       accountId: (await app.store.getOrCreateAccount(user.id)).id,
-      connection: { userId: user.id, googleEmail: "x@example.com" } as GmailConnectionRow,
+      mailbox: fakeMailbox([]),
       messageId: `gm-${user.id}`,
       senders: [],
     });

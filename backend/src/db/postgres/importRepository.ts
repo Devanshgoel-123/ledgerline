@@ -48,7 +48,7 @@ export class PostgresImportRepository {
         source: input.source,
         status: input.status,
         filename: input.filename,
-        gmailMessageId: input.gmailMessageId,
+        mailMessageId: input.mailMessageId,
         attachmentHash: input.attachmentHash,
         bankAdapter: input.bankAdapter,
         errorMessage: input.errorMessage,
@@ -68,7 +68,7 @@ export class PostgresImportRepository {
       "errorMessage",
       "bankAdapter",
       "attachmentHash",
-      "gmailMessageId",
+      "mailMessageId",
       "filename",
       "accountId",
     ] as const;
@@ -116,9 +116,9 @@ export class PostgresImportRepository {
       .limit(1);
     return row ? mapImport(row) : null;
   }
-  async findImportByGmailMessage(
+  async findImportByMailMessage(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<ImportRow | null> {
     const [row] = await this.db
       .select()
@@ -126,14 +126,14 @@ export class PostgresImportRepository {
       .where(
         and(
           eq(imports.userId, userId),
-          eq(imports.gmailMessageId, gmailMessageId),
+          eq(imports.mailMessageId, mailMessageId),
         ),
       )
       .limit(1);
     return row ? mapImport(row) : null;
   }
 
-  /** Skips rows whose fingerprint or Gmail message id already exists. */
+  /** Skips rows whose fingerprint or mail message id already exists. */
   async insertTransactions(
     userId: string,
     rows: NewTransactionInput[],

@@ -39,7 +39,7 @@ export function telegramConnectHint(status: TelegramStatus): string {
   if (status.linked) {
     return status.phone
       ? `Linked to ${status.phone}. This chat is your account.`
-      : "Linked. This chat is your account. Send /sync to pull Gmail, or a statement PDF.";
+      : "Linked. This chat is your account. Send /sync to scan bank mail, or send a statement PDF.";
   }
   if (status.verify?.codeSent) {
     return `Code sent to ${status.verify.phone}. Enter it here. It expires in 10 minutes.`;

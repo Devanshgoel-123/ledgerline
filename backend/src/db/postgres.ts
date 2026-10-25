@@ -5,7 +5,7 @@ import { logger } from "../logger/index.js";
 import { createDb, type AppDb } from "./client.js";
 import { migrateUp } from "./migrator.js";
 import * as s from "./schema.js";
-import { PostgresGmailRepository } from "./postgres/gmailRepository.js";
+import { PostgresMailRepository } from "./postgres/mailRepository.js";
 import { PostgresImportRepository } from "./postgres/importRepository.js";
 import { mapAccount } from "./postgres/shared.js";
 import { deletedEmail, SCRUBBED_USER } from "./userScrub.js";
@@ -14,7 +14,7 @@ import type {
   AccountRow,
   BankPresetRow,
   CategoryRow,
-  GmailConnectionRow,
+  MailConnectionRow,
   ImportRow,
   ListTransactionsOptions,
   MailMessageRow,
@@ -119,7 +119,7 @@ export class PostgresStore implements Store {
   private pool: pg.Pool;
   private db: AppDb;
   private readonly imports: PostgresImportRepository;
-  private readonly gmail: PostgresGmailRepository;
+  private readonly mail: PostgresMailRepository;
   constructor(databaseUrl: string | { pool: pg.Pool; db: AppDb }) {
     if (typeof databaseUrl === "string") {
       this.pool = new pg.Pool({
@@ -145,7 +145,7 @@ export class PostgresStore implements Store {
       this.db = databaseUrl.db;
     }
     this.imports = new PostgresImportRepository(this.db);
-    this.gmail = new PostgresGmailRepository(this.db);
+    this.mail = new PostgresMailRepository(this.db);
   }
   /** Run `fn` against a store whose every write is in one database transaction. */
   async inTransaction<T>(fn: (store: Store) => Promise<T>): Promise<T> {
@@ -554,8 +554,8 @@ export class PostgresStore implements Store {
   findImportByHash(u: string, h: string) {
     return this.imports.findImportByHash(u, h);
   }
-  findImportByGmailMessage(u: string, g: string) {
-    return this.imports.findImportByGmailMessage(u, g);
+  findImportByMailMessage(u: string, g: string) {
+    return this.imports.findImportByMailMessage(u, g);
   }
   insertTransactions(u: string, r: NewTransactionInput[]) {
     return this.imports.insertTransactions(u, r);
@@ -616,34 +616,34 @@ export class PostgresStore implements Store {
   ) {
     return this.imports.setStatementLineMatches(u, m);
   }
-  upsertGmailConnection(i: Omit<GmailConnectionRow, "id"> & { id?: string }) {
-    return this.gmail.upsertGmailConnection(i);
+  upsertMailConnection(i: Omit<MailConnectionRow, "id"> & { id?: string }) {
+    return this.mail.upsertMailConnection(i);
   }
-  getGmailConnection(u: string) {
-    return this.gmail.getGmailConnection(u);
+  getMailConnection(u: string) {
+    return this.mail.getMailConnection(u);
   }
-  disconnectGmail(u: string) {
-    return this.gmail.disconnectGmail(u);
+  disconnectMail(u: string) {
+    return this.mail.disconnectMail(u);
   }
-  listActiveGmailConnections() {
-    return this.gmail.listActiveGmailConnections();
+  listActiveMailConnections() {
+    return this.mail.listActiveMailConnections();
   }
   listPoolingAccounts() {
-    return this.gmail.listPoolingAccounts();
+    return this.mail.listPoolingAccounts();
   }
   upsertMailMessage(
     i: Omit<MailMessageRow, "id" | "createdAt"> & { id?: string },
   ) {
-    return this.gmail.upsertMailMessage(i);
+    return this.mail.upsertMailMessage(i);
   }
-  findMailMessageByGmailId(u: string, g: string) {
-    return this.gmail.findMailMessageByGmailId(u, g);
+  findMailMessageById(u: string, g: string) {
+    return this.mail.findMailMessageById(u, g);
   }
   listMailMessages(u: string, fromIso: string, toIso: string) {
-    return this.gmail.listMailMessages(u, fromIso, toIso);
+    return this.mail.listMailMessages(u, fromIso, toIso);
   }
   oldestMailReceivedAt(u: string) {
-    return this.gmail.oldestMailReceivedAt(u);
+    return this.mail.oldestMailReceivedAt(u);
   }
   createPoolingRun(
     i: Omit<PoolingRunRow, "id" | "startedAt" | "finishedAt" | "status"> & {
@@ -651,19 +651,19 @@ export class PostgresStore implements Store {
       status?: PoolingRunStatus;
     },
   ) {
-    return this.gmail.createPoolingRun(i);
+    return this.mail.createPoolingRun(i);
   }
   updatePoolingRun(id: string, p: Partial<PoolingRunRow>) {
-    return this.gmail.updatePoolingRun(id, p);
+    return this.mail.updatePoolingRun(id, p);
   }
   getLatestPoolingRun(u: string) {
-    return this.gmail.getLatestPoolingRun(u);
+    return this.mail.getLatestPoolingRun(u);
   }
   listPoolingRuns(u: string, l = 10) {
-    return this.gmail.listPoolingRuns(u, l);
+    return this.mail.listPoolingRuns(u, l);
   }
   hasRunningPoolingRun(u: string) {
-    return this.gmail.hasRunningPoolingRun(u);
+    return this.mail.hasRunningPoolingRun(u);
   }
   async findUserByTelegramChatId(chatId: string) {
     const [r] = await this.db
@@ -974,9 +974,9 @@ export class PostgresStore implements Store {
         .set({ poolingEnabled: false, poolingStartedAt: null })
         .where(eq(s.accounts.userId, userId));
       await tx
-        .update(s.gmailConnections)
+        .update(s.mailConnections)
         .set({ lastScannedOn: null })
-        .where(eq(s.gmailConnections.userId, userId));
+        .where(eq(s.mailConnections.userId, userId));
       return {
         transactions: transactions.length,
         imports: imports.length,
@@ -1013,8 +1013,8 @@ export class PostgresStore implements Store {
         );
       await tx.delete(s.mailMessages).where(eq(s.mailMessages.userId, userId));
       await tx
-        .delete(s.gmailConnections)
-        .where(eq(s.gmailConnections.userId, userId));
+        .delete(s.mailConnections)
+        .where(eq(s.mailConnections.userId, userId));
       await tx.execute(sql`DELETE FROM upi_category_hints WHERE user_id = ${userId}`);
       const [user] = await tx
         .select({ phone: s.users.phoneE164 })

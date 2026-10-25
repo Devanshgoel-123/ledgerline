@@ -3,7 +3,7 @@ export type {
   AccountSummary,
   LocalProfile,
   BankPreset,
-  GmailStatus,
+  MailStatus,
   ImportStatus,
   ParseStatementResult,
 } from "./types";

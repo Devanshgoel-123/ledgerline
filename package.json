@@ -1,8 +1,5 @@
 {
   "scripts": {
-    "docker:restart": "docker-compose down && docker-compose up -d && echo 'Containers restarted'",
-    "docker:restart:wait": "docker-compose down && docker-compose up -d && sleep 20 && docker-compose ps",
-    "docker:logs": "docker-compose logs -f",
     "test": "playwright test"
   },
   "devDependencies": {

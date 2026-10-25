@@ -31,16 +31,16 @@ const jetbrains = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "Ledgerline",
+    default: "Ledgerline: your UPI spending, sorted on your own computer",
     template: "%s · Ledgerline",
   },
   description:
-    "Personal ledger for Indian UPI spend. Read HDFC mail, label each payment by app and category, and separate money in from money out.",
+    "Free, open-source expense tracker for UPI in India. Reads HDFC and ICICI statements and bank alert emails, sorts every payment, and runs entirely on your own computer. No account, no tracking.",
   applicationName: "Ledgerline",
   openGraph: {
     title: "Ledgerline",
     description:
-      "See where UPI money actually went. Label spends, keep credits separate, and scan HDFC alerts into one ledger.",
+      "See where your UPI money went. Runs on your own computer: no account, and your bank data never leaves it.",
     type: "website",
     locale: "en_IN",
     siteName: "Ledgerline",
@@ -53,9 +53,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="light"
+      suppressHydrationWarning
+      // Font variables live on <html> so the :root tokens (--font-mono etc.) can resolve them.
+      className={`${inter.variable} ${bricolage.variable} ${jetbrains.variable}`}
+    >
       <body
-        className={`${inter.variable} ${inter.className} ${bricolage.variable} ${jetbrains.variable}`}
+        className={inter.className}
       >
         <script
           dangerouslySetInnerHTML={{

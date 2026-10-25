@@ -8,7 +8,7 @@ import { useApi } from "@/lib/useApi";
 import { useDashboard } from "@/lib/dashboard-context";
 import { pathForView } from "@/lib/dashboardViews";
 import { telegramConnectHint, telegramPill, type TelegramStatus } from "@/lib/telegram";
-import type { GmailStatus } from "@/lib/api/types";
+import type { MailStatus } from "@/lib/api/types";
 import { formatInr } from "@/helpers/currency";
 import { userInitials } from "@/helpers/userInitials";
 
@@ -86,7 +86,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
   }
   const [showDanger, setShowDanger] = useState(false);
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
-  const [gmail, setGmail] = useState<GmailStatus | null>(null);
+  const [mail, setMail] = useState<MailStatus | null>(null);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [telegramBusy, setTelegramBusy] = useState(false);
@@ -97,16 +97,16 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
   const refresh = useCallback(async () => {
     if (!api) return;
     try {
-      const [rulesRes, prefsRes, telegramRes, gmailRes] = await Promise.all([
+      const [rulesRes, prefsRes, telegramRes, mailRes] = await Promise.all([
         api.listRules(),
         api.fetchPreferences(),
         api.telegramStatus().catch(() => null),
-        api.gmailStatus().catch(() => null),
+        api.mailStatus().catch(() => null),
       ]);
       setRules(rulesRes.rules);
       setDailyLimit(prefsRes.dailySpendLimit);
       setTelegram(telegramRes);
-      setGmail(gmailRes);
+      setMail(mailRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load settings");
     }
@@ -515,21 +515,21 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
       <section className="settings-section">
         <div className="settings-row">
           <div>
-            <h3 className="ui-header">Gmail</h3>
+            <h3 className="ui-header">Bank mail</h3>
             <p className="meta">
-              {gmail?.connected
-                ? gmail.email
-                  ? `Reading bank mail for ${gmail.email}.`
-                  : "Bank mail is connected."
-                : "Connect Gmail on Import to scan bank mail. Turn on email alerts for transactions in your bank app first."}
+              {mail?.connected
+                ? `Reading bank mail from ${mail.email}. The app password is encrypted on this computer.`
+                : mail?.needsPassword
+                  ? `${mail.email} needs an app password before the next scan.`
+                  : "Connect the mailbox that gets your bank alerts on Import. Turn on email alerts for transactions in your bank app first."}
             </p>
           </div>
           <div className="settings-row-end">
-            <span className={`status-pill ${gmail?.connected ? "is-on" : "is-off"}`}>
-              {gmail?.connected ? "Connected" : "Not connected"}
+            <span className={`status-pill ${mail?.connected ? "is-on" : "is-off"}`}>
+              {mail?.connected ? "Connected" : mail?.needsPassword ? "Needs password" : "Not connected"}
             </span>
             <Link href={pathForView("import")} className="ghost">
-              {gmail?.connected ? "Manage" : "Connect"}
+              {mail?.connected ? "Manage" : "Connect"}
             </Link>
           </div>
         </div>

@@ -112,7 +112,7 @@ export function homeKeyboard(): InlineKeyboard {
       ],
       [
         { text: "📄 Send statement", callback_data: "m:stmt" },
-        { text: "🔄 Sync Gmail", callback_data: "m:sync" },
+        { text: "🔄 Scan mail", callback_data: "m:sync" },
       ],
       [{ text: "⚙️ Settings", callback_data: "m:settings" }],
     ],
@@ -127,7 +127,7 @@ export function settingsKeyboard(): InlineKeyboard {
         { text: "⏰ Reminder", callback_data: "m:remind" },
       ],
       [
-        { text: "📧 Connect email", callback_data: "m:gmail" },
+        { text: "📧 Connect email", callback_data: "m:mail" },
         { text: "👤 Profile", callback_data: "m:profile" },
       ],
       [
@@ -142,10 +142,6 @@ export function settingsKeyboard(): InlineKeyboard {
 /** Shown after a settings change so the next tweak is one tap away. */
 export function afterSettingKeyboard(): InlineKeyboard {
   return { inline_keyboard: [SETTINGS_ROW] };
-}
-
-export function linkKeyboard(text: string, url: string): InlineKeyboard {
-  return { inline_keyboard: [[{ text, url }], HOME_ROW] };
 }
 
 export function clearConfirmKeyboard(): InlineKeyboard {
@@ -216,7 +212,7 @@ export type TelegramAction =
   | { kind: "spent-menu" }
   | { kind: "scan" }
   | { kind: "sync" }
-  | { kind: "gmail" }
+  | { kind: "mail" }
   | { kind: "limit-menu" }
   | { kind: "remind-menu" }
   | { kind: "statement" }
@@ -239,7 +235,9 @@ const MENU: Record<string, MenuKind> = {
   spent: "spent-menu",
   scan: "scan",
   sync: "sync",
-  gmail: "gmail",
+  mail: "mail",
+  // Buttons sent before the rename still say m:gmail.
+  gmail: "mail",
   limit: "limit-menu",
   remind: "remind-menu",
   stmt: "statement",

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { config } from "../config.js";
 import { getStore } from "../db/index.js";
-import { gmailConfigured } from "../gmail/client.js";
 
 export const healthRouter = Router();
 
@@ -40,7 +39,6 @@ healthRouter.get("/health", async (_req, res) => {
         status: "degraded",
         product: "ledgerline",
         database,
-        gmailConfigured: gmailConfigured(),
       });
       return;
     }
@@ -50,8 +48,7 @@ healthRouter.get("/health", async (_req, res) => {
       status: "degraded",
       product: "ledgerline",
       database,
-      gmailConfigured: gmailConfigured(),
-    });
+      });
     return;
   }
 
@@ -60,7 +57,5 @@ healthRouter.get("/health", async (_req, res) => {
     product: "ledgerline",
     env: config.env,
     database,
-    auth: true,
-    gmailConfigured: gmailConfigured(),
   });
 });

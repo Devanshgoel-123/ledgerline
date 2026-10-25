@@ -1,5 +1,7 @@
 # Architectural decisions worth talking about
 
+> Written while Ledgerline was a hosted, multi-account app. In October 2026 it became a local, single-user app: the account, sign-in allowlist, Gmail OAuth and separate worker described below were replaced by one local profile, a localhost-only API and IMAP with an app password. The ledger, matching and categorisation ideas still hold.
+
 These are choices in Ledgerline that are visible in the product, not a tour of folders. Each one can carry a post, a short video, or a chapter in a build log. The hook is the sentence you can open with. The rest is the idea, so the piece has something to say.
 
 Shared facts if a piece needs them: the web app is Next.js, the API is Express, the ledger is Postgres. Bank mail and statement PDFs both become rows. The month on screen is computed from those rows when you open it.

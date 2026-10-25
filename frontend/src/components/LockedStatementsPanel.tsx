@@ -13,7 +13,7 @@ interface LockedStatement {
 }
 
 /**
- * Bank statements found in Gmail are usually password-protected. Scans cannot open them on
+ * Bank statements found in bank mail are usually password-protected. Scans cannot open them on
  * their own, so they wait here until the user types the password once.
  */
 export function LockedStatementsPanel({

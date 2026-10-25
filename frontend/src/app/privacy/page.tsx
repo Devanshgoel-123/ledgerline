@@ -1,79 +1,95 @@
 import type { Metadata } from "next";
-import { AppSurfaceBackdrop } from "@/components/effects/AppSurfaceBackdrop";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
 
 export const metadata: Metadata = {
-  title: "Privacy policy — Ledgerline",
+  title: "Privacy",
   description:
-    "What Ledgerline stores, what Gmail access it asks for, and how to download or delete your data.",
+    "Ledgerline runs on your own computer. What it stores there, what it reads, the one feature that sends data out, and how to take or erase your data.",
 };
 
-const SECTIONS = [
+const SECTIONS: { title: string; body: React.ReactNode }[] = [
   {
-    title: "What Ledgerline is",
-    body: "Ledgerline is a free, open-source dashboard for your UPI spending. You import bank statements or bank alert emails, and it shows where your money went each month. Only you can see your data.",
+    title: "The short version",
+    body: "Ledgerline runs on your computer. There is no Ledgerline server, no account and no tracking. Your transactions never reach us, because there is nowhere for them to go.",
   },
   {
-    title: "Signing in",
-    body: "You can sign in with an email and password, or with Google. With an email and password we store your email and a scrambled (hashed) copy of the password, never the password itself. With Google we store the email and name Google returns. Either way you stay signed in for up to 7 days on that device.",
+    title: "Where your data lives",
+    body: "In a PostgreSQL database inside Docker on your own disk. It holds the payments Ledgerline reads (date, amount, description, UPI ID, merchant, category), the rules, people and bill splits you add, your daily limit, and an optional name and photo. Backups are files in the backups folder, which you control.",
   },
   {
-    title: "Gmail access",
-    body: "Signing in with Google also asks for read-only Gmail access, so Ledgerline can find bank alert and statement emails. It only searches mail from the bank addresses you choose, and it never sends, deletes, or changes mail. If you do not want this, sign in with an email and password instead and upload statement PDFs yourself. You can disconnect Gmail at any time in Settings.",
+    title: "Who can open it",
+    body: "The Ledgerline service listens only on this computer (localhost). It refuses requests addressed to any other name and requests from other websites, so a page you visit cannot read or change your data. There is no sign-in, so anyone using your computer can open Ledgerline: lock your screen when you step away.",
   },
   {
-    title: "What we store",
-    body: "The transactions we read (date, amount, description, UPI ID, merchant, category), your bank setup and chosen sender addresses, rules and people you add, bill splits, an optional daily limit, and an optional profile photo. For Gmail we keep a refresh token, encrypted, and when it last synced. Statement PDFs are read and then discarded: we keep only a fingerprint of each file so the same statement is not imported twice. Statement passwords are used once and never saved.",
+    title: "Statement PDFs",
+    body: "Read on your computer and then discarded. Ledgerline keeps a fingerprint of each file so the same statement is not imported twice. Statement passwords are used once and never saved.",
   },
   {
-    title: "Telegram (optional)",
-    body: "If you link the Telegram bot, we store your Telegram chat ID and, if you verify it, your mobile number, so the bot can send reminders and receive PDFs you forward. Unlinking in Settings removes both the chat link and the number.",
+    title: "Bank mail (optional)",
+    body: "If you connect your mailbox, Ledgerline signs in to it over IMAP with an app password you create. The app password is stored encrypted on your computer. Ledgerline searches only mail from your bank’s addresses, reads it, and never sends, moves, deletes or marks mail. Disconnect it in Settings at any time; revoke the app password in your email account to be sure.",
   },
   {
-    title: "Who else handles your data",
-    body: "Google, if you connect Gmail; Telegram, if you link the bot; and the hosting and database providers that run Ledgerline. We do not sell your data, show ads, or share it with anyone for marketing.",
+    title: "Telegram (optional, the one exception)",
+    body: "The Telegram bot is off unless you add a bot token. If you turn it on and link it, reminders and the payments they mention travel through Telegram’s servers, and Ledgerline stores your chat ID and, if you verify it, your mobile number. Unlink it in Settings to remove both.",
+  },
+  {
+    title: "This website",
+    body: "The website you are reading only explains Ledgerline and how to install it. It has no analytics, cookies for tracking, forms or sign-up, and it never sees your data.",
   },
   {
     title: "Taking your data with you",
-    body: "Settings → Download all transactions gives you every transaction as a CSV file you can open in Excel or Google Sheets.",
+    body: "Settings › Download all transactions gives you every transaction as a CSV file for Excel or Google Sheets. ./ledgerline backup saves the whole database to a file.",
   },
   {
-    title: "Deleting your data",
-    body: "Settings lets you clear imported transactions, or delete your account. Deleting the account removes your transactions, imports, rules, Gmail and Telegram links, profile, and phone number, and signs you out everywhere. Server logs keep short records of security events such as sign-ins, which can include your email address.",
+    title: "Erasing your data",
+    body: "Settings › Erase everything removes every transaction, rule, mailbox connection and Telegram link, and starts fresh. ./ledgerline uninstall removes Ledgerline and asks before deleting the database.",
   },
   {
-    title: "Security",
-    body: "Traffic is encrypted, every request checks your session, and Gmail tokens are encrypted at rest. Ledgerline is not a bank and cannot move money. Treat statement PDFs as sensitive.",
+    title: "Security notes",
+    body: "Ledgerline is not a bank and cannot move money. Your statements and backups are sensitive: keep your computer’s disk encrypted (FileVault, BitLocker or LUKS) and store backups somewhere safe.",
   },
   {
     title: "Questions",
-    body: "Ledgerline is open source. Ask questions or report a problem by opening an issue on the project's GitHub page. Last updated 11 October 2026.",
+    body: (
+      <>
+        Ledgerline is open source, so you can check all of this in the code. Ask questions or
+        report a problem on <a href="https://github.com/Devanshgoel-123/ledgerline/issues">GitHub</a>.
+        Last updated 25 October 2026.
+      </>
+    ),
   },
 ];
 
 export default function PrivacyPage() {
   return (
-    <main className="shell privacy-page">
-      <AppSurfaceBackdrop />
-      <SiteNav />
-      <article className="legal-doc">
-        <header className="arch-hero">
-          <p className="brand compact">Ledgerline</p>
-          <h1>Privacy policy</h1>
-          <p className="lede">
-            What Ledgerline stores, what it asks Google for, and how to take your
-            data with you or delete it.
+    <div className="site">
+      <a className="site-skip" href="#main">
+        Skip to content
+      </a>
+      <div className="site-frame">
+        <SiteNav />
+      </div>
+      <main id="main" className="site-frame site-doc">
+        <header className="site-doc-head">
+          <h1 className="site-display site-display-sm">Privacy</h1>
+          <p className="site-lede">
+            What Ledgerline keeps on your computer, what it reads, the one optional feature that
+            sends data out, and how to take your data with you or erase it.
           </p>
         </header>
-        {SECTIONS.map((section) => (
-          <section key={section.title} className="panel legal-section">
-            <h2 className="ui-header">{section.title}</h2>
-            <p className="legal-copy">{section.body}</p>
-          </section>
-        ))}
-      </article>
-      <SiteFooter />
-    </main>
+        <div className="site-doc-sections">
+          {SECTIONS.map((section) => (
+            <section key={section.title} className="site-doc-section">
+              <h2 className="site-def-title">{section.title}</h2>
+              <p>{section.body}</p>
+            </section>
+          ))}
+        </div>
+      </main>
+      <div className="site-frame">
+        <SiteFooter />
+      </div>
+    </div>
   );
 }

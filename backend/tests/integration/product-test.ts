@@ -5,7 +5,7 @@
 
 async function main() {
   process.env.DATABASE_URL = "memory";
-  process.env.JWT_SECRET = "test-jwt-secret-16chars";
+  process.env.APP_SECRET = "test-app-secret-16chars";
   process.env.ENCRYPTION_KEY =
     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
@@ -127,7 +127,7 @@ async function main() {
     source: "upload",
     status: "completed",
     filename: "a.pdf",
-    gmailMessageId: null,
+    mailMessageId: null,
     attachmentHash: "hash1",
     bankAdapter: "hdfc",
     errorMessage: null,

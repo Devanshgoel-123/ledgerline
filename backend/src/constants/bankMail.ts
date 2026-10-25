@@ -6,7 +6,7 @@
  */
 export type BankMailVendor = {
   bankId: "HDFC" | "SBI" | "ICICI" | "AXIS";
-  /** Gmail `from:` token: a domain or a full address. */
+  /** IMAP FROM search term: a domain or a full address. */
   sender: string;
   /** Seen on a real message. Unconfirmed rows are the existing allowlist. */
   confirmed: boolean;

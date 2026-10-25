@@ -3,7 +3,8 @@ import { requestBlob, requestJson, requestVoid } from "./http";
 import type {
   AccountSummary,
   LocalProfile,
-  GmailStatus,
+  MailProviderId,
+  MailStatus,
   ParseStatementResult,
   Provider,
   TelegramStatus,
@@ -44,7 +45,7 @@ export function createApiClient() {
     eraseAllData: (): Promise<void> =>
       requestVoid("/api/me", { method: "DELETE" }),
 
-    /** Wipe imported mail and transactions. Keeps the account and Gmail. */
+    /** Wipe imported mail and transactions. Keeps settings and the mailbox connection. */
     clearImportedData: (): Promise<import("./types").ClearedImportedData> =>
       requestJson("/api/imports/data", { method: "DELETE" }),
 
@@ -98,7 +99,7 @@ export function createApiClient() {
     enablePooling: (
       body: { month?: string; password?: string; maxMessages?: number; banks?: string[] } = {},
     ) =>
-      requestJson<{ status: "running"; runId: string }>("/api/gmail/pooling/enable", {
+      requestJson<{ status: "running"; runId: string }>("/api/mail/pooling/enable", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -153,17 +154,28 @@ export function createApiClient() {
         body: JSON.stringify(body),
       }),
 
-    gmailStatus: () => requestJson<GmailStatus>("/api/gmail/status"),
+    mailStatus: () => requestJson<MailStatus>("/api/mail/status"),
 
-    confirmGmail: (pending: string) =>
-      requestJson<{ connected: boolean; email: string }>("/api/gmail/confirm", {
+    /** The server signs in with the app password before saving it, so a wrong one fails here. */
+    connectMailbox: (body: {
+      email: string;
+      provider: MailProviderId;
+      host?: string;
+      port?: number;
+      password: string;
+    }) =>
+      requestJson<MailStatus>("/api/mail/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pending }),
+        body: JSON.stringify(body),
       }),
 
-    gmailConnectUrl: () =>
-      requestJson<{ url: string }>("/api/gmail/connect"),
+    disconnectMailbox: () =>
+      requestJson<{ ok: true }>("/api/mail/connect", { method: "DELETE" }),
+
+    /** Re-read this month's bank mail; runs in the background. */
+    scanMailNow: () =>
+      requestJson<{ status: "running"; runId: string }>("/api/mail/scan-now", { method: "POST" }),
 
     telegramStatus: () =>
       requestJson<TelegramStatus>("/api/telegram/status"),
@@ -427,11 +439,11 @@ export function createApiClient() {
 
     listLockedStatements: () =>
       requestJson<{ statements: Array<{ id: string; filename: string | null; foundAt: string }> }>(
-        "/api/gmail/locked-statements"),
+        "/api/mail/locked-statements"),
 
     unlockStatement: (id: string, password: string) =>
       requestJson<{ inserted: number; verified: number }>(
-        `/api/gmail/locked-statements/${encodeURIComponent(id)}/unlock`,
+        `/api/mail/locked-statements/${encodeURIComponent(id)}/unlock`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

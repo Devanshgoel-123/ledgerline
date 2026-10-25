@@ -15,6 +15,25 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  installer:
+    name: Install scripts
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Shell syntax
+        run: bash -n ledgerline && sh -n install.sh
+      - name: ShellCheck
+        run: shellcheck ledgerline install.sh
+      - name: Compose file is valid with the settings ./ledgerline creates
+        run: docker compose config --quiet
+        env:
+          APP_SECRET: ci
+          ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+          POSTGRES_PASSWORD: ci
+      - name: Help works without Docker running
+        run: ./ledgerline help
+
   backend:
     name: Backend tests
     timeout-minutes: 20
@@ -38,7 +57,7 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: memory
-      JWT_SECRET: test-jwt-secret-16chars
+      APP_SECRET: test-app-secret-16chars
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       TELEGRAM_BOT_TOKEN: ""
       TELEGRAM_BOT_USERNAME: ""

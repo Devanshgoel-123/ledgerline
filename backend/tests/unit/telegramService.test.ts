@@ -5,7 +5,7 @@ import { MemoryStore } from "../../src/db/memory.js";
 import { parseTelegramCommand } from "../../src/telegram/commands.js";
 import { istClock } from "../../src/telegram/briefing.js";
 import { normalizePhone } from "../../src/telegram/phone.js";
-import { followGmailSync, syncProgressText } from "../../src/telegram/syncWatch.js";
+import { followMailScan, syncProgressText } from "../../src/telegram/syncWatch.js";
 import {
   buildTelegramDeepLink,
   confirmTelegramPhone,
@@ -391,7 +391,7 @@ describe("telegram menus", () => {
     const home = callbacks(homeKeyboard());
     assert.deepEqual(home, ["m:today", "m:month", "m:status", "m:spent", "m:stmt", "m:sync", "m:settings"]);
     const settings = callbacks(settingsKeyboard());
-    for (const data of ["m:limit", "m:remind", "m:gmail", "m:profile", "m:clear", "m:unlink", "m:home"]) {
+    for (const data of ["m:limit", "m:remind", "m:mail", "m:profile", "m:clear", "m:unlink", "m:home"]) {
       assert.ok(settings.includes(data), data);
     }
     assert.deepEqual(parseTelegramAction("m:settings"), { kind: "settings-menu" });
@@ -575,7 +575,7 @@ describe("telegram category asks", () => {
     assert.match(sent.at(-1) ?? "", /Saved as Rides/);
   });
 
-  it("sync asks to connect email when Gmail is missing", async () => {
+  it("sync asks to connect email when no mailbox is connected", async () => {
     const { store, user } = await setupUser();
     await store.linkTelegramChat(user.id, "91");
     const sent: string[] = [];
@@ -780,7 +780,7 @@ describe("telegram profile", () => {
       },
     );
     assert.match(sent.at(-1) ?? "", /Profile/);
-    assert.match(sent.at(-1) ?? "", /tg@example.com/);
+    assert.match(sent.at(-1) ?? "", /Mailbox {2}Not connected/);
     assert.match(sent.at(-1) ?? "", /Not linked/);
     assert.match(sent.at(-1) ?? "", /Reminder {2}Off/);
     assert.doesNotMatch(sent.at(-1) ?? "", /Off IST/);
@@ -793,19 +793,19 @@ describe("telegram errors", () => {
       'Failed query: select "id" from "pooling_runs" where "pooling_runs"."user_id" = $1\nparams: abc',
     );
     error.cause = new Error("Connection terminated unexpectedly");
-    assert.equal(formatTelegramError(error, "Could not sync Gmail."), "⚠️ Could not sync Gmail.");
+    assert.equal(formatTelegramError(error, "Could not scan bank mail."), "⚠️ Could not scan bank mail.");
   });
 
   it("keeps a short message the user can act on", () => {
     assert.equal(
-      formatTelegramError(new Error("Add a bank and its statement sender on Import, then sync again."), "Could not sync Gmail."),
+      formatTelegramError(new Error("Add a bank and its statement sender on Import, then sync again."), "Could not scan bank mail."),
       "⚠️ Add a bank and its statement sender on Import, then sync again.",
     );
   });
 });
 
-describe("gmail sync progress", () => {
-  it("shows a percent once Gmail has said how many messages are in the scan", () => {
+describe("mail scan progress", () => {
+  it("shows a percent once the search has said how many messages are in the scan", () => {
     const text = syncProgressText({
       status: "running",
       scanned: 94,
@@ -821,7 +821,7 @@ describe("gmail sync progress", () => {
   it("publishes counts while the run is going, then returns the finished run", async () => {
     const texts: string[] = [];
     let reads = 0;
-    const finished = await followGmailSync({
+    const finished = await followMailScan({
       publish: async (text) => {
         texts.push(text);
       },
@@ -849,7 +849,7 @@ describe("gmail sync progress", () => {
       sleep: async () => undefined,
       maxTicks: 5,
     });
-    assert.match(texts[0] ?? "", /Syncing Gmail/);
+    assert.match(texts[0] ?? "", /Scanning bank mail/);
     assert.match(texts.at(-1) ?? "", /Saved <b>2<\/b>/);
     assert.equal(finished?.status, "completed");
     assert.equal(finished?.imported, 2);

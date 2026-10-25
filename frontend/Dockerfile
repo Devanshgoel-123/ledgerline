@@ -11,6 +11,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG NEXT_PUBLIC_API_URL=http://localhost:4000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# "app": the local install. "site" builds the public website instead.
+ARG NEXT_PUBLIC_LEDGERLINE_MODE=app
+ENV NEXT_PUBLIC_LEDGERLINE_MODE=$NEXT_PUBLIC_LEDGERLINE_MODE
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

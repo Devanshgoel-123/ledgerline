@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { IncomingMessage, Server } from "node:http";
+import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
 import { createApp } from "../../src/app.js";
@@ -7,7 +7,6 @@ import { localHeaders } from "../helpers/local.js";
 import { config } from "../../src/config.js";
 import { resetStoreForTests } from "../../src/db/index.js";
 import { MemoryStore } from "../../src/db/memory.js";
-import { controlAllowed } from "../../src/worker/controlAuth.js";
 
 describe("security hardening", () => {
   let server: Server;
@@ -63,7 +62,10 @@ describe("security hardening", () => {
           "access-control-request-headers": "x-ledgerline-client",
         },
       });
-    assert.equal((await preflight("http://localhost:3000")).headers.get("access-control-allow-origin"), "http://localhost:3000");
+    const local = await preflight("http://localhost:3000");
+    assert.equal(local.headers.get("access-control-allow-origin"), "http://localhost:3000");
+    // Without this the browser blocks every call the web app makes.
+    assert.match(local.headers.get("access-control-allow-headers") ?? "", /x-ledgerline-client/i);
     assert.equal((await preflight("https://evil.example")).headers.get("access-control-allow-origin"), null);
   });
 
@@ -85,22 +87,5 @@ describe("security hardening", () => {
     });
     assert.equal(res.status, 404);
     Object.assign(config.telegram, saved);
-  });
-});
-
-describe("pooling worker control routes", () => {
-  const request = (remoteAddress: string, authorization?: string) =>
-    ({ socket: { remoteAddress }, headers: authorization ? { authorization } : {} }) as unknown as IncomingMessage;
-
-  it("without a token, answer loopback callers only", () => {
-    assert.equal(controlAllowed(request("127.0.0.1"), ""), true);
-    assert.equal(controlAllowed(request("::1"), ""), true);
-    assert.equal(controlAllowed(request("172.18.0.4"), ""), false);
-  });
-
-  it("with a token, require it from everyone", () => {
-    assert.equal(controlAllowed(request("172.18.0.4", "Bearer worker-secret"), "worker-secret"), true);
-    assert.equal(controlAllowed(request("127.0.0.1"), "worker-secret"), false);
-    assert.equal(controlAllowed(request("172.18.0.4", "Bearer wrong"), "worker-secret"), false);
   });
 });

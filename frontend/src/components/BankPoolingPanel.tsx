@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApi } from "@/lib/useApi";
 import { useDashboard } from "@/lib/dashboard-context";
-import type { BankPreset, GmailStatus } from "@/lib/api/types";
+import type { BankPreset, MailStatus } from "@/lib/api/types";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { BrandMark } from "@/components/BrandMark";
+import { MailboxConnectForm } from "@/components/MailboxConnectForm";
 
 /** Banks whose transaction alert emails the mail reader is tested against. */
 const ALERTS_TESTED = new Set(["HDFC"]);
@@ -26,11 +27,9 @@ function bankLogo(bankId: string): string {
 export function BankPoolingPanel({
   onChanged,
   onImported,
-  onGmailStatus,
 }: {
   onChanged?: () => void;
   onImported?: (imported: number) => void;
-  onGmailStatus?: (status: GmailStatus | null) => void;
 }) {
   const api = useApi();
   const {
@@ -41,40 +40,33 @@ export function BankPoolingPanel({
   } = useDashboard();
   const [presets, setPresets] = useState<BankPreset[]>([]);
   const [banks, setBanks] = useState<string[]>([]);
-  const [gmail, setGmail] = useState<GmailStatus | null>(null);
+  const [mail, setMail] = useState<MailStatus | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const windowLabel = formatScanWindowLabel(
-    displayScanWindow(gmail?.lastScannedOn ?? null),
+    displayScanWindow(mail?.lastScannedOn ?? null),
   );
 
   const onChangedRef = useRef(onChanged);
   const onImportedRef = useRef(onImported);
-  const onGmailStatusRef = useRef(onGmailStatus);
 
   useEffect(() => {
     onChangedRef.current = onChanged;
     onImportedRef.current = onImported;
-    onGmailStatusRef.current = onGmailStatus;
-  }, [onChanged, onImported, onGmailStatus]);
-
-  const applyGmail = useCallback((next: GmailStatus | null) => {
-    setGmail(next);
-    onGmailStatusRef.current?.(next);
-  }, []);
+  }, [onChanged, onImported]);
 
   const refresh = useCallback(async () => {
     if (!api) return null;
     try {
-      const [presetRes, accountRes, gmailRes] = await Promise.all([
+      const [presetRes, accountRes, mailRes] = await Promise.all([
         api.fetchBankPresets(),
         api.fetchAccounts().catch(() => ({ accounts: [] })),
-        api.gmailStatus().catch(() => null),
+        api.mailStatus().catch(() => null),
       ]);
       setPresets(presetRes.presets);
-      applyGmail(gmailRes);
+      setMail(mailRes);
       const enabled = accountRes.accounts
         .filter((account) => account.poolingEnabled)
         .map((account) => account.bank);
@@ -89,12 +81,12 @@ export function BankPoolingPanel({
           presetRes.presets[0];
         return defaultPreset ? [defaultPreset.id] : [];
       });
-      return gmailRes;
+      return mailRes;
     } catch {
       setError("Could not load bank setup. Refresh the page and try again.");
       return null;
     }
-  }, [api, applyGmail]);
+  }, [api]);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,16 +138,8 @@ export function BankPoolingPanel({
         });
       }
 
-      if (!gmail?.connected) {
-        if (!gmail?.configured) {
-          throw new Error(
-            "Gmail is not configured on the API. Set GOOGLE_CLIENT_ID / SECRET.",
-          );
-        }
-        setMessage("Redirecting to Google…");
-        const { url } = await client.gmailConnectUrl();
-        window.location.href = url;
-        return;
+      if (!mail?.connected) {
+        throw new Error("Connect your mailbox first.");
       }
 
       await client.enablePooling({
@@ -164,8 +148,7 @@ export function BankPoolingPanel({
         banks: selectedPresets.map((preset) => preset.id),
       });
       watchActiveScan();
-      const next = await client.gmailStatus().catch(() => null);
-      applyGmail(next);
+      setMail(await client.mailStatus().catch(() => mail));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start scan");
     } finally {
@@ -176,7 +159,7 @@ export function BankPoolingPanel({
   async function handleClear() {
     if (
       !confirm(
-        "Delete every imported transaction and mail record for this account? Gmail stays connected.",
+        "Delete every imported transaction and mail record? Your mailbox stays connected.",
       )
     ) {
       return;
@@ -197,14 +180,32 @@ export function BankPoolingPanel({
     }
   }
 
+  async function handleDisconnect() {
+    if (!confirm(`Disconnect ${mail?.email ?? "this mailbox"}? Ledgerline forgets its app password and stops scanning. Imported payments stay.`)) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await client.disconnectMailbox();
+      setMail(await client.mailStatus().catch(() => null));
+      setMessage("Mailbox disconnected. You can also delete the app password at your mail provider.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not disconnect the mailbox");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <SpotlightCard className="panel">
       <header className="panel-head">
         <h2 className="ui-header">Bank mail</h2>
         <p className="meta">
           Reads debit and credit alerts from the banks you pick. Amount is stored.{" "}
-          {gmail?.lastScannedOn
-            ? `Scanned through ${formatIsoDateLabel(gmail.lastScannedOn)}. This scan covers ${windowLabel}.`
+          {mail?.lastScannedOn
+            ? `Scanned through ${formatIsoDateLabel(mail.lastScannedOn)}. This scan covers ${windowLabel}.`
             : `This scan covers ${windowLabel}.`}
         </p>
         <p className="meta">
@@ -212,6 +213,25 @@ export function BankPoolingPanel({
           are off, a scan has nothing to import.
         </p>
       </header>
+
+      {mail?.connected ? (
+        <div className="settings-row mail-connected">
+          <p className="meta">
+            Reading bank mail from <strong>{mail.email}</strong>.
+          </p>
+          <button type="button" className="ghost" disabled={scanning} onClick={() => void handleDisconnect()}>
+            Disconnect
+          </button>
+        </div>
+      ) : mail ? (
+        <MailboxConnectForm
+          current={mail.needsPassword ? mail : null}
+          onConnected={(next) => {
+            setMail(next);
+            setMessage(`Connected ${next.email}. Choose your bank, then scan.`);
+          }}
+        />
+      ) : null}
 
       <div className="import-bank-field">
         <span className="import-bank-label">Banks</span>
@@ -261,14 +281,10 @@ export function BankPoolingPanel({
         <button
           type="button"
           className="cta"
-          disabled={scanning || banks.length === 0}
+          disabled={scanning || banks.length === 0 || !mail?.connected}
           onClick={() => void handleScan()}
         >
-          {scanning
-            ? "Scanning…"
-            : !gmail?.connected
-              ? "Connect Gmail and scan"
-              : "Scan bank mail"}
+          {scanning ? "Scanning…" : "Scan bank mail"}
         </button>
         <button
           type="button"

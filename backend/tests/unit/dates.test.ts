@@ -14,8 +14,6 @@ import {
   poolingDateWindow,
   poolingScanWindow,
   statementScanBudget,
-  toGmailQueryAfter,
-  toGmailQueryDate,
   toIstCalendarDate,
 } from "../../src/helpers/dates.js";
 
@@ -43,11 +41,6 @@ describe("pooling scan window (today back to 1 Jan 2016)", () => {
   it("maps receivedAt to the IST calendar date", () => {
     assert.equal(toIstCalendarDate("2025-12-31T18:30:00.000Z"), "2026-01-01");
     assert.equal(toIstCalendarDate("2025-12-31T18:29:59.000Z"), "2025-12-31");
-  });
-
-  it("uses Gmail after:YYYY/MM/DD the day before the inclusive start", () => {
-    assert.equal(toGmailQueryAfter("2026-03-01"), "2026/02/28");
-    assert.equal(toGmailQueryAfter("2026-08-01"), "2026/07/31");
   });
 
   it("clamps a month query to the live window", () => {
@@ -93,8 +86,7 @@ describe("date helpers", () => {
     assert.equal(monthBounds("2025-02").to, "2025-02-28");
   });
 
-  it("formats Gmail dates and parses pooling instants in IST", () => {
-    assert.equal(toGmailQueryDate("2026-07-01"), "2026/07/01");
+  it("parses pooling instants in IST", () => {
     assert.equal(parsePoolingInstant(null), null);
     assert.equal(parsePoolingInstant("   "), null);
     assert.equal(parsePoolingInstant("not-a-date"), null);

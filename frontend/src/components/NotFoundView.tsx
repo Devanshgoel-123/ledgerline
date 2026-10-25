@@ -49,8 +49,8 @@ export function NotFoundView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.36, duration: 0.45, ease: easeOut }}
         >
-          The route you opened is not in Ledgerline. Head back to the dashboard
-          or read how the product is put together.
+          There is no page at this address. Go back to the start, or open the
+          install guide.
         </motion.p>
         <motion.div
           className="hero-actions not-found-actions"
@@ -59,10 +59,10 @@ export function NotFoundView() {
           transition={{ delay: 0.44, duration: 0.45, ease: easeOut }}
         >
           <Link className="cta" href="/">
-            Back to dashboard
+            Go to the start
           </Link>
-          <Link className="ghost" href="/architecture">
-            Architecture
+          <Link className="ghost" href="/install">
+            Install guide
           </Link>
         </motion.div>
       </div>

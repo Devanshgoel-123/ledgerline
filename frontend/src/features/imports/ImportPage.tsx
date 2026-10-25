@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FileUp } from "lucide-react";
 import { LockedStatementsPanel } from "@/components/LockedStatementsPanel";
@@ -17,15 +17,6 @@ import {
   formatScanWindowLabel,
 } from "@/constants/pooling";
 
-/** Drop the one-time ?gmail= and ?detail= params from the address bar. */
-function clearGmailParams(): void {
-  const url = new URL(window.location.href);
-  if (!url.searchParams.has("gmail") && !url.searchParams.has("detail")) return;
-  for (const key of ["gmail", "detail", "pending", "email"]) url.searchParams.delete(key);
-  const qs = url.searchParams.toString();
-  window.history.replaceState({}, "", `${url.pathname}${qs ? `?${qs}` : ""}`);
-}
-
 export function ImportPage() {
   const {
     loading,
@@ -41,42 +32,12 @@ export function ImportPage() {
   } = useDashboard();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [banner, setBanner] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
   // Coming from the home welcome screen (?start=1) means the user already chose to import.
   const [showWelcome, setShowWelcome] = useState(() => searchParams.get("start") !== "1");
   const [loadingDemo, setLoadingDemo] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const windowLabel = formatScanWindowLabel(displayScanWindow());
-  // A Google account other than the sign-in email waits for this user to confirm it.
-  const [pendingGmail, setPendingGmail] = useState<{ pending: string; email: string } | null>(null);
-  const [confirmingGmail, setConfirmingGmail] = useState(false);
-  const [gmailVersion, setGmailVersion] = useState(0);
-
-  // The Gmail callback lands here with ?gmail=connected|error. Show it once, while
-  // rendering (React's "adjust state on prop change"), then tidy the address bar.
-  const paramsKey = searchParams.toString();
-  const [seenParams, setSeenParams] = useState<string | null>(null);
-  if (paramsKey !== seenParams) {
-    setSeenParams(paramsKey);
-    const gmail = searchParams.get("gmail");
-    if (gmail === "connected") {
-      setBanner("Gmail connected. Scan bank mail below.");
-      setShowWelcome(false);
-    } else if (gmail === "confirm" && searchParams.get("pending")) {
-      setPendingGmail({
-        pending: searchParams.get("pending") ?? "",
-        email: searchParams.get("email") ?? "this Google account",
-      });
-      setShowWelcome(false);
-    } else if (gmail === "error") {
-      setBannerError(searchParams.get("detail") ?? "Gmail connection failed. Try again.");
-    }
-  }
-  useEffect(() => {
-    clearGmailParams();
-  }, [paramsKey]);
-
   const handleTryDemo = async () => {
     if (loadingDemo) return;
     setLoadingDemo(true);
@@ -124,56 +85,13 @@ export function ImportPage() {
           {successMessage}
         </p>
       ) : null}
-      {banner ? (
-        <p className="meta" role="status">
-          {banner}
-        </p>
-      ) : null}
       {bannerError ? (
         <p className="form-error" role="alert">
           {bannerError}
         </p>
       ) : null}
-      {pendingGmail ? (
-        <div className="settings-reveal" role="alertdialog" aria-label="Confirm Gmail connection">
-          <p className="meta">
-            Connect <strong>{pendingGmail.email}</strong> to this Ledgerline account? Its bank
-            mail will be read into your dashboard. If you did not just start this from
-            Ledgerline, choose Cancel.
-          </p>
-          <div className="settings-row-end">
-            <button
-              type="button"
-              className="cta"
-              disabled={confirmingGmail}
-              onClick={async () => {
-                setConfirmingGmail(true);
-                setBannerError(null);
-                try {
-                  const result = await createApiClient().confirmGmail(pendingGmail.pending);
-                  setBanner(`Gmail connected (${result.email}). Scan bank mail below.`);
-                  setGmailVersion((v) => v + 1);
-                  refresh();
-                } catch (error) {
-                  setBannerError(error instanceof Error ? error.message : "Could not connect Gmail.");
-                } finally {
-                  setPendingGmail(null);
-                  setConfirmingGmail(false);
-                }
-              }}
-            >
-              Connect
-            </button>
-            <button type="button" className="ghost" onClick={() => setPendingGmail(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <LedgerlineFadeContent delay={40}>
         <BankPoolingPanel
-          key={gmailVersion}
           onChanged={refresh}
           onImported={(count) => {
             void (async () => {

@@ -36,44 +36,6 @@
   background: var(--bg-muted);
 }
 
-.import-stepper .import-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--muted);
-  padding: 0.35rem 0.65rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-muted);
-  transition: all var(--ease);
-}
-
-.import-stepper .import-step-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-.import-stepper .import-step.active {
-  color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
-  background: var(--primary-soft);
-}
-
-.import-stepper .import-step.done {
-  color: var(--foreground);
-  border-color: color-mix(in srgb, var(--success) 30%, transparent);
-}
-
 .import-trust-panel {
   display: flex;
   gap: 0.85rem;
@@ -84,6 +46,83 @@
 }
 
 .import-bank-field {
+  margin-bottom: 0.85rem;
+}
+
+/* ── Mailbox connect (IMAP + app password) ── */
+.mail-connect {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.1rem;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.mail-connect h3 {
+  margin: 0;
+}
+
+.mail-connect-providers {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.mail-connect-notice,
+.mail-connect-warning {
+  margin: 0;
+}
+
+.mail-connect-guide {
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.mail-connect-guide .meta {
+  margin: 0;
+}
+
+.mail-connect-guide ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mail-connect-guide a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mail-connect-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+}
+
+.mail-connect-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.mail-connect-privacy svg {
+  flex: none;
+  margin-top: 0.2rem;
+}
+
+.mail-connect .cta {
+  justify-self: start;
+}
+
+.mail-connected {
   margin-bottom: 0.85rem;
 }
 

@@ -32,7 +32,7 @@ export function generateTelegramCode(): string {
 }
 
 export function hashTelegramCode(userId: string, code: string): string {
-  return createHash("sha256").update(`${config.jwtSecret}:${userId}:${code}`).digest("hex");
+  return createHash("sha256").update(`${config.appSecret}:${userId}:${code}`).digest("hex");
 }
 
 export function telegramCodeMatches(userId: string, code: string, hash: string): boolean {

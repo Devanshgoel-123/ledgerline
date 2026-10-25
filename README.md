@@ -1,501 +1,215 @@
 # Ledgerline
 
-> Track your UPI spending with bank statements and Gmail alerts. Understand where your money goes.
+> Where your UPI money actually went, worked out on your own computer.
 
-A privacy-first, open-source expense tracker built for UPI users in India. Import HDFC bank statements as PDFs, connect Gmail for real-time alerts, and analyze spending patterns with rich visualizations and smart categorization.
+Ledgerline is a free, open-source (MIT) spending tracker for UPI users in India.
+It reads your bank statement PDFs and bank alert emails, sorts every payment by
+app, shop, person and category, and shows the month as a picture you can act on.
 
-**Status:** Beta | Free and open source (MIT) | Self-host it, or use a hosted instance
-
----
-
-## ✨ Features
-
-### Core
-- **PDF Import** — Upload HDFC bank statement PDFs (password-protected is fine); every line is checked against the running balance before it is added
-- **Gmail Integration (optional)** — Read-only scan of bank alert emails. Tested on HDFC; SBI, ICICI and Axis are marked early
-- **Smart Categorization** — Auto-categorize transactions; create custom rules for merchants
-- **Bill Splitting** — Split expenses with friends; track who owes what
-- **Spending Analytics** — Daily spend trends, category breakdowns, merchant analysis
-- **Daily Limits** — Set daily budgets; track days over limit and weekly patterns
-
-### Technical
-- **Multi-tenant** — Isolated user data with tenant context enforcement
-- **Privacy-first** — No third-party tracking; all data stays in your database
-- **Self-hosted** — Deploy to your own server; full control over infrastructure
-- **Type-safe** — Full TypeScript, strict mode; zero type errors
-- **Accessible** — Keyboard and screen-reader support on the main screens (not yet formally audited)
-- **Mobile-optimized** — Touch-friendly inputs; responsive layout
+It runs only on your computer. There is no account to create, no cloud, no
+analytics. Your data sits in a database on your machine, and the app only
+answers your own browser.
 
 ---
 
-## 🚀 Quick Start
+## Install
 
-### Prerequisites
-- Docker & Docker Compose (recommended)
-- Node.js 20+ (for local development)
-- PostgreSQL 15+ (included in Docker Compose)
+You need **Docker**. Use Docker Desktop on macOS or Windows, or Docker Engine
+with the Compose plugin on Linux. On Windows, run the commands below in a
+**WSL (Ubuntu) terminal** with Docker Desktop's WSL integration turned on.
 
-### 1. Clone & Setup
+Choose one of three ways. All of them end with the same command.
+
+**1. One line**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Devanshgoel-123/ledgerline/main/install.sh | sh
+```
+
+This downloads Ledgerline into `~/ledgerline` and starts it. To use another
+folder, set `LEDGERLINE_DIR=/path` first. You can read
+[install.sh](install.sh) before you run it.
+
+**2. Clone**
 
 ```bash
 git clone https://github.com/Devanshgoel-123/ledgerline.git
 cd ledgerline
-cp .env.example .env
+./ledgerline start
 ```
 
-### 2. Configure Environment
+**3. Download**
 
-Edit `.env` and set the two required secrets (generate them like this):
-```bash
-# Security (required)
-JWT_SECRET=$(openssl rand -hex 32)        # paste the output
-ENCRYPTION_KEY=$(openssl rand -hex 32)    # must be 64 hex characters
+Download the [zip](https://github.com/Devanshgoel-123/ledgerline/archive/refs/heads/main.zip)
+and unzip it. Open a terminal in that folder, then run `./ledgerline start`.
 
-# Database: the default DATABASE_URL already points at the bundled Postgres,
-# which COMPOSE_PROFILES=local-db starts. If you change POSTGRES_PASSWORD,
-# change it inside DATABASE_URL too. Using hosted Postgres (Neon etc.)?
-# Set DATABASE_URL to it and delete the COMPOSE_PROFILES line.
+### What `./ledgerline start` does
 
-# Optional: Google OAuth & Telegram
-GOOGLE_CLIENT_ID=your-google-oauth-client-id
-GOOGLE_CLIENT_SECRET=your-google-oauth-secret
-TELEGRAM_BOT_TOKEN=your-telegram-bot-token
-TELEGRAM_BOT_USERNAME=@your_bot_name
-```
+1. Checks that Docker is installed and running, and that ports 3000 and 4000 are free.
+2. On the first run, creates `.env` with random secrets. You don't edit anything.
+3. Builds and starts three containers: Postgres, the API and the web app. All of
+   them listen on `127.0.0.1` only. The first build takes a few minutes; later
+   starts take seconds.
+4. Waits until everything answers, then opens <http://localhost:3000>.
 
-The API long-polls Telegram, so the bot works on a laptop with no public URL or
-ngrok tunnel. Run one API per bot token. To have Telegram push updates instead,
-set `TELEGRAM_WEBHOOK_URL` to the API's public https address and
-`TELEGRAM_WEBHOOK_SECRET` to 16+ random characters. Settings shows "Connected"
-only when the bot is receiving updates and Telegram accepts messages for your chat.
+### Everyday commands
 
-### 3. Run with Docker
+| Command | What it does |
+|---|---|
+| `./ledgerline start` | Start Ledgerline and open it |
+| `./ledgerline stop` | Stop it. Your data is kept |
+| `./ledgerline status` | Show whether each part is running |
+| `./ledgerline logs` | Follow the logs (`logs api` for one part) |
+| `./ledgerline open` | Open it in your browser |
+| `./ledgerline update` | Back up, get the latest version, restart |
+| `./ledgerline backup` | Save your data to `./backups` |
+| `./ledgerline restore <file>` | Replace your data with a backup |
+| `./ledgerline uninstall` | Remove the containers. Asks before deleting your data |
 
-```bash
-docker compose up --build
-```
-
-Access:
-- **Web:** http://localhost:3000
-- **API:** http://localhost:4000/health
-
-### 4. Run Locally (without Docker)
-
-```bash
-# Start Postgres only
-docker compose up -d postgres
-
-# Setup backend
-cd backend
-cp .env.example .env
-npm install
-npm run migrate
-npm run dev
-
-# Setup frontend (new terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-Access: http://localhost:3000 (API at http://localhost:4000)
+Docker restarts Ledgerline when your computer restarts, as long as Docker itself
+starts.
 
 ---
 
-## 📖 User Guide
+## Using it
 
-### First time
-1. **Sign up** with an email and password, or continue with Google. Google sign-in also asks for read-only Gmail access; email sign-in never touches your inbox.
-2. The **welcome screen** offers three things: import your transactions, explore with sample data, or read this guide.
+1. Open <http://localhost:3000>. The welcome screen offers three ways in: import
+   a statement, look around with sample data, or connect your bank mail.
+2. **Statement PDFs.** Go to **Import** and choose an HDFC or ICICI statement.
+   Password-protected files are fine; for HDFC the password is usually your
+   customer ID. The password is used once and never saved. Each line is checked
+   against the running balance before it's added, and uploading the same file
+   twice adds nothing.
+3. **Bank alert emails (optional).** Under **Import → Bank mail**, enter your
+   email address and an *app password* from your mail provider. Ledgerline
+   connects over IMAP, reads only mail from your bank's addresses, and never
+   changes your mailbox. The app password is encrypted with the key in your
+   `.env` and stored only in your local database. Ledgerline rescans every 6
+   hours, or when you press **Scan now**.
+4. **Things your bank can't see.** UPI Lite payments, cash and other wallets
+   don't appear in statements or alerts. Add them under **Transactions → Add
+   expense**.
 
-### Importing a statement PDF
-1. Go to **Import** and choose an HDFC statement PDF.
-2. Enter its password if it has one (for HDFC this is usually your customer ID). A wrong password says so and keeps you signed in.
-3. A report shows how many lines were read, already recorded, added, and held back because they did not add up against the closing balance. Uploading the same file again adds nothing.
-4. Choose **View <month>** to see the results.
+The pages:
 
-### Scanning bank mail (optional)
-1. Go to **Import** → **Connect Gmail and scan**, and pick your bank.
-2. Ledgerline searches only mail from that bank's addresses. It rescans every 6 hours, or whenever you press **Scan bank mail**.
-3. Statement PDFs found in mail are usually locked. They are listed on Import under **Statements waiting for a password**; type the password once to import each one. The password is not saved.
+- **Overview**: spent, money in, daily average and your daily limit.
+- **Lifestyle**: spending by category, and who or what each category went to.
+- **Apps**: the apps and shops you paid, with their UPI IDs.
+- **People**: money sent to and received from people.
+- **Transactions**: search, filter, recategorise, split a bill, add or delete.
+- **Settings**: daily limit, rules, CSV export, Telegram, and erasing everything.
 
-### Pages
-- **Overview** — total spent, money in, daily average and daily limit for the month.
-- **Lifestyle** — spending by category; expand a category to see who or what it went to.
-- **Apps** — apps and shops you paid this month, their category and UPI IDs. Apps with no spending are hidden behind a button.
-- **People** — money sent to and received from people.
-- **Transactions** — every payment: search, filter (a parent category includes its subcategories), change category, split a bill, add an expense by hand, or delete.
-- **Settings** — daily limit, profile, Telegram, **Download all transactions (CSV)**, clear imported data, delete account.
+### What it supports today
 
-### Bill splitting
-Open a payment on **Transactions** → split, add friends and their shares. Only your share counts toward your spending.
-
-### Sample data
-Choose **Explore with sample data** on the welcome screen. A month of made-up transactions is added and clearly labelled; a banner with **Remove sample data** stays visible until you remove them. Your real imports are never touched.
+| Source | Status |
+|---|---|
+| HDFC statement PDF | Supported |
+| ICICI statement PDF | Supported (built from the real layout; few real files tested) |
+| HDFC alert emails | Supported |
+| SBI, ICICI, Axis alert emails | Early: some payments may be missed |
+| Other banks | Not yet. Add them by hand, or [open an issue](https://github.com/Devanshgoel-123/ledgerline/issues) |
 
 ---
 
-## 🏗 Architecture
+## Privacy
 
-### System diagram
+- **No account and no sign-in.** Ledgerline is for the one person using this computer.
+- **Nothing is sent anywhere** except the connections you turn on. Ledgerline
+  reads your mailbox over IMAP if you connect it. The optional Telegram bot is
+  the one feature that sends data off your computer: to Telegram, and only if
+  you add a bot token.
+- **Only your browser can reach it.** All ports bind to `127.0.0.1`. The API
+  also rejects requests addressed to any other host name (which blocks DNS
+  rebinding), and requests that don't carry the web app's header (so other
+  websites open in your browser can't use it).
+- **Secrets stay local.** `.env` holds the keys. A mail app password is
+  encrypted before it's stored. Statement passwords are never stored.
+- **Erasing is real.** **Settings → Erase everything** deletes every
+  transaction, rule and connection. `./ledgerline uninstall` can delete the
+  database too.
+
+Back up with `./ledgerline backup`. To restore on another computer you also
+need the same `.env`, because it unlocks the stored mail password (or you can
+just reconnect your mail).
+
+---
+
+## Troubleshooting
+
+**"Docker is not running".** Start Docker Desktop, wait until it says it's
+running, then run `./ledgerline start` again.
+
+**"Port 3000 is already in use".** Another program is using that port. Set
+`WEB_PORT=3001` (or `API_PORT` for 4000) in `.env`, then start again.
+
+**The page says "Ledgerline is not running".** The web page couldn't reach the
+API on your computer. Run `./ledgerline status`, then `./ledgerline logs api`.
+
+**The mail app password is refused.** Gmail, Yahoo and iCloud only issue app
+passwords once 2-step verification is on. Create a new app password and paste
+it without spaces. Your normal email password won't work.
+
+**A statement isn't recognised.** Only HDFC and ICICI PDFs are read for now.
+Check that the file is the statement PDF from net banking, not a screenshot or
+a printout.
+
+---
+
+## How it fits together
 
 ```mermaid
 flowchart LR
-    U["User"] --> Web["Next.js 16 web app<br/>dashboard · imports · rules<br/>splits · analytics"]
-    TG["Telegram"] <--> Bot
-
-    subgraph API["Express 5 API (TypeScript)"]
-        Auth["/api/auth<br/>JWT + bcrypt"]
-        Imp["/api/imports<br/>HDFC PDF statements<br/>(pdf.js parser)"]
-        Gm["/api/gmail<br/>OAuth + alert parser"]
-        Rules["/api/rules · /api/categories<br/>auto-categorisation"]
-        SM["/api/statement-match<br/>reconcile alerts vs statements"]
-        Bot["/api/telegram<br/>commands · daily briefing"]
-        Misc["/api/accounts · /api/providers<br/>/api/preferences · /api/admin"]
-    end
-
-    Worker["Polling worker<br/>Gmail sync jobs"]
-
-    Web -->|REST| Auth & Imp & Rules & SM & Misc
-    Web --> Gm
-    Gm <--> Google["Gmail API"]
-    Worker <--> Google
-    Worker --> DB
-    Imp --> Rules
-    Auth & Imp & Gm & Rules & SM & Bot & Misc --> DB[("PostgreSQL 15<br/>Drizzle ORM")]
+    B["Your browser<br/>localhost:3000"] --> Web["Web app<br/>Next.js"]
+    B -->|"X-Ledgerline-Client"| API["API<br/>Express + TypeScript"]
+    API --> DB[("Postgres<br/>Docker volume")]
+    API -->|"IMAP, read-only<br/>(optional)"| Mail["Your mailbox"]
+    API -.->|"optional bot"| TG["Telegram"]
 ```
 
-**Data flow:** bank statement PDFs and Gmail transaction alerts are each parsed into transactions. Rules then categorise them by merchant, and statement matching de-duplicates and reconciles the two sources. The dashboard, analytics, and Telegram briefings all read from the same Postgres data.
+Statement PDFs and alert emails are each parsed into transactions. Rules then
+categorise them by merchant, and statement matching reconciles the two sources
+so a payment is never counted twice. Every page reads the same Postgres data.
 
-
-### Tech Stack
-
-**Frontend**
-- Next.js 16 (App Router)
-- React 19 with hooks
-- Tailwind CSS 4 + custom design system
-- Framer Motion (animations)
-- Recharts (visualizations)
-
-**Backend**
-- Express 5
-- TypeScript (strict mode)
-- Drizzle ORM + PostgreSQL 15
-- JWT auth with bcrypt
-- Domain-driven modules
-
-**Infrastructure**
-- Docker & Docker Compose
-- PostgreSQL (data)
-
-### Project Structure
-
-```
-ledgerline/
-├── frontend/              # Next.js web app
-│   ├── src/
-│   │   ├── app/          # App Router pages
-│   │   ├── components/   # React components
-│   │   ├── features/     # Feature modules (imports, dashboard)
-│   │   ├── lib/          # Utilities (auth, API, hooks)
-│   │   └── styles/       # Global & responsive CSS
-│   └── package.json
-│
-├── backend/               # Express API
-│   ├── src/
-│   │   ├── auth/         # JWT auth, login
-│   │   ├── imports/      # PDF/Gmail import logic
-│   │   ├── gmail/        # Gmail OAuth & pooling
-│   │   ├── rules/        # Auto-categorization rules
-│   │   ├── providers/    # Merchant database
-│   │   ├── splits/       # Bill splitting
-│   │   ├── db/           # Schema & migrations
-│   │   ├── middleware/   # Auth, rate limiting, validation
-│   │   └── errors/       # Error handling
-│   ├── tests/            # Vitest unit & integration tests
-│   └── package.json
-│
-├── docs/                  # Documentation
-├── scripts/              # Docker setup & checks
-└── docker-compose.yml    # Full stack definition
-```
-
-### Data Model
-
-**Core Tables**
-- `users` — Account info, auth
-- `transactions` — Imported/manual expenses
-- `imports` — Import history (PDF, Gmail)
-- `splits` — Bill split records
-- `categories` — Spending categories
-- `providers` — Merchant database
-- `rules` — Categorization rules
-
-**Design Principles**
-- Tenant isolation (explicit `userId` on all queries)
-- Soft deletes (keep audit trail)
-- Normalized schema (avoid data duplication)
-- Indexes on common queries (date, category, merchant)
+| Part | Where | Notes |
+|---|---|---|
+| Web app | `frontend/` | Next.js 16, React 19. It also builds the public website when `NEXT_PUBLIC_LEDGERLINE_MODE=site` |
+| API | `backend/` | Express 5, TypeScript strict, Drizzle ORM, pdf.js parser |
+| Database | Docker volume `ledgerline_pg` | Postgres 16. Migrations run on start |
+| CLI | `ledgerline`, `install.sh` | Bash; no dependencies beyond Docker |
 
 ---
 
-## 🛠 Development
-
-### Run Tests
+## Development
 
 ```bash
-cd backend
-npm test
+docker run -d --name ledgerline-dev-db -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5432:5432 postgres:16-alpine
+
+cd backend && npm install
+DATABASE_URL=postgres://postgres:dev@localhost:5432/postgres npm run dev    # API on :4000
+
+cd frontend && npm install && npm run dev                                   # web on :3000
 ```
 
-Postgres-only tests (need a disposable database, never your real one):
+With `DATABASE_URL=memory`, the API runs with no database at all, using an
+in-memory store that's lost on restart.
+
+Tests:
 
 ```bash
-cd backend
-TEST_DATABASE_URL=postgres://user:pass@localhost:5432/scratch npm run test:db
+cd backend && npm run typecheck && npm test
+cd backend && TEST_DATABASE_URL=postgres://... npm run test:db   # disposable database only
+cd frontend && npm run typecheck && npm run lint && npm test
+npm install && npx playwright install chromium && npm test       # browser journeys, from the repo root
 ```
 
-Frontend unit tests: `cd frontend && npm test`.
+The public website is the same frontend, built with
+`NEXT_PUBLIC_LEDGERLINE_MODE=site` (on Vercel, set the root directory to
+`frontend`). In that mode it shows the landing and install pages and never
+calls an API.
 
-Browser journeys (Playwright) start their own in-memory API and frontend; set
-`E2E_DATABASE_URL` to a disposable Postgres to test persistence:
+See [CONTRIBUTING.md](CONTRIBUTING.md) to send changes, and
+[SECURITY.md](SECURITY.md) to report a vulnerability.
 
-```bash
-npm install && npx playwright install chromium
-npm test
-```
+## License
 
-### Type Checking
-
-```bash
-# Frontend
-cd frontend
-npm run build
-
-# Backend
-cd backend
-npm run build
-```
-
-Both must pass with 0 errors.
-
-### Git Workflow
-
-1. Create feature branch: `git checkout -b feat/description`
-2. Make small, focused commits
-3. Test locally before pushing
-4. Create PR on GitHub
-
-`main` is protected: every change lands through a pull request, and it
-can merge only when **Backend tests**, **Frontend tests**, **Browser
-journeys**, and **Dependency review** pass on the latest `main`. Pull
-requests are squash-merged. Workflows on a first-time contributor's pull
-request run after a maintainer approves them.
-
-Commit style:
-```
-feat: add demo data endpoint
-
-- Create /api/demo/load POST endpoint
-- Include 19 sample transactions
-- Help new users understand app
-```
-
-### Making Changes
-
-**Add a new API endpoint:**
-1. Create `backend/src/module/controller.ts`
-2. Create `backend/src/module/service.ts` (business logic)
-3. Create `backend/src/module/routes.ts`
-4. Add route to `backend/src/app.ts`
-5. Test in `backend/tests/`
-
-**Add a new page:**
-1. Create `frontend/src/app/(dashboard)/path/page.tsx`
-2. Add to navigation (`dashboardViews.ts`)
-3. Add styling if needed
-4. Test mobile layout
-
----
-
-## 📦 Deployment
-
-### Self-Hosted (Recommended)
-
-**1. Generate Secrets**
-```bash
-./scripts/generate-docker-secrets.sh
-```
-
-**2. Set Production Environment**
-```bash
-cp .env.example .env
-# Edit .env with secure values
-./scripts/docker-prod-check.sh --strict --compose
-```
-
-**3. Run Production Stack**
-```bash
-docker compose \
-  -f docker-compose.yml \
-  -f docker-compose.prod.yml \
-  up --build -d
-```
-
-Features in prod:
-- No published database port (internal only)
-- Strict secret validation
-- Optional Gmail worker container
-
-### Web app on Vercel
-
-The Next.js app (`frontend/`) deploys to Vercel: a merge to `main`
-deploys to production and every pull request gets a preview. The API is
-a long-running server (Gmail scanning and the Telegram bot keep running),
-so host `backend/` with Docker as above.
-
-1. Import the repository in Vercel and set **Root Directory** to `frontend`.
-2. Set `NEXT_PUBLIC_API_URL` to your API's public URL, then redeploy:
-   the value is built into the page.
-3. On the API, add the Vercel domain to `CORS_ORIGINS` and set
-   `FRONTEND_URL` to it, so sign-in and email links come back to the app.
-
-### Production Checklist
-
-- [ ] JWT_SECRET is ≥16 random characters
-- [ ] ENCRYPTION_KEY is 64 hex characters
-- [ ] Database password is strong (not default)
-- [ ] CORS_ORIGINS restricted to your domain
-- [ ] HTTPS enabled (use reverse proxy like nginx)
-- [ ] Backups configured for Postgres
-- [ ] Logs monitored (check `/api/health`)
-- [ ] Rate limiting configured (see config.ts)
-
-### Monitoring
-
-Health checks:
-```bash
-curl http://localhost:4000/health
-curl http://localhost:4000/ready
-curl http://localhost:4000/live
-```
-
-Logs:
-```bash
-docker compose logs -f api
-docker compose logs -f web
-```
-
----
-
-## 🔒 Security
-
-### Data Privacy
-- All data stored in your database
-- No analytics or telemetry sent externally
-- Passwords hashed with bcrypt (12 rounds)
-- JWTs expire after 7 days
-
-### Best Practices
-1. **Keep secrets secure** — Never commit `.env`
-2. **Use HTTPS** — Always in production
-3. **Backup database** — Daily snapshots recommended
-4. **Monitor logs** — Watch for suspicious activity
-5. **Update dependencies** — Run `npm audit` regularly
-
-### Reporting Security Issues
-See [SECURITY.md](SECURITY.md) for responsible disclosure.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup
-- Code style & conventions
-- How to submit PRs
-- Issue reporting
-
----
-
-## ❓ Troubleshooting
-
-### "PDF password incorrect"
-HDFC sends the password separately from the statement. Check your email or account settings.
-
-### "Gmail connection failed"
-1. Check Google OAuth credentials in `.env`
-2. Ensure redirect URI matches: `http://localhost:3000/api/auth/callback/google`
-3. Verify email is Gmail (not corporate G Suite)
-
-### "Transactions not showing"
-1. Go to **Import** → check import history
-2. Verify PDF or Gmail scan completed
-3. Check **Transactions** tab — may need manual review
-
-### "High memory usage"
-1. Reduce `MAX_POOL_SIZE` in `.env` (default: 20)
-2. Reduce Gmail scan frequency (default: 5 min)
-3. Archive old transactions to reduce dataset size
-
-### Tests failing locally
-```bash
-cd backend
-rm -rf node_modules
-npm install
-npm test
-```
-
-### TypeScript errors in build
-```bash
-cd frontend
-npm run build
-# Check error messages
-# Fix issues and retry
-```
-
----
-
-## 📊 Performance
-
-### Benchmarks
-
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Page load | <2s | 1.2s |
-| API response | <200ms | ~100ms |
-| PDF parse | <5s | 2-4s |
-| Gmail scan | <30s | 8-15s |
-
-### Optimization Tips
-
-1. **Database** — Add indexes for custom queries
-2. **Frontend** — Use `<Suspense>` for large components
-3. **Images** — Optimize with `next/image`
-4. **API** — Cache frequently accessed data
-
----
-
-## 📝 License
-
-[MIT](LICENSE) © 2026 Devansh Goel
-
-Ledgerline is open-source software. You're free to use, modify, and distribute it under the MIT license.
-
----
-
-## 🔗 Links
-
-- **Source Code:** https://github.com/Devanshgoel-123/ledgerline
-- **Issues:** GitHub Issues tab
-- **Docs:** [docs/](docs/) folder
-- **Demo:** Try demo data in app
-
----
-
-## 🙋 Support
-
-- Check [Troubleshooting](#troubleshooting) section
-- Search [GitHub Issues](https://github.com/Devanshgoel-123/ledgerline/issues)
-- Review [SECURITY.md](SECURITY.md) for security questions
-- File a new issue with details
+MIT

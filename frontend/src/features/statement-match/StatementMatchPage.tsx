@@ -587,7 +587,7 @@ export function StatementMatchPage() {
           )}
           <div className="statement-gap-summary">
             <p className="meta">
-              {preview.gaps.missingCount} not in Gmail
+              {preview.gaps.missingCount} not in bank mail
               {preview.gaps.missingCreditCount > 0
                 ? ` · ${preview.gaps.missingCreditCount} credit${preview.gaps.missingCreditCount === 1 ? "" : "s"}`
                 : ""}
@@ -601,7 +601,7 @@ export function StatementMatchPage() {
           </div>
           {preview.gaps.missingCount > 0 ? (
             <details className="statement-gap-block" open>
-              <summary>Missing from Gmail ({preview.gaps.missingCount})</summary>
+              <summary>Missing from bank mail ({preview.gaps.missingCount})</summary>
               <div className="statement-gap-add">
                 <p className="meta">
                   Credits can be Salary, Money from home, or any other category. Spend can be labeled now or later on Transactions.

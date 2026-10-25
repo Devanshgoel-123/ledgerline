@@ -3,7 +3,8 @@ import { z } from "zod";
 
 loadEnv();
 
-const INSECURE_JWT_DEFAULTS = new Set([
+const INSECURE_APP_SECRETS = new Set([
+  "dev-only-app-secret-change-me",
   "dev-only-jwt-secret-change-me",
   "change-me-to-a-long-random-string",
   "test-jwt-secret",
@@ -26,31 +27,18 @@ const envSchema = z.object({
   /** Host names the API answers to. There is no sign-in, so keep this to this computer. */
   LEDGERLINE_ALLOWED_HOSTS: z.string().default("localhost,127.0.0.1,[::1]"),
   DATABASE_URL: z.string().min(1).default("memory"),
-  JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
+  /** Keys the hashes of Telegram phone codes. JWT_SECRET is read when this is unset. */
+  APP_SECRET: z.string().min(16, "APP_SECRET must be at least 16 characters"),
   ENCRYPTION_KEY: z
     .string()
     .regex(
       /^[0-9a-fA-F]{64}$/,
       "ENCRYPTION_KEY must be 64 hex characters (32 bytes)",
     ),
-  FRONTEND_URL: z.string().url().default("http://localhost:3000"),
-  GOOGLE_CLIENT_ID: z.string().optional().default(""),
-  GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
-  GOOGLE_REDIRECT_URI: z
-    .string()
-    .default("http://localhost:4000/api/v1/auth/google/callback"),
-  GMAIL_PUBSUB_TOPIC: z.string().optional().default(""),
-  /** Audience set on the Pub/Sub push subscription's OIDC token (usually the push URL). */
-  GMAIL_PUSH_AUDIENCE: z.string().optional().default(""),
-  /** Service account the push subscription signs its token as. */
-  GMAIL_PUSH_SERVICE_ACCOUNT: z.string().optional().default(""),
-  DISABLE_INLINE_GMAIL_JOBS: z.enum(["0", "1"]).default("0"),
-  POOLING_WORKER_SEPARATE: z.enum(["0", "1"]).default("0"),
-  POOLING_WORKER_HOST: z.string().min(1).default("127.0.0.1"),
-  /** Bearer token for the worker's /status, /run, /probe and /backfill. Empty: loopback callers only. */
-  POOLING_WORKER_TOKEN: z.string().optional().default(""),
-  POOLING_WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(5473),
-  POOLING_WORKER_INTERVAL_MS: z.coerce.number().int().positive().default(6 * 60 * 60 * 1000),
+  /** 1: no scheduled bank-mail scans (tests). "Scan now" still works. */
+  DISABLE_MAIL_JOBS: z.enum(["0", "1"]).default("0"),
+  /** How often connected mailboxes are scanned for new bank mail. */
+  MAIL_SCAN_INTERVAL_MS: z.coerce.number().int().positive().default(6 * 60 * 60 * 1000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(15),
@@ -84,24 +72,11 @@ export type AppConfig = {
   databaseUrl: string;
   databaseHost: string;
   useMemoryStore: boolean;
-  jwtSecret: string;
+  /** Server-side secret for keyed hashes. Never sent anywhere. */
+  appSecret: string;
   encryptionKey: string;
-  frontendUrl: string;
-  google: {
-    clientId: string;
-    clientSecret: string;
-    redirectUri: string;
-    pubsubTopic: string;
-    pushAudience: string;
-    pushServiceAccount: string;
-    inlineJobsEnabled: boolean;
-  };
-  poolingWorker: {
-    separateProcess: boolean;
-    host: string;
-    /** Empty: control routes answer loopback callers only. */
-    token: string;
-    port: number;
+  mailJobs: {
+    enabled: boolean;
     intervalMs: number;
   };
   rateLimit: {
@@ -161,12 +136,14 @@ function databaseHost(url: string): string {
   }
 }
 
-function resolveJwtSecret(raw: string | undefined, nodeEnv: string): string {
+/** APP_SECRET, or JWT_SECRET from installs made before it was renamed. */
+function resolveAppSecret(nodeEnv: string): string {
+  const raw = process.env.APP_SECRET?.trim() || process.env.JWT_SECRET?.trim();
   if (raw && raw.length >= 16) return raw;
   if (nodeEnv === "production") {
-    throw new Error("JWT_SECRET is required in production (min 16 chars)");
+    throw new Error("APP_SECRET is required in production (min 16 chars)");
   }
-  return raw && raw.length >= 16 ? raw : "dev-only-jwt-secret-change-me";
+  return "dev-only-app-secret-change-me";
 }
 
 function resolveEncryptionKey(
@@ -191,7 +168,7 @@ function loadConfig(): AppConfig {
 
   const parsed = envSchema.safeParse({
     ...process.env,
-    JWT_SECRET: resolveJwtSecret(process.env.JWT_SECRET, nodeEnv),
+    APP_SECRET: resolveAppSecret(nodeEnv),
     ENCRYPTION_KEY: resolveEncryptionKey(process.env.ENCRYPTION_KEY, nodeEnv),
   });
 
@@ -205,9 +182,9 @@ function loadConfig(): AppConfig {
   const env = parsed.data;
 
   if (env.NODE_ENV === "production") {
-    if (INSECURE_JWT_DEFAULTS.has(env.JWT_SECRET)) {
+    if (INSECURE_APP_SECRETS.has(env.APP_SECRET)) {
       throw new Error(
-        "JWT_SECRET uses an insecure default. Set a strong secret before production.",
+        "APP_SECRET uses an insecure default. Set a strong secret before production.",
       );
     }
     if (INSECURE_ENCRYPTION_DEFAULTS.has(env.ENCRYPTION_KEY.toLowerCase())) {
@@ -218,11 +195,6 @@ function loadConfig(): AppConfig {
     if (env.DATABASE_URL === "memory") {
       throw new Error(
         "DATABASE_URL=memory is not allowed in production. Use PostgreSQL.",
-      );
-    }
-    if (env.GMAIL_PUBSUB_TOPIC && (!env.GMAIL_PUSH_AUDIENCE || !env.GMAIL_PUSH_SERVICE_ACCOUNT)) {
-      throw new Error(
-        "GMAIL_PUBSUB_TOPIC needs GMAIL_PUSH_AUDIENCE and GMAIL_PUSH_SERVICE_ACCOUNT so push requests can be verified.",
       );
     }
     if (!env.DATABASE_URL.startsWith("postgres")) {
@@ -271,26 +243,11 @@ function loadConfig(): AppConfig {
     databaseUrl: env.DATABASE_URL,
     databaseHost: databaseHost(env.DATABASE_URL),
     useMemoryStore: env.DATABASE_URL === "memory",
-    jwtSecret: env.JWT_SECRET,
+    appSecret: env.APP_SECRET,
     encryptionKey: env.ENCRYPTION_KEY,
-    frontendUrl: env.FRONTEND_URL,
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      redirectUri: env.GOOGLE_REDIRECT_URI,
-      pubsubTopic: env.GMAIL_PUBSUB_TOPIC,
-      pushAudience: env.GMAIL_PUSH_AUDIENCE,
-      pushServiceAccount: env.GMAIL_PUSH_SERVICE_ACCOUNT.trim().toLowerCase(),
-      inlineJobsEnabled:
-        env.DISABLE_INLINE_GMAIL_JOBS !== "1" &&
-        env.POOLING_WORKER_SEPARATE !== "1",
-    },
-    poolingWorker: {
-      separateProcess: env.POOLING_WORKER_SEPARATE === "1",
-      host: env.POOLING_WORKER_HOST,
-      token: env.POOLING_WORKER_TOKEN.trim(),
-      port: env.POOLING_WORKER_PORT,
-      intervalMs: env.POOLING_WORKER_INTERVAL_MS,
+    mailJobs: {
+      enabled: env.DISABLE_MAIL_JOBS !== "1",
+      intervalMs: env.MAIL_SCAN_INTERVAL_MS,
     },
     rateLimit: {
       windowMs: env.RATE_LIMIT_WINDOW_MS,

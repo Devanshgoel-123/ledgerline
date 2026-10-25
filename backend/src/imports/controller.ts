@@ -2,7 +2,7 @@ import type { RequestHandler } from "express";
 import { config } from "../config.js";
 import { ImportSource } from "../enums/index.js";
 import { AppError } from "../errors/AppError.js";
-import { cancelActiveScan } from "../gmail/poolingService.js";
+import { cancelActiveScan } from "../bankMail/poolingService.js";
 import { bankAdapters, detectAdapter } from "../adapters/index.js";
 import { parsePdf } from "../parser.js";
 import type {

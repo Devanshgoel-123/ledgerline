@@ -478,7 +478,7 @@ async function rescanForUnmatched(
 
 /**
  * Store a statement PDF as evidence lines and reconcile the ledger.
- * Re-sending the same PDF (same hash or same Gmail id) is a no-op.
+ * Re-sending the same PDF (same hash or same mail message id) is a no-op.
  */
 export async function ingestStatementPdf(input: {
   userId: string;
@@ -486,7 +486,7 @@ export async function ingestStatementPdf(input: {
   filename: string;
   password?: string;
   source: ImportSource;
-  gmailMessageId?: string | null;
+  mailMessageId?: string | null;
   rescan?: RescanAlerts;
 }): Promise<{ importId: string; parsed: number; summary: ReconcileSummary | null }> {
   const store = await getStore();
@@ -515,8 +515,8 @@ export async function ingestStatementPdf(input: {
   };
   const byHash = await store.findImportByHash(input.userId, attachmentHash);
   if (byHash?.status === ImportStatus.Completed) return already(byHash);
-  if (input.gmailMessageId) {
-    const byMail = await store.findImportByGmailMessage(input.userId, input.gmailMessageId);
+  if (input.mailMessageId) {
+    const byMail = await store.findImportByMailMessage(input.userId, input.mailMessageId);
     if (byMail?.status === ImportStatus.Completed) return already(byMail);
   }
 
@@ -529,7 +529,7 @@ export async function ingestStatementPdf(input: {
       source: input.source,
       status: ImportStatus.Processing,
       filename: input.filename,
-      gmailMessageId: input.gmailMessageId ?? null,
+      mailMessageId: input.mailMessageId ?? null,
       attachmentHash,
       bankAdapter: null,
       errorMessage: null,
@@ -547,7 +547,7 @@ export async function ingestStatementPdf(input: {
     if (!parsed.length) {
       throw new Error(`No transactions found with ${adapter.displayName} adapter.`);
     }
-    // Re-read alert mail before any write, so no transaction stays open during Gmail calls.
+    // Re-read alert mail before any write, so no transaction stays open during mailbox calls.
     if (input.rescan) await rescanForUnmatched(input.userId, parsed, input.rescan);
     const lineInputs: NewStatementLineInput[] = parsed.map((line) => ({
       importId: importRow.id,

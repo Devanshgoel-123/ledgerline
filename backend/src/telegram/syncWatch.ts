@@ -7,11 +7,11 @@ export type SyncRunSnapshot = {
   imported: number;
   skipped: number;
   errorMessage: string | null;
-  /** How many messages Gmail said this scan would list. */
+  /** How many messages the mailbox search found for this scan. */
   estimate?: number | null;
 };
 
-/** 1–99 while a scan is open, 100 once it has finished. Null when Gmail has not given a total. */
+/** 1–99 while a scan is open, 100 once it has finished. Null until the search has a total. */
 export function syncPercent(
   scanned: number,
   estimate: number | null | undefined,
@@ -36,20 +36,20 @@ export function syncProgressText(
   >,
 ): string {
   if (run.status === "failed") {
-    const message = run.errorMessage?.trim() || "Gmail sync failed.";
+    const message = run.errorMessage?.trim() || "Mail scan failed.";
     return `⚠️ ${esc(message.slice(0, 300))}`;
   }
   if (run.status === "running") {
     const pct = syncPercent(run.scanned, run.estimate, false);
     return [
-      "🔄 <b>Syncing Gmail</b>",
+      "🔄 <b>Scanning bank mail</b>",
       ...(pct == null ? [] : [progressMeter(pct)]),
       `Looked at <b>${run.scanned}</b> message${run.scanned === 1 ? "" : "s"}`,
       `Saved <b>${run.imported}</b> new`,
     ].join("\n");
   }
-  if (run.imported === 0) return "✅ <b>Gmail synced.</b> No new mail this month.";
-  return `✅ <b>Gmail synced.</b> ${run.imported} new message${run.imported === 1 ? "" : "s"}.`;
+  if (run.imported === 0) return "✅ <b>Bank mail scanned.</b> No new mail this month.";
+  return `✅ <b>Bank mail scanned.</b> ${run.imported} new message${run.imported === 1 ? "" : "s"}.`;
 }
 
 const STARTING = syncProgressText({
@@ -61,10 +61,10 @@ const STARTING = syncProgressText({
 });
 
 /**
- * Poll a Gmail run and publish when the counts change.
+ * Poll a mail scan run and publish when the counts change.
  * Returns the finished run. Null means it vanished or was still going when we stopped watching.
  */
-export async function followGmailSync(input: {
+export async function followMailScan(input: {
   publish: (text: string) => Promise<void>;
   read: () => Promise<SyncRunSnapshot | null>;
   sleep?: (ms: number) => Promise<void>;
@@ -86,7 +86,7 @@ export async function followGmailSync(input: {
   for (let tick = 0; tick < maxTicks; tick += 1) {
     const run = await input.read();
     if (!run) {
-      await say("⚠️ The Gmail sync stopped before it finished.");
+      await say("⚠️ The mail scan stopped before it finished.");
       return null;
     }
     if (run.status === "running") {

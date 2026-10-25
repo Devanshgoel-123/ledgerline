@@ -1,4 +1,4 @@
-# Ledgerline API (+ optional pooling worker via CMD override)
+# Ledgerline API
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
