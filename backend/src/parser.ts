@@ -1,4 +1,3 @@
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { buildDailyInsights } from "./analytics/dailyInsights.js";
 import type {
   AmountBand,
@@ -318,74 +317,38 @@ function parseLooseRow(
   };
 }
 
-const MAX_PDF_PAGES = 300;
+/** One positioned piece of text from a PDF page. */
+export interface PdfTextItem {
+  str: string;
+  x: number;
+  y: number;
+}
 
-export async function extractTextFromPdf(
-  data: Buffer,
-  password = "",
-): Promise<string> {
-  const loadingTask = getDocument({
-    data: new Uint8Array(data),
-    password: password || undefined,
-    useSystemFonts: true,
-  });
-
-  try {
-    const pdf = await loadingTask.promise;
-    // Parsing runs on the API's event loop. A bank statement is a few dozen pages.
-    if (pdf.numPages > MAX_PDF_PAGES) {
-      throw new Error(`This PDF has ${pdf.numPages} pages. Statements over ${MAX_PDF_PAGES} pages are not supported.`);
-    }
-    const pages: string[] = [];
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-
-      // Bucket by approximate Y so cells on one table row stay together
-      type TextItem = { x: number; str: string };
-      const buckets = new Map<number, TextItem[]>();
-
-      for (const item of content.items) {
-        if (!("str" in item) || !item.str.trim()) continue;
-        const transform = "transform" in item ? item.transform : null;
-        if (!transform) continue;
-        const x = transform[4] as number;
-        const y = Math.round((transform[5] as number) / 2) * 2;
-        const row = buckets.get(y) ?? [];
-        row.push({ x, str: item.str });
-        buckets.set(y, row);
-      }
-
-      const lines = [...buckets.entries()]
-        .sort((a, b) => b[0] - a[0])
-        .map(([, parts]) =>
-          parts
-            .sort((a, b) => a.x - b.x)
-            .map((p) => p.str)
-            .join(" ")
-            .replace(/\s+/g, " ")
-            .trim(),
-        )
-        .filter(Boolean);
-
-      pages.push(lines.join("\n"));
-    }
-
-    return pages.join("\n");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/password/i.test(message)) {
-      // pdf.js PasswordException: code 1 = no password given, 2 = wrong password.
-      const code = (error as { code?: number }).code;
-      throw new Error(
-        code === 1 || /no password/i.test(message)
-          ? "PDF password required"
-          : "Incorrect PDF password",
-      );
-    }
-    throw error;
+/**
+ * Rebuild a page's lines from positioned text: bucket by approximate Y so cells
+ * on one table row stay together, then read each row left to right.
+ */
+export function pageTextFromItems(items: PdfTextItem[]): string {
+  const buckets = new Map<number, Array<{ x: number; str: string }>>();
+  for (const item of items) {
+    if (!item.str.trim()) continue;
+    const y = Math.round(item.y / 2) * 2;
+    const row = buckets.get(y) ?? [];
+    row.push({ x: item.x, str: item.str });
+    buckets.set(y, row);
   }
+  return [...buckets.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([, parts]) =>
+      parts
+        .sort((a, b) => a.x - b.x)
+        .map((p) => p.str)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("\n");
 }
 
 export interface StatementLine extends Transaction {
@@ -637,27 +600,4 @@ export function buildAnalytics(
       parsedCount: transactions.length,
     },
   };
-}
-
-export async function parsePdf(
-  data: Buffer,
-  password = "",
-  /** Reads transactions from the PDF text; pass a bank adapter's extract. */
-  extract: (text: string) => Transaction[] = parseTransactions,
-): Promise<ParseResult> {
-  const text = await extractTextFromPdf(data, password);
-  if (!text.trim()) {
-    throw new Error(
-      "Could not extract text from PDF. It may be image-based or empty.",
-    );
-  }
-
-  const transactions = extract(text);
-  if (!transactions.length) {
-    throw new Error("No transactions found in this statement.");
-  }
-
-  const result = buildAnalytics(transactions);
-  result.meta.pagesTextChars = text.length;
-  return result;
 }
