@@ -1,0 +1,62 @@
+import { BricolageGrotesque_600SemiBold } from "@expo-google-fonts/bricolage-grotesque/600SemiBold";
+import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque/700Bold";
+import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
+import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
+import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
+import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono/400Regular";
+import { JetBrainsMono_500Medium } from "@expo-google-fonts/jetbrains-mono/500Medium";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { SQLiteProvider } from "expo-sqlite";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { migrate } from "@/db/schema";
+import { configureNotifications, useOpenReminders } from "@/reminders/schedule";
+import { LedgerProvider } from "@/state/ledger";
+import { useTheme } from "@/ui/theme";
+
+void SplashScreen.preventAutoHideAsync();
+configureNotifications();
+
+export default function RootLayout() {
+  const { c, dark } = useTheme();
+  const [loaded, error] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    BricolageGrotesque_600SemiBold,
+    BricolageGrotesque_700Bold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+  });
+
+  useEffect(() => {
+    // A missing font falls back to the system font rather than blocking the app.
+    if (loaded || error) void SplashScreen.hideAsync();
+  }, [loaded, error]);
+
+  useOpenReminders();
+
+  if (!loaded && !error) return null;
+
+  return (
+    <SQLiteProvider databaseName="ledgerline.db" onInit={migrate as never}>
+      <LedgerProvider>
+        <StatusBar style={dark ? "light" : "dark"} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: c.bg },
+          }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="add" options={{ presentation: "modal" }} />
+          <Stack.Screen name="entry/[id]" options={{ presentation: "modal" }} />
+          <Stack.Screen name="statement" options={{ presentation: "modal" }} />
+          <Stack.Screen name="categories" options={{ presentation: "modal" }} />
+        </Stack>
+      </LedgerProvider>
+    </SQLiteProvider>
+  );
+}
