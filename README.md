@@ -10,6 +10,14 @@ It runs only on your computer. There is no account to create, no cloud, no
 analytics. Your data sits in a database on your machine, and the app only
 answers your own browser.
 
+**Status:** Beta | Free and open source (MIT) | Runs on your computer with Docker
+
+<sub>About the history: I built this in a private repo from July 2026 (206 commits). That history contained my own bank statements and transactions, so this public repo starts on 13 Oct 2026 from a cleaned snapshot, split into grouped commits. Everything after that is the real day-to-day history.</sub>
+
+![Ledgerline overview: a month of spending, money in, and the daily chart, on the built-in sample data](docs/images/overview.png)
+
+<sub>The overview page with the built-in sample data (Welcome → Explore with sample data). Every number is made up.</sub>
+
 ---
 
 ## Install
