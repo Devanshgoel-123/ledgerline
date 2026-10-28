@@ -8,7 +8,6 @@ type Listener = (job: StatementMatchJob) => void;
 
 type Watcher = {
   jobId: string;
-  token: string;
   listeners: Set<Listener>;
   timer: number | null;
 };
@@ -45,13 +44,11 @@ function clearSavedJob(): void {
  * Poll a server-side approval. Unsubscribing does not cancel the job,
  * so leaving this page or hiding the tab does not stop the batches.
  */
-export function watchMatchJob(jobId: string, token: string, listener: Listener): () => void {
+export function watchMatchJob(jobId: string, listener: Listener): () => void {
   if (!watcher || watcher.jobId !== jobId) {
     if (watcher?.timer != null) window.clearTimeout(watcher.timer);
-    watcher = { jobId, token, listeners: new Set(), timer: null };
+    watcher = { jobId, listeners: new Set(), timer: null };
     void poll();
-  } else {
-    watcher.token = token;
   }
   watcher.listeners.add(listener);
   return () => {
@@ -65,7 +62,6 @@ async function poll(): Promise<void> {
   try {
     const job = await requestJson<StatementMatchJob>(
       `/api/statement-match/apply-batch/${current.jobId}`,
-      { token: current.token },
     );
     if (watcher?.jobId !== current.jobId) return;
     if (job.status === "done") {

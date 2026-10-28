@@ -1,0 +1,26 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS password_hash TEXT NOT NULL DEFAULT '!local',
+  ADD COLUMN IF NOT EXISTS apple_sub TEXT,
+  ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS sessions_valid_after TIMESTAMP WITH TIME ZONE;
+ALTER TABLE users ALTER COLUMN password_hash DROP DEFAULT;
+CREATE UNIQUE INDEX IF NOT EXISTS users_apple_sub_idx ON users (apple_sub);
+CREATE TABLE IF NOT EXISTS invites (
+  code TEXT PRIMARY KEY,
+  max_uses INTEGER NOT NULL DEFAULT 1,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT invites_used_lte_max CHECK (used_count <= max_uses)
+);
+CREATE TABLE IF NOT EXISTS allowed_emails (
+  email TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  used_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);

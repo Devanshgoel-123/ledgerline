@@ -1,9 +1,9 @@
 import type { ParseResult } from "@/types";
 import type { PoolingRunStatus } from "@/enums/pooling";
 
-export interface AuthUser {
+/** The one person using this install. Nothing here leaves the computer. */
+export interface LocalProfile {
   id: string;
-  email: string;
   displayName?: string | null;
   avatarUrl?: string | null;
 }
@@ -29,10 +29,19 @@ export interface AccountSummary {
 
 export type ScanWindow = { from: string; to: string };
 
-export type GmailStatus = {
-  configured: boolean;
+/** Mail services with a known IMAP address; "custom" takes a host and port. */
+export type MailProviderId = "gmail" | "yahoo" | "icloud" | "zoho" | "outlook" | "custom";
+
+export type MailStatus = {
+  /** A mailbox is saved with a working app password. */
   connected: boolean;
+  /** A mailbox is saved but its app password has to be entered (again). */
+  needsPassword: boolean;
   email: string | null;
+  provider: MailProviderId | null;
+  host: string | null;
+  port: number | null;
+  lastSyncAt?: string | null;
   scanWindow?: ScanWindow;
   /** Inclusive IST day already scanned. Null until the first full scan, or after a clear. */
   lastScannedOn?: string | null;

@@ -511,7 +511,7 @@
   flex-basis: 100%;
 }
 
-/* ── Locked statements from Gmail ── */
+/* ── Locked statements from bank mail ── */
 .locked-statements {
   display: grid;
   gap: 0.75rem;
@@ -597,4 +597,13 @@
 
 .import-notice .ghost {
   padding: 0.3rem;
+}
+
+/* Keyboard focus must be visible (3:1); the soft focus shadow above is not enough on its own. */
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible,
+.limit-field input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 70%, transparent);
+  outline-offset: 1px;
 }

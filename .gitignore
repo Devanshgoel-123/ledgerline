@@ -34,3 +34,8 @@ backend/dumps/
 ios/**/xcuserdata/
 ios/**/DerivedData/
 *.xcuserstate
+
+# Written by next dev
+frontend/AGENTS.md
+# ./ledgerline backup
+/backups/

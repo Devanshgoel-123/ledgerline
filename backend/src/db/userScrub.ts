@@ -1,4 +1,4 @@
-/** Telegram and phone links, cleared when an account is deleted or claimed. */
+/** Telegram and phone links, cleared when the local data is deleted. */
 export const UNLINKED_TELEGRAM = {
   telegramChatId: null,
   telegramLinkToken: null,
@@ -18,9 +18,6 @@ export const UNLINKED_TELEGRAM = {
 
 /** Personal fields cleared when an account is deleted. */
 export const SCRUBBED_USER = {
-  passwordHash: "!deleted",
-  // Unique per Apple ID: a deleted account must not keep it, or that person cannot sign up again.
-  appleSub: null,
   displayName: null,
   avatarUrl: null,
   dailySpendLimit: null,

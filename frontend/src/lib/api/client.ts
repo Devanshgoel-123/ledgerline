@@ -2,8 +2,9 @@ import type { ParseResult } from "@/types";
 import { requestBlob, requestJson, requestVoid } from "./http";
 import type {
   AccountSummary,
-  AuthUser,
-  GmailStatus,
+  LocalProfile,
+  MailProviderId,
+  MailStatus,
   ParseStatementResult,
   Provider,
   TelegramStatus,
@@ -21,35 +22,32 @@ export type StatementMatchJob = {
 };
 
 /**
- * Authenticated API client — all methods attach the session JWT automatically.
- * Create once per token via `createApiClient(token)` or consume via `useApi()`.
+ * Client for the Ledgerline API running on this computer.
+ * Create with `createApiClient()` or consume via `useApi()`.
  */
-export function createApiClient(token: string) {
-  const auth = { token };
-
+export function createApiClient() {
   return {
-    /** Load the current user profile. */
-    fetchMe: (): Promise<AuthUser> =>
-      requestJson<AuthUser>("/api/auth/me", auth),
+    /** Load the local profile. */
+    fetchMe: (): Promise<LocalProfile> =>
+      requestJson<LocalProfile>("/api/me"),
 
     updateProfile: (body: {
       displayName?: string | null;
       avatarUrl?: string | null;
-    }): Promise<AuthUser> =>
-      requestJson<AuthUser>("/api/auth/me", {
+    }): Promise<LocalProfile> =>
+      requestJson<LocalProfile>("/api/me", {
         method: "PATCH",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
 
-    /** Permanently delete the signed-in account. */
-    deleteAccount: (): Promise<void> =>
-      requestVoid("/api/auth/me", { method: "DELETE", ...auth }),
+    /** Erase everything Ledgerline stores on this computer and start fresh. */
+    eraseAllData: (): Promise<void> =>
+      requestVoid("/api/me", { method: "DELETE" }),
 
-    /** Wipe imported mail and transactions. Keeps the account and Gmail. */
+    /** Wipe imported mail and transactions. Keeps settings and the mailbox connection. */
     clearImportedData: (): Promise<import("./types").ClearedImportedData> =>
-      requestJson("/api/imports/data", { method: "DELETE", ...auth }),
+      requestJson("/api/imports/data", { method: "DELETE" }),
 
     /** Parse and import a bank statement PDF. */
     parseStatement: (file: File, password: string): Promise<ParseStatementResult> => {
@@ -58,7 +56,6 @@ export function createApiClient(token: string) {
       form.append("password", password);
       return requestJson<ParseStatementResult>("/api/parse", {
         method: "POST",
-        ...auth,
         body: form,
       });
     },
@@ -70,23 +67,19 @@ export function createApiClient(token: string) {
       if (range?.to) params.set("to", range.to);
       const qs = params.toString();
       return requestJson<ParseResult>(
-        `/api/imports/dashboard${qs ? `?${qs}` : ""}`,
-        auth,
-      );
+        `/api/imports/dashboard${qs ? `?${qs}` : ""}`);
     },
 
     /** Lightweight bootstrap — whether the account has any transactions. */
     fetchImportStatus: (): Promise<import("./types").ImportStatus> =>
-      requestJson<import("./types").ImportStatus>("/api/imports/status", auth),
+      requestJson<import("./types").ImportStatus>("/api/imports/status"),
 
     fetchBankPresets: () =>
       requestJson<{ presets: import("./types").BankPreset[]; notice: string }>(
-        "/api/accounts/bank-presets",
-        auth,
-      ),
+        "/api/accounts/bank-presets"),
 
     fetchAccounts: () =>
-      requestJson<{ accounts: AccountSummary[] }>("/api/accounts", auth),
+      requestJson<{ accounts: AccountSummary[] }>("/api/accounts"),
 
     patchAccount: (body: {
       bank?: string;
@@ -98,7 +91,6 @@ export function createApiClient(token: string) {
         "/api/accounts",
         {
           method: "PATCH",
-          ...auth,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
@@ -107,31 +99,28 @@ export function createApiClient(token: string) {
     enablePooling: (
       body: { month?: string; password?: string; maxMessages?: number; banks?: string[] } = {},
     ) =>
-      requestJson<{ status: "running"; runId: string }>("/api/gmail/pooling/enable", {
+      requestJson<{ status: "running"; runId: string }>("/api/mail/pooling/enable", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
 
     listRules: () =>
-      requestJson<{ rules: Array<Record<string, unknown>> }>("/api/rules", auth),
+      requestJson<{ rules: Array<Record<string, unknown>> }>("/api/rules"),
 
     createRule: (body: Record<string, unknown>) =>
       requestJson<Record<string, unknown>>("/api/rules", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
 
     deleteRule: (id: string) =>
-      requestVoid(`/api/rules/${id}`, { method: "DELETE", ...auth }),
+      requestVoid(`/api/rules/${id}`, { method: "DELETE" }),
 
     attachPersonUpi: (body: { name: string; upiId: string }) =>
       requestJson<{ ok: true; attached: boolean }>("/api/rules/attach-upi", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -139,7 +128,6 @@ export function createApiClient(token: string) {
     detachPersonUpi: (body: { name: string; upiId: string }) =>
       requestJson<{ ok: true; cleared: number }>("/api/rules/detach-upi", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -147,7 +135,6 @@ export function createApiClient(token: string) {
     untrackPerson: (name: string) =>
       requestJson<{ ok: true; removedRules: number; cleared: number }>("/api/rules/untrack", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       }),
@@ -155,57 +142,62 @@ export function createApiClient(token: string) {
     fetchSuggestions: () =>
       requestJson<{
         suggestions: Array<{ label: string; count: number; sample: string }>;
-      }>("/api/rules/suggestions", auth),
+      }>("/api/rules/suggestions"),
 
     fetchPreferences: () =>
-      requestJson<{ dailySpendLimit: number | null }>("/api/preferences", auth),
+      requestJson<{ dailySpendLimit: number | null }>("/api/preferences"),
 
     updatePreferences: (body: { dailySpendLimit: number | null }) =>
       requestJson<{ dailySpendLimit: number | null }>("/api/preferences", {
         method: "PATCH",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
 
-    gmailStatus: () => requestJson<GmailStatus>("/api/gmail/status", auth),
+    mailStatus: () => requestJson<MailStatus>("/api/mail/status"),
 
-    confirmGmail: (pending: string) =>
-      requestJson<{ connected: boolean; email: string }>("/api/gmail/confirm", {
+    /** The server signs in with the app password before saving it, so a wrong one fails here. */
+    connectMailbox: (body: {
+      email: string;
+      provider: MailProviderId;
+      host?: string;
+      port?: number;
+      password: string;
+    }) =>
+      requestJson<MailStatus>("/api/mail/connect", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pending }),
+        body: JSON.stringify(body),
       }),
 
-    gmailConnectUrl: () =>
-      requestJson<{ url: string }>("/api/gmail/connect", auth),
+    disconnectMailbox: () =>
+      requestJson<{ ok: true }>("/api/mail/connect", { method: "DELETE" }),
+
+    /** Re-read this month's bank mail; runs in the background. */
+    scanMailNow: () =>
+      requestJson<{ status: "running"; runId: string }>("/api/mail/scan-now", { method: "POST" }),
 
     telegramStatus: () =>
-      requestJson<TelegramStatus>("/api/telegram/status", auth),
+      requestJson<TelegramStatus>("/api/telegram/status"),
 
     createTelegramLink: () =>
       requestJson<TelegramStatus>("/api/telegram/link", {
         method: "POST",
-        ...auth,
       }),
 
     sendTelegramTest: () =>
       requestJson<TelegramStatus & { sent: boolean }>("/api/telegram/test", {
         method: "POST",
-        ...auth,
       }),
 
     unlinkTelegram: () =>
       requestJson<TelegramStatus>("/api/telegram/link", {
         method: "DELETE",
-        ...auth,
       }),
 
     requestTelegramPhone: (phone: string) =>
       requestJson<TelegramStatus>("/api/telegram/phone", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
       }),
@@ -213,20 +205,18 @@ export function createApiClient(token: string) {
     confirmTelegramPhone: (code: string) =>
       requestJson<TelegramStatus>("/api/telegram/verify", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
       }),
 
     listProviders: () =>
-      requestJson<{ providers: Provider[] }>("/api/providers", auth),
+      requestJson<{ providers: Provider[] }>("/api/providers"),
 
     createCategory: (body: { label: string; blurb?: string; accent?: string }) =>
       requestJson<{ category: import("@/types").CategorySummary }>(
         "/api/categories",
         {
           method: "POST",
-          ...auth,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
@@ -234,21 +224,18 @@ export function createApiClient(token: string) {
 
     getUpiCategoryHint: (upiId: string) =>
       requestJson<{ hint: { categorySlug: string; usageCount: number } | null }>(
-        `/api/categories/hints/upi/${encodeURIComponent(upiId)}`,
-        auth,
-      ),
+        `/api/categories/hints/upi/${encodeURIComponent(upiId)}`),
 
     listUpiCategoryHints: () =>
       requestJson<{
         hints: { upiId: string; categorySlug: string; usageCount: number }[];
-      }>("/api/categories/hints", auth),
+      }>("/api/categories/hints"),
 
     saveUpiCategoryHint: (upiId: string, categorySlug: string) =>
       requestJson<{ success: boolean }>(
         "/api/categories/hints/upi",
         {
           method: "POST",
-          ...auth,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ upiId, categorySlug }),
         },
@@ -259,7 +246,6 @@ export function createApiClient(token: string) {
         `/api/categories/hints/upi/${encodeURIComponent(upiId)}`,
         {
           method: "DELETE",
-          ...auth,
         },
       ),
 
@@ -313,7 +299,6 @@ export function createApiClient(token: string) {
         }>;
       }>("/api/statement-match/preview", {
         method: "POST",
-        ...auth,
         body: form,
       });
     },
@@ -330,7 +315,6 @@ export function createApiClient(token: string) {
     ) =>
       requestJson<{ inserted: number; skipped: number; previouslyDeleted?: number }>("/api/statement-match/import-missing", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lines }),
       }),
@@ -356,7 +340,6 @@ export function createApiClient(token: string) {
         window: { from: string; to: string };
       }>("/api/statement-match/apply", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -373,13 +356,12 @@ export function createApiClient(token: string) {
     }) =>
       requestJson<StatementMatchJob>("/api/statement-match/apply-batch", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
 
     statementMatchJob: (jobId: string) =>
-      requestJson<StatementMatchJob>(`/api/statement-match/apply-batch/${jobId}`, auth),
+      requestJson<StatementMatchJob>(`/api/statement-match/apply-batch/${jobId}`),
 
     patchProvider: (
       id: string,
@@ -387,7 +369,6 @@ export function createApiClient(token: string) {
     ) =>
       requestJson<{ provider: Provider }>(`/api/providers/${id}`, {
         method: "PATCH",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -402,7 +383,6 @@ export function createApiClient(token: string) {
     }) =>
       requestJson<{ provider: Provider }>("/api/providers", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -410,7 +390,6 @@ export function createApiClient(token: string) {
     deleteTransaction: (id: string) =>
       requestJson<{ ok: true }>(`/api/imports/transactions/${id}`, {
         method: "DELETE",
-        ...auth,
       }),
 
     createManualExpense: (body: {
@@ -421,7 +400,6 @@ export function createApiClient(token: string) {
     }) =>
       requestJson<{ transaction: unknown }>("/api/imports/transactions", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -429,7 +407,6 @@ export function createApiClient(token: string) {
     setBillSplit: (id: string, friends: { name: string; amount: number }[]) =>
       requestJson<{ transaction: unknown }>(`/api/imports/transactions/${id}/splits`, {
         method: "PUT",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ friends }),
       }),
@@ -448,7 +425,6 @@ export function createApiClient(token: string) {
         `/api/imports/transactions/${id}`,
         {
           method: "PATCH",
-          ...auth,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         },
@@ -457,32 +433,28 @@ export function createApiClient(token: string) {
     loadDemoData: () =>
       requestJson<{ created: number; month: string }>("/api/demo/load", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       }),
 
     listLockedStatements: () =>
       requestJson<{ statements: Array<{ id: string; filename: string | null; foundAt: string }> }>(
-        "/api/gmail/locked-statements",
-        auth,
-      ),
+        "/api/mail/locked-statements"),
 
     unlockStatement: (id: string, password: string) =>
       requestJson<{ inserted: number; verified: number }>(
-        `/api/gmail/locked-statements/${encodeURIComponent(id)}/unlock`,
+        `/api/mail/locked-statements/${encodeURIComponent(id)}/unlock`,
         {
           method: "POST",
-          ...auth,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ password }),
         },
       ),
 
-    exportTransactionsCsv: () => requestBlob("/api/imports/export", auth),
+    exportTransactionsCsv: () => requestBlob("/api/imports/export"),
 
     removeDemoData: () =>
-      requestJson<{ removed: number }>("/api/demo", { method: "DELETE", ...auth }),
+      requestJson<{ removed: number }>("/api/demo", { method: "DELETE" }),
   };
 }
 

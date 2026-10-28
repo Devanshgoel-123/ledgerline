@@ -17,11 +17,10 @@ export function securityHeaders(): RequestHandler {
 export function corsMiddleware(): RequestHandler {
   return cors({
     origin: config.corsOrigins,
-    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
-      "Authorization",
+      "X-Ledgerline-Client",
       "X-Request-Id",
       "X-Correlation-Id",
     ],

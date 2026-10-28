@@ -26,7 +26,6 @@ async function linkedUser() {
   await store.migrate();
   const user = await store.createUser({
     email: "tg-health@example.com",
-    passwordHash: "hash",
     displayName: "Tg",
   });
   await store.linkTelegramChat(user.id, CHAT_ID);
@@ -133,7 +132,7 @@ describe("telegram connection status", () => {
   it("reports an unlinked account and a server without a bot", async () => {
     const store = new MemoryStore();
     await store.migrate();
-    const user = await store.createUser({ email: "nolink@example.com", passwordHash: "h", displayName: "N" });
+    const user = await store.createUser({ email: "nolink@example.com", displayName: "N" });
     resetStoreForTests(store);
     assert.equal((await getTelegramStatus(user.id)).connection, "not_linked");
     config.telegram.enabled = false;

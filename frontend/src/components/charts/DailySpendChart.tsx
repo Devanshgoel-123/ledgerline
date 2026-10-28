@@ -78,7 +78,8 @@ function parentOf(txn: Transaction, categories: CategorySummary[]): { slug: stri
   const parent = categories.find((item) => item.slug === slug) ?? category;
   return {
     slug,
-    label: parent?.label ?? slug,
+    // A category this month's summary does not list still reads as a name, not a slug.
+    label: parent?.label ?? slug.charAt(0).toUpperCase() + slug.slice(1).replace(/[-_]/g, " "),
     color: parent?.accent || "var(--cat-other)",
   };
 }

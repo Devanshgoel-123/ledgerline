@@ -1,7 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
 import { bankAdapters, runAdapters } from "../adapters/index.js";
-import { requireAuth } from "../auth/service.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
 import { extractTextFromPdf } from "../parser.js";
@@ -68,7 +67,6 @@ const applyBatchSchema = z.object({
 });
 
 export const statementMatchRouter = Router();
-statementMatchRouter.use(requireAuth);
 
 statementMatchRouter.post(
   "/preview",

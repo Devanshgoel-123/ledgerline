@@ -2,20 +2,12 @@ import { appConfig } from "../config";
 
 export const API_BASE = appConfig.apiBaseUrl;
 
-/** Dispatched when any authenticated request returns 401. */
-export const SESSION_EXPIRED_EVENT = "ledgerline:session-expired";
-
-const TOKEN_KEY = "ledgerline_token";
-
-function notifySessionExpired(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
-  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
-}
+/** Sent on every call. The local API refuses requests without it, so other sites cannot use it. */
+const CLIENT_HEADERS = { "X-Ledgerline-Client": "web" } as const;
 
 /** Shown when the request never reached the server (offline, DNS, server down). */
 export const NETWORK_ERROR_MESSAGE =
-  "Could not reach Ledgerline. Check your internet connection and try again.";
+  "Could not reach the Ledgerline API on this computer. Make sure Ledgerline is running (./ledgerline status), then try again.";
 
 /** Parse API error JSON into a user-facing message. */
 export async function parseError(res: Response): Promise<string> {
@@ -32,53 +24,27 @@ export async function parseError(res: Response): Promise<string> {
     }
     if (typeof data?.error?.message === "string") return data.error.message;
     if (typeof data?.detail === "string") return data.detail;
-    if (res.status === 401) return "Session expired — sign in again.";
   } catch {
     // ignore malformed JSON
   }
-  if (res.status === 401) return "Session expired — sign in again.";
   return "Request failed";
 }
 
-/** Build Authorization header for bearer JWT requests. */
-export function authHeaders(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}` };
-}
-
-/** True when a 401 means the session itself is gone, not that some input was rejected. */
-async function isSessionRejection(res: Response): Promise<boolean> {
-  if (res.status !== 401) return false;
-  try {
-    const data = await res.clone().json();
-    const code = data?.error?.code;
-    return code == null || code === "UNAUTHORIZED";
-  } catch {
-    return true;
-  }
-}
-
 async function handleResponse<T>(res: Response): Promise<T> {
-  if (await isSessionRejection(res)) {
-    notifySessionExpired();
-    throw new Error(await parseError(res));
-  }
   if (!res.ok) throw new Error(await parseError(res));
   return (await res.json()) as T;
 }
 
-/** JSON request helper with optional bearer auth. */
-export async function requestJson<T>(
-  path: string,
-  options: RequestInit & { token?: string } = {},
-): Promise<T> {
-  const { token, headers, ...init } = options;
+/** JSON request to the local API. */
+export async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const { headers, ...init } = options;
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       cache: "no-store",
       ...init,
       headers: {
         ...headers,
-        ...(token ? authHeaders(token) : {}),
+        ...CLIENT_HEADERS,
       },
     });
     return handleResponse<T>(res);
@@ -90,24 +56,17 @@ export async function requestJson<T>(
   }
 }
 
-/** Void request helper with optional bearer auth. */
-export async function requestVoid(
-  path: string,
-  options: RequestInit & { token?: string } = {},
-): Promise<void> {
-  const { token, headers, ...init } = options;
+/** Request to the local API that returns no body. */
+export async function requestVoid(path: string, options: RequestInit = {}): Promise<void> {
+  const { headers, ...init } = options;
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
         ...headers,
-        ...(token ? authHeaders(token) : {}),
+        ...CLIENT_HEADERS,
       },
     });
-    if (await isSessionRejection(res)) {
-      notifySessionExpired();
-      throw new Error(await parseError(res));
-    }
     if (!res.ok) throw new Error(await parseError(res));
   } catch (error) {
     // fetch rejects with a TypeError ("Failed to fetch", "Load failed") when the network is down.
@@ -117,20 +76,10 @@ export async function requestVoid(
   }
 }
 
-/** File download with bearer auth. Same session and network handling as requestJson. */
-export async function requestBlob(
-  path: string,
-  options: { token?: string } = {},
-): Promise<Blob> {
+/** File download from the local API. Same network handling as requestJson. */
+export async function requestBlob(path: string): Promise<Blob> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      cache: "no-store",
-      headers: options.token ? authHeaders(options.token) : {},
-    });
-    if (await isSessionRejection(res)) {
-      notifySessionExpired();
-      throw new Error(await parseError(res));
-    }
+    const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: CLIENT_HEADERS });
     if (!res.ok) throw new Error(await parseError(res));
     return await res.blob();
   } catch (error) {

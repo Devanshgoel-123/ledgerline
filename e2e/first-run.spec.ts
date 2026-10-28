@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { API_URL } from "../playwright.config";
+import { CLIENT_HEADERS, startFresh } from "./local";
 
 /**
  * The paths a new user takes on day one, against a throwaway in-memory API.
@@ -9,24 +11,15 @@ import { expect, test, type Page } from "@playwright/test";
 
 const LOCKED_PDF = readFileSync(path.join(__dirname, "..", "backend", "tests", "fixtures", "locked.pdf"));
 
-async function signUp(page: Page, email: string) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Create an account" }).click();
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill("a-long-password");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
-}
-
-test("sign up with email, explore samples, remove them", async ({ page }) => {
-  await signUp(page, `samples-${Date.now()}@example.com`);
+test("open it, explore samples, remove them", async ({ page }) => {
+  await startFresh(page);
 
   await page.getByRole("button", { name: /Explore with sample data/ }).click();
   await expect(page).toHaveURL(/\/overview/);
   const banner = page.getByText("You are looking at sample data.");
   await expect(banner).toBeVisible();
 
-  // A refresh on a deep link keeps the session and the samples.
+  // A refresh on a deep link keeps the samples.
   await page.goto("/transactions");
   await expect(banner).toBeVisible();
 
@@ -34,8 +27,8 @@ test("sign up with email, explore samples, remove them", async ({ page }) => {
   await expect(banner).toBeHidden();
 });
 
-test("a wrong statement password explains itself and keeps you signed in", async ({ page }) => {
-  await signUp(page, `pdf-${Date.now()}@example.com`);
+test("a wrong statement password explains itself and stays on Import", async ({ page }) => {
+  await startFresh(page);
   await page.getByRole("button", { name: /Import your transactions/ }).click();
   await expect(page).toHaveURL(/\/import/);
 
@@ -49,11 +42,10 @@ test("a wrong statement password explains itself and keeps you signed in", async
 
   await expect(page.getByText(/did not open the statement/)).toBeVisible();
   await expect(page).toHaveURL(/\/import/);
-  await expect(page.getByRole("link", { name: "Continue with Google" })).toHaveCount(0);
 });
 
 test("download every transaction as a CSV", async ({ page }) => {
-  await signUp(page, `export-${Date.now()}@example.com`);
+  await startFresh(page);
   await page.getByRole("button", { name: /Explore with sample data/ }).click();
   await expect(page.getByText("You are looking at sample data.")).toBeVisible();
 
@@ -67,13 +59,28 @@ test("download every transaction as a CSV", async ({ page }) => {
   expect(text).toContain(",yes");
 });
 
-test("a dropped connection gives a plain message", async ({ page, context }) => {
-  await signUp(page, `offline-${Date.now()}@example.com`);
+test("when the API stops answering, the message says how to start it", async ({ page, context }) => {
+  await startFresh(page);
   await page.getByRole("button", { name: /Explore with sample data/ }).click();
   await expect(page.getByText("You are looking at sample data.")).toBeVisible();
 
   await context.setOffline(true);
   await page.getByRole("button", { name: "Remove sample data" }).click();
-  await expect(page.getByText(/Check your internet connection/)).toBeVisible();
+  await expect(page.getByText(/Make sure Ledgerline is running/)).toBeVisible();
   await context.setOffline(false);
+});
+
+test("the API refuses calls that do not come from the local web app", async ({ request }) => {
+  // Another website open in the same browser cannot send this header without passing CORS.
+  expect((await request.get(`${API_URL}/api/imports/export`)).status()).toBe(403);
+  expect((await request.get(`${API_URL}/api/imports/export`, { headers: CLIENT_HEADERS })).status()).toBe(200);
+  const evil = await request.fetch(`${API_URL}/api/me`, {
+    method: "OPTIONS",
+    headers: {
+      origin: "https://evil.example",
+      "access-control-request-method": "DELETE",
+      "access-control-request-headers": "x-ledgerline-client",
+    },
+  });
+  expect(evil.headers()["access-control-allow-origin"]).toBeUndefined();
 });

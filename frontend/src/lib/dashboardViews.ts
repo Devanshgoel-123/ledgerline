@@ -90,7 +90,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   {
     id: "settings",
     label: "Settings",
-    description: "Limits & account",
+    description: "Limits & your data",
     icon: Settings2,
     path: DASHBOARD_PATHS.settings,
   },

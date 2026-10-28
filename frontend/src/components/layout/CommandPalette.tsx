@@ -24,16 +24,16 @@ interface CommandItem {
 
 const PAGE_ITEMS: CommandItem[] = [
   {
-    id: "architecture",
-    label: "Architecture",
-    description: "Technical notes for developers",
+    id: "install",
+    label: "Install guide",
+    description: "Update, back up, remove, troubleshoot",
     kind: "page",
-    href: "/architecture",
+    href: "/install",
   },
   {
     id: "privacy",
-    label: "Privacy policy",
-    description: "What we store and why",
+    label: "Privacy",
+    description: "What stays on this computer",
     kind: "page",
     href: "/privacy",
   },
@@ -142,7 +142,7 @@ function PaletteDialog({
               setActive(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Search views, architecture, privacy…"
+            placeholder="Search views, install guide, privacy…"
             aria-label="Search dashboard"
           />
           <kbd className="kbd">esc</kbd>

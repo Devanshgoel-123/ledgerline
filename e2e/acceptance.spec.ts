@@ -1,15 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-import { MAIL_OUTBOX } from "../playwright.config";
 import { hdfcStatement, iciciStatement, textPdf } from "../backend/tests/helpers/statementPdf";
+import { startFresh } from "./local";
 
 /**
  * Launch acceptance journeys. Expected money figures are worked out here from the
  * statement rows, independently of the app's own calculation code.
  * Run against a disposable Postgres with E2E_DATABASE_URL to prove persistence.
  */
-
-const PASSWORD = "a-long-password";
 
 const SEPTEMBER = [
   { date: "2026-09-01", narration: "UPI-SWIGGY-swiggy@icici-ICIC0000001", amount: 500, type: "debit" as const },
@@ -23,22 +20,6 @@ const statementPdf = () => hdfcStatement(10_000, SEPTEMBER);
 
 const inr = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
-async function signUp(page: Page, email: string) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Create an account" }).click();
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
-}
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-}
-
 async function uploadStatement(page: Page) {
   await page.locator('input[type="file"]').setInputFiles({
     name: "hdfc-september.pdf",
@@ -48,12 +29,11 @@ async function uploadStatement(page: Page) {
   await page.getByRole("button", { name: "Import statement" }).click();
 }
 
-test("import a statement: totals match, repeats are refused, data survives a new session", async ({
+test("import a statement: totals match, repeats are refused, data survives a new browser", async ({
   page,
   browser,
 }) => {
-  const email = `import-${Date.now()}@example.com`;
-  await signUp(page, email);
+  await startFresh(page);
   await page.getByRole("button", { name: /Import your transactions/ }).click();
   await uploadStatement(page);
 
@@ -80,10 +60,10 @@ test("import a statement: totals match, repeats are refused, data survives a new
   await page.goto("/overview");
   await expect(page.getByText(`${inr(EXPECTED_SPENT)} spent`)).toBeVisible();
 
-  // A brand-new browser session sees the same data.
+  // A brand-new browser sees the same data: it lives in the local database, not the browser.
   const fresh = await browser.newContext();
   const second = await fresh.newPage();
-  await signIn(second, email);
+  await second.goto("/");
   await expect(second).toHaveURL(/\/overview/);
   await second.getByLabel("Month").fill("2026-09");
   await expect(second.getByText(`${inr(EXPECTED_SPENT)} spent`)).toBeVisible();
@@ -91,7 +71,7 @@ test("import a statement: totals match, repeats are refused, data survives a new
 });
 
 test("files that are not statements are refused clearly and add nothing", async ({ page }) => {
-  await signUp(page, `badfile-${Date.now()}@example.com`);
+  await startFresh(page);
   await page.getByRole("button", { name: /Import your transactions/ }).click();
   const fileInput = page.locator('input[type="file"]');
   const importButton = page.getByRole("button", { name: "Import statement" });
@@ -122,7 +102,7 @@ test("an ICICI statement imports with the right totals", async ({ page }) => {
   ];
   const spent = rows.filter((row) => row.type === "debit").reduce((sum, row) => sum + row.amount, 0);
 
-  await signUp(page, `icici-${Date.now()}@example.com`);
+  await startFresh(page);
   await page.getByRole("button", { name: /Import your transactions/ }).click();
   await page.locator('input[type="file"]').setInputFiles({
     name: "icici-september.pdf",
@@ -139,7 +119,7 @@ test("an ICICI statement imports with the right totals", async ({ page }) => {
 });
 
 test("a typed-in expense moves the total by exactly its amount", async ({ page }) => {
-  await signUp(page, `manual-${Date.now()}@example.com`);
+  await startFresh(page);
   await page.getByRole("button", { name: /Import your transactions/ }).click();
   await uploadStatement(page);
   await page.getByRole("button", { name: "View September 2026" }).click();
@@ -158,57 +138,19 @@ test("a typed-in expense moves the total by exactly its amount", async ({ page }
   await expect(page.getByText(`${inr(EXPECTED_SPENT + 75)} spent`)).toBeVisible();
 });
 
-test("delete the account, then the same email can start again", async ({ page }) => {
-  const email = `leaver-${Date.now()}@example.com`;
-  await signUp(page, email);
+test("erase everything, and Ledgerline starts fresh", async ({ page }) => {
+  await startFresh(page);
   await page.getByRole("button", { name: /Explore with sample data/ }).click();
   await expect(page.getByText("You are looking at sample data.")).toBeVisible();
 
   await page.goto("/settings");
   page.on("dialog", (dialog) => void dialog.accept());
-  await page.getByRole("button", { name: "Delete account…" }).click();
-  await page.getByRole("button", { name: "Confirm delete account" }).click();
-  await expect(page.getByRole("link", { name: "Continue with Google" })).toBeVisible();
+  await page.getByRole("button", { name: "Erase everything…" }).click();
+  await page.getByRole("button", { name: "Erase everything", exact: true }).click();
+  await expect(page.getByText("Everything was erased.")).toBeVisible();
 
-  await signIn(page, email);
-  await expect(page.getByText("Incorrect email or password.")).toBeVisible();
-
-  await signUp(page, email);
-});
-
-test("forgot password: the emailed link sets a new password", async ({ page, browser }) => {
-  const email = `forgot-${Date.now()}@example.com`;
-  await signUp(page, email);
-
-  const fresh = await browser.newContext();
-  const login = await fresh.newPage();
-  await login.goto("/");
-  await login.getByRole("button", { name: "Forgot password?" }).click();
-  await login.getByLabel("Email").fill(email);
-  await login.getByRole("button", { name: "Send reset link" }).click();
-  await expect(login.getByRole("status")).toContainText("a reset link is on its way");
-
-  await expect.poll(() => existsSync(MAIL_OUTBOX) && readFileSync(MAIL_OUTBOX, "utf8").includes(email)).toBe(true);
-  const mail = readFileSync(MAIL_OUTBOX, "utf8").trim().split("\n").map((line) => JSON.parse(line) as { to: string; text: string })
-    .filter((item) => item.to === email).at(-1)!;
-  const link = mail.text.match(/https?:\/\/\S+reset-password\?code=\S+/)![0];
-
-  await login.goto(link.replace(/^https?:\/\/[^/]+/, ""));
-  await login.getByLabel("New password").fill("brand-new-password");
-  await login.getByLabel("Type it again").fill("brand-new-password");
-  await login.getByRole("button", { name: "Save new password" }).click();
-  await expect(login.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
-
-  // The old password no longer works; the new one does.
-  const other = await browser.newContext();
-  const check = await other.newPage();
-  await signIn(check, email);
-  await expect(check.getByText("Incorrect email or password.")).toBeVisible();
-  await check.getByLabel("Password", { exact: true }).fill("brand-new-password");
-  await check.getByRole("button", { name: "Sign in" }).click();
-  await expect(check.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
-  await fresh.close();
-  await other.close();
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
 });
 
 for (const viewport of [
@@ -217,9 +159,7 @@ for (const viewport of [
 ]) {
   test(`every main page fits a ${viewport.name} screen`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto("/");
-    await page.screenshot({ path: testInfo.outputPath(`${viewport.name}-login.png`), fullPage: true });
-    await signUp(page, `${viewport.name}-${Date.now()}@example.com`);
+    await startFresh(page);
     await page.screenshot({ path: testInfo.outputPath(`${viewport.name}-welcome.png`), fullPage: true });
     await page.getByRole("button", { name: /Explore with sample data/ }).click();
     await expect(page.getByText("You are looking at sample data.")).toBeVisible();

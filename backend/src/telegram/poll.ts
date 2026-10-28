@@ -120,7 +120,7 @@ async function runPolling(): Promise<void> {
     delay = 3_000;
     for (const update of reply.result ?? []) {
       offset = update.update_id + 1;
-      // Stop the button spinner before any earlier update finishes. A Gmail
+      // Stop the button spinner before any earlier update finishes. A mail
       // sync must not sit in front of the next getUpdates.
       if (update.callback_query?.id) void answerTelegramCallback(update.callback_query.id);
       const chatId = String(

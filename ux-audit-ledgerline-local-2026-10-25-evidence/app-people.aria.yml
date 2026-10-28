@@ -1,0 +1,89 @@
+- alert
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - link "Overview This month at a glance":
+      - /url: /overview
+      - strong: Overview
+      - text: This month at a glance
+    - link "Lifestyle Where life costs go":
+      - /url: /lifestyle
+      - strong: Lifestyle
+      - text: Where life costs go
+    - link "Apps Spending by app and shop":
+      - /url: /apps
+      - strong: Apps
+      - text: Spending by app and shop
+    - link "People Money sent to people":
+      - /url: /people
+      - strong: People
+      - text: Money sent to people
+    - paragraph: Data
+    - link "Transactions Every payment, searchable":
+      - /url: /transactions
+      - strong: Transactions
+      - text: Every payment, searchable
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - status:
+    - paragraph:
+      - strong: You are looking at sample data.
+      - text: These 20 transactions are made up so you can explore. Your real imports are kept separate.
+    - button "Remove sample data"
+  - paragraph: People
+  - heading "October 2026" [level=2]
+  - paragraph: Friends and family you pay, and what moved between you this month.
+  - heading "Add a person" [level=2]
+  - paragraph: Matches the UPI id or narration on payments already saved from mail or a statement, across every month.
+  - text: Name
+  - textbox "Name":
+    - /placeholder: Kabir
+  - text: UPI id or narration
+  - textbox "UPI id or narration":
+    - /placeholder: kabir@okicici
+  - text: Group
+  - combobox "Group":
+    - option "Friends" [selected]
+    - option "Family"
+    - option "Office"
+  - button "Add person"
+  - heading "Friends" [level=2]
+  - paragraph: People you pay outside home and work
+  - paragraph: No one in this group yet.
+  - heading "Family" [level=2]
+  - paragraph: 1 family · October 2026
+  - heading "Mom" [level=3]
+  - paragraph: 1 payment · last on 10 Oct
+  - button "Remove"
+  - text: Paid
+  - strong: ₹3,000
+  - text: Received
+  - strong: ₹0
+  - text: You paid more
+  - strong: ₹3,000
+  - list:
+    - listitem: 10 Oct Bank statement Family −₹3,000
+  - heading "Office" [level=2]
+  - paragraph: People you pay at work
+  - paragraph: No one in this group yet.

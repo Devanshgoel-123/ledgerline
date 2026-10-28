@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "../auth/service.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
 import { slugifyLabel } from "../helpers/slug.js";
@@ -19,7 +18,6 @@ const ACCENTS = [
 ];
 
 export const categoriesRouter = Router();
-categoriesRouter.use(requireAuth);
 
 categoriesRouter.get(
   "/",

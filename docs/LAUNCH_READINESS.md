@@ -1,89 +1,79 @@
 # Launch readiness
 
-Assessed on 12 October 2026; updated after merge `b76ecd7` (ICICI statements, password reset). Every status below comes
-from a check that was actually run; nothing is inferred from code reading alone unless it says so.
+Assessed on 25 October 2026 on branch `privacy-first-local`, after the move to a
+local, single-user app. Every status below comes from a check that was run that
+day. Anything not run says so.
 
-**Verdict: ready for a public beta once email sending and hosting are set up.** The core path (sign
-up, import an HDFC or ICICI statement, see correct totals, correct and export data, reset a
-password, delete the account) is verified end to end in a real browser on real Postgres, locally and
-in CI, and Gmail scanning has run against a real account. What remains is operational: an SMTP
-provider for reset emails, a host for the API, and one real ICICI statement.
+**Verdict: ready for a public beta with technical early users, once the branch
+is merged and the website is deployed.** A fresh clone installs and runs
+with one command. The full lifecycle (start, stop, backup, restore, update,
+uninstall) works. The UX audit's one blocker and its high-severity findings are
+fixed. What's left is the real-world part: a real mailbox scan over IMAP, a
+real ICICI statement, and installs on Windows (WSL) and Linux.
 
-## Core workflows
+## Install and run
 
-| Workflow | Status | Evidence | Limits |
-|---|---|---|---|
-| Email sign-up and sign-in | Verified | `e2e/acceptance.spec.ts`, `e2e/first-run.spec.ts` (browser, Postgres); `passwordAuth.test.ts` | |
-| Forgotten password | Verified | Browser: emailed link sets a new password, old one stops working; unit and Postgres-store tests | Needs `SMTP_URL` in production; without it the form says reset is not set up |
-| Google sign-in | Partially verified | Unit and Postgres tests for the account-claim path; on the live server `/api/auth/google` redirects to Google's consent page | Real Google OAuth not exercised (needs Google credentials) |
-| First run (welcome, sample data, remove samples) | Verified | Browser journeys, both stores | |
-| Import an HDFC statement PDF | Verified | Generated HDFC-format statement imported in the browser; report card shows 4 lines added | Real customer statements not used (private data) |
-| Import an ICICI statement PDF | Verified | Generated PDF in ICICI's layout (wrapped 1–4 line descriptions, centred dates, two pages): every row, direction and balance checked; browser import with totals | Built from screenshots of a real statement; not yet run on the real PDF file |
-| Wrong or missing PDF password | Verified | Browser: message shown, user stays signed in; mutation check (reintroducing the old 401) makes the test fail | |
-| Files that are not statements | Verified | Browser: non-PDF and non-statement PDF refused with a plain message, nothing added | |
-| Repeat upload of the same statement | Verified | Browser: "Already imported", totals unchanged | |
-| Totals and categories | Verified | Statement totals worked out in the test (₹870 spent, Food ₹500); sample month worked out by hand (₹28,293: rent and family counted, ₹5,000 investment and ₹52,000 salary excluded) matches API and settled UI | Covered mixes: UPI debits, salary, rent, family, investment, refund |
-| Typed-in expense | Verified | Browser: total moves by exactly ₹75; description with parentheses and ₹ accepted | |
-| Data persistence across sessions | Verified | Browser: fresh browser context signs in and sees the same totals (Postgres) | |
-| CSV export | Verified | Browser download; header and sample flag checked; formula cells neutralised (unit test) | |
-| Delete account, sign up again | Verified | Browser: deletion signs out, old password refused, same email can register | |
-| Offline / network failure | Verified | Browser offline: "Check your internet connection" | |
-| Phone and tablet layout | Verified | Browser at 390×844 and 768×1024: no sideways scrolling on 7 main pages; Apps content visible on first screen; header checked by screenshot | |
-| Gmail bank-mail scan | Verified | The live app's scheduled scan on 12 Oct 21:34 read 122 real emails from a connected Gmail account and imported 4 payments; later runs complete | Alert wording tested for HDFC only; SBI, ICICI and Axis alerts are labelled "early" |
-| Telegram bot | Blocked | Unit tests only | Needs a Telegram bot token |
-| Self-hosting from the README | Verified | Fresh clone of `main`, two secrets set, `docker compose up`: API healthy, sign-up 201, web 200 | |
+| Check | Status | Evidence |
+|---|---|---|
+| `./ledgerline start` on a fresh clone | Verified (macOS, Docker Desktop) | Clean clone of the branch; `.env` created with mode 600 and random secrets; build, healthy, app answering |
+| Ports bound to 127.0.0.1 only; Postgres not published | Verified | `docker port`: `127.0.0.1:4300`, `127.0.0.1:3300`; nothing for Postgres |
+| Migrations on a real Postgres reach 065 | Verified | `schema_migrations` max 65; one local user |
+| `status`, `backup`, `restore`, `stop`/`start` keeps data | Verified | Erase, then restore brought back 20 transactions; data survived stop/start |
+| Port already in use | Verified | A clear message naming the port and `WEB_PORT` |
+| `update` backs up first (even when stopped), then restarts | Verified | Backup written, then healthy |
+| `uninstall` keeps data unless you type DELETE | Verified | Volume kept, then removed on DELETE |
+| `install.sh` one-liner | **Not run end to end** | It downloads from GitHub `main`, which doesn't have this code until merge. Syntax and ShellCheck are clean |
+| Windows (WSL) and Linux | **Not run** | Only macOS was available |
+
+## Privacy boundary
+
+| Check | Status | Evidence |
+|---|---|---|
+| No client header → 403 | Verified | curl against the running install; unit test; browser journey |
+| Foreign Host header (DNS rebinding) → 403 | Verified | curl with `Host: evil.example`; unit test |
+| CORS allows only the local web app | Verified | Preflight from `https://evil.example` gets no allow-origin; unit test and browser journey |
+| Public website never calls an API | Verified | 0 requests from `/`, `/install`, `/privacy` in the site build; unit test |
+| Mail password encrypted at rest; mailbox opened read-only | Verified in code and tests | `EXAMINE` + `BODY.PEEK`; `password_encrypted` column |
+
+## Product flows (browser journeys, `npm test` at the root: 12 passing)
+
+Covered: first run with sample data, then removing it; statement import with
+totals, repeats refused, and data surviving a new browser; files that aren't
+statements; wrong PDF password; ICICI import; typed-in expense; CSV export;
+erase everything; the "not running" message; phone and tablet layouts with no
+sideways scroll; and the API refusing foreign callers.
 
 ## Checks run
 
-- Backend: type check, 225 unit tests, both integration scripts, Postgres tests (`npm run test:db`) on a disposable database, production build.
-- Frontend: type check, 71 tests, lint (0 errors, 3 `<img>` warnings), production build.
-- Browser (Playwright, `npm test` at the repo root): 12 journeys, all passing on Postgres.
-- Migrations: all apply to an empty database, roll back one by one, and apply again.
-- Dependencies: 0 production vulnerabilities in backend and frontend.
-- CI on GitHub runs all of the above, including the browser journeys against a Postgres service.
+- **Backend:** typecheck, 240 unit and integration tests passing (2 skipped,
+  which need Postgres). Fork A also ran the Postgres suite (17/17) and
+  migration 065 up/down/up against a real database.
+- **Frontend:** typecheck, 89 tests passing, lint with 0 errors, and production
+  builds in both app and site mode.
+- **Dependencies:** `npm audit --omit=dev` reports 0 vulnerabilities in backend
+  and frontend. Next.js is on 16.4.3, past the security advisory on 16.4.0.
+- **UX audit:** see `ux-audit-ledgerline-local-2026-10-25.md`. One blocker
+  (fixed), three high (fixed), and the rest Medium/Low, all fixed except
+  grouping chart subcategories.
 
-## Remaining issues, by severity
+## Still open, by severity
 
-1. **High (operational) — no email provider configured.** Password reset works, but production needs `SMTP_URL` (any SMTP service) to send the links.
-2. **Medium — no hosted deployment.** Vercel can host the frontend only; the API runs background jobs and needs a long-running host.
-3. **Medium — ICICI checked on a generated statement only.** Run one real ICICI PDF through Import to confirm.
-4. **Low — non-HDFC alert emails.** Gmail scanning works end to end, but only HDFC alert wording is tested.
-
-## Incident note
-
-Migrations 053–063 reached the live database while they were being written. The cause was a
-backend dev server (`tsx watch src/index.ts`) left running since 10 October with `backend/.env`
-pointing at the real database: every file change restarted it and applied pending migrations. It
-was stopped on 12 October. Its restarts also logged failed Gmail scans ("Unsupported state or unable
-to authenticate data"): `backend/.env` holds a different `ENCRYPTION_KEY` from the root `.env` the
-containers use, so it could not decrypt the stored Gmail token. Point `backend/.env` at a local
-database (`docker compose up -d postgres`), not the production one. Backend tests also now refuse any database except the in-memory store or
-`TEST_DATABASE_URL`. Do not run the backend dev server against the production database.
+1. **High: no real IMAP scan yet.** Connect and scan are tested against a fake
+   mailbox, and one real refused login was checked. Connect a real Gmail with
+   an app password and import a month before announcing.
+2. **Medium: first rescan after upgrading an old Gmail-OAuth install.** Message
+   ids changed format. Old mail should match existing rows by amount and date
+   rather than duplicate, but no test covers it. Check this on the author's own
+   data first, with a backup taken.
+3. **Medium: `install.sh` and Windows/Linux installs untested.** Run them right
+   after merge.
+4. **Low: chart subcategories share one grey** (audit DATA-02).
 
 ## Launch checklist
 
-- [ ] Choose an email provider and set `SMTP_URL` and `MAIL_FROM` so reset links are sent.
-- [x] Sign-up allowlist cleared (both `GOOGLE_ALLOWED_EMAILS` and the `allowed_emails` table).
-- [ ] Choose hosting for the API and database; point `NEXT_PUBLIC_API_URL`, `CORS_ORIGINS`, `FRONTEND_URL` and the Google OAuth redirect URI at the real domain.
-- [ ] Set real `JWT_SECRET`, `ENCRYPTION_KEY` and database password (`./scripts/docker-prod-check.sh --strict --compose`).
-- [ ] Turn on database backups and confirm a restore works.
-- [x] Real Gmail scan (12 Oct: 122 emails read, 4 payments imported).
-- [ ] Import one real HDFC and one real ICICI statement on the production setup.
-- [ ] Rotate the Google client secret and Telegram bot token if the old audit report was ever shared outside this machine.
-
-## Known limitations
-
-- Statement import reads HDFC and ICICI PDFs.
-- Bank-mail scanning is tested on HDFC alerts; other banks may miss payments.
-- Gmail is scanned every 6 hours or on demand; it is not real time.
-- No email verification at sign-up (a password reset or Google sign-in proves the address).
-- English only; amounts in rupees; dates use Indian conventions.
-
-## How to rerun the evidence
-
-```bash
-cd backend && npm test && TEST_DATABASE_URL=postgres://... npm run test:db
-cd frontend && npm test && npm run lint && npm run build
-npm install && npx playwright install chromium && E2E_DATABASE_URL=postgres://... npm test
-```
-Use disposable databases only. Backend tests refuse to open the database named in `backend/.env`.
+- [ ] Merge `privacy-first-local` into `main`.
+- [ ] Run the `install.sh` one-liner on a clean macOS user and on Ubuntu, and run `./ledgerline start` in WSL.
+- [ ] Connect a real mailbox with an app password; scan one month; compare with the bank's statement.
+- [ ] On the author's existing install: `./ledgerline backup`, then `./ledgerline update`, then check the first rescan doesn't duplicate.
+- [ ] Deploy the website to Vercel with root `frontend` and `NEXT_PUBLIC_LEDGERLINE_MODE=site`.
+- [ ] Rotate the Google OAuth client and Telegram bot token from the old hosted setup, and delete the Google Cloud project if nothing else uses it.

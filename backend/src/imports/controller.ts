@@ -2,7 +2,7 @@ import type { RequestHandler } from "express";
 import { config } from "../config.js";
 import { ImportSource } from "../enums/index.js";
 import { AppError } from "../errors/AppError.js";
-import { cancelActiveScan } from "../gmail/poolingService.js";
+import { cancelActiveScan } from "../bankMail/poolingService.js";
 import { bankAdapters, detectAdapter } from "../adapters/index.js";
 import { parsePdf } from "../parser.js";
 import type {
@@ -84,22 +84,6 @@ export const uploadImportController: RequestHandler = async (req, res) => {
       });
     }
     res.json(response);
-  } catch (error) {
-    mapPdfImportError(error);
-  }
-};
-
-export const parseEphemeralController: RequestHandler = async (req, res) => {
-  if (!config.allowAnonParse) {
-    throw AppError.unauthorized("Authentication required");
-  }
-  const file = assertPdfUpload(req.file);
-  const body = req.body as { password?: string };
-  try {
-    const result = await parsePdf(file.buffer, body.password ?? "", (text) =>
-      detectAdapter(text, bankAdapters).extract(text),
-    );
-    res.json(result);
   } catch (error) {
     mapPdfImportError(error);
   }

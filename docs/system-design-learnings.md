@@ -1,5 +1,7 @@
 # System design learnings
 
+> Written while Ledgerline was a hosted, multi-account app. In October 2026 it became a local, single-user app: the account, sign-in allowlist, Gmail OAuth and separate worker described below were replaced by one local profile, a localhost-only API and IMAP with an app password. The ledger, matching and categorisation ideas still hold.
+
 Same decisions as `architecture-notes.md`, stated as lessons that transfer. A learning here is an invariant, the mechanism that holds it, and the failure you get when a later change breaks it.
 
 Ledgerline is a small system: Next.js, Express, Postgres, a Gmail worker, a Telegram client. The lessons are about ledgers, ingestion, and tenancy. They show up in any system that imports untrusted events and then shows a derived view.

@@ -36,6 +36,18 @@ export function ManualExpenseForm({
         event.preventDefault();
         if (!api) return;
         const value = Number(amount);
+        // Say what is missing instead of leaving Save greyed out with no reason.
+        const form = event.currentTarget;
+        if (!description.trim()) {
+          setError("Add what it was for, for example Chai or Auto.");
+          form.querySelector<HTMLInputElement>('input[name="what"]')?.focus();
+          return;
+        }
+        if (!(value > 0)) {
+          setError("Add the amount in rupees.");
+          form.querySelector<HTMLInputElement>('input[name="amount"]')?.focus();
+          return;
+        }
         setBusy(true);
         setError(null);
         void api
@@ -58,6 +70,7 @@ export function ManualExpenseForm({
       <label className="field field-compact">
         <span>What</span>
         <input
+          name="what"
           value={description}
           maxLength={200}
           placeholder="Dinner, or a Splitwise share"
@@ -67,9 +80,10 @@ export function ManualExpenseForm({
       <label className="field field-compact">
         <span>Amount</span>
         <input
+          name="amount"
           inputMode="decimal"
           value={amount}
-          placeholder="500"
+          placeholder="₹ amount"
           onChange={(event) => setAmount(event.target.value)}
         />
       </label>
@@ -88,14 +102,18 @@ export function ManualExpenseForm({
         <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
       </label>
       <div className="manual-expense-actions">
-        <button type="submit" className="cta" disabled={busy || !description.trim() || !categorySlug}>
+        <button type="submit" className="cta" disabled={busy || !categorySlug}>
           {busy ? "Saving…" : "Save"}
         </button>
         <button type="button" className="ghost" onClick={() => setOpen(false)}>
           Cancel
         </button>
       </div>
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

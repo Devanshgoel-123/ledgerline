@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "../auth/service.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
 import { validate } from "../middleware/validate.js";
@@ -7,7 +6,6 @@ import { patchAccountBodySchema } from "../validators/accounts.js";
 
 export const accountsRouter = Router();
 
-accountsRouter.use(requireAuth);
 
 accountsRouter.get("/bank-presets", async (_req, res) => {
   const store = await getStore();
@@ -15,7 +13,7 @@ accountsRouter.get("/bank-presets", async (_req, res) => {
   res.json({
     presets,
     notice:
-      "Only these bank sender addresses are used in Gmail search. We never scrape or store non-bank mail.",
+      "Only mail from these bank sender addresses is read. Other mail is never opened or stored.",
   });
 });
 

@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { telegramConnectHint, telegramPill } from "@/lib/telegram";
 
 describe("telegramConnectHint", () => {
-  it("explains when the bot is not configured", () => {
+  it("says how to turn the bot on when it is not configured", () => {
     expect(
       telegramConnectHint({
         configured: false,
         linked: false,
         botUsername: null,
       }),
-    ).toMatch(/not enabled/i);
+    ).toMatch(/TELEGRAM_BOT_TOKEN.*\.env.*\.\/ledgerline start/);
   });
 
   it("confirms a linked chat", () => {

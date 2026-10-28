@@ -27,7 +27,6 @@ describe("manual expenses and bill splits", () => {
     });
     const user = await store.createUser({
       email: "friend@example.com",
-      passwordHash: "unused",
       displayName: "Dev",
     });
 

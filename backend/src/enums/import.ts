@@ -1,8 +1,9 @@
-export const IMPORT_SOURCES = ["upload", "gmail"] as const;
+export const IMPORT_SOURCES = ["upload", "mail"] as const;
 
 export const ImportSource = {
   Upload: "upload",
-  Gmail: "gmail",
+  /** A statement PDF found in bank mail. */
+  Mail: "mail",
 } as const;
 
 export type ImportSource = (typeof IMPORT_SOURCES)[number];

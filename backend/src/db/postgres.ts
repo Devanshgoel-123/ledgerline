@@ -5,16 +5,16 @@ import { logger } from "../logger/index.js";
 import { createDb, type AppDb } from "./client.js";
 import { migrateUp } from "./migrator.js";
 import * as s from "./schema.js";
-import { PostgresGmailRepository } from "./postgres/gmailRepository.js";
+import { PostgresMailRepository } from "./postgres/mailRepository.js";
 import { PostgresImportRepository } from "./postgres/importRepository.js";
 import { mapAccount } from "./postgres/shared.js";
-import { deletedEmail, SCRUBBED_USER, UNLINKED_TELEGRAM } from "./userScrub.js";
+import { deletedEmail, SCRUBBED_USER } from "./userScrub.js";
 import { withoutShadowedGlobals } from "./providerScope.js";
 import type {
   AccountRow,
   BankPresetRow,
   CategoryRow,
-  GmailConnectionRow,
+  MailConnectionRow,
   ImportRow,
   ListTransactionsOptions,
   MailMessageRow,
@@ -52,8 +52,6 @@ const mapUser = (r: typeof s.users.$inferSelect): UserRow => ({
   telegramPhoneChatId: r.telegramPhoneChatId ?? null,
   telegramPhoneAttempts: r.telegramPhoneAttempts ?? 0,
   telegramPhoneSentAt: r.telegramPhoneSentAt ? iso(r.telegramPhoneSentAt) : null,
-  emailVerifiedAt: r.emailVerifiedAt ? iso(r.emailVerifiedAt) : null,
-  sessionsValidAfter: r.sessionsValidAfter ? iso(r.sessionsValidAfter) : null,
   createdAt: iso(r.createdAt),
   deletedAt: r.deletedAt ? iso(r.deletedAt) : null,
 });
@@ -121,7 +119,7 @@ export class PostgresStore implements Store {
   private pool: pg.Pool;
   private db: AppDb;
   private readonly imports: PostgresImportRepository;
-  private readonly gmail: PostgresGmailRepository;
+  private readonly mail: PostgresMailRepository;
   constructor(databaseUrl: string | { pool: pg.Pool; db: AppDb }) {
     if (typeof databaseUrl === "string") {
       this.pool = new pg.Pool({
@@ -147,7 +145,7 @@ export class PostgresStore implements Store {
       this.db = databaseUrl.db;
     }
     this.imports = new PostgresImportRepository(this.db);
-    this.gmail = new PostgresGmailRepository(this.db);
+    this.mail = new PostgresMailRepository(this.db);
   }
   /** Run `fn` against a store whose every write is in one database transaction. */
   async inTransaction<T>(fn: (store: Store) => Promise<T>): Promise<T> {
@@ -174,80 +172,21 @@ export class PostgresStore implements Store {
   query<R extends pg.QueryResultRow = any>(text: string, values?: unknown[]) {
     return this.pool.query<R>(text, values);
   }
-  async createUser(i: {
-    email: string;
-    passwordHash: string;
-    displayName?: string | null;
-    emailVerified?: boolean;
-  }) {
+  async createUser(i: { email: string; displayName?: string | null }) {
     const [r] = await this.db
       .insert(s.users)
-      .values({
-        email: i.email.toLowerCase(),
-        passwordHash: i.passwordHash,
-        displayName: i.displayName ?? null,
-        emailVerifiedAt: i.emailVerified ? new Date() : null,
-      })
+      .values({ email: i.email.toLowerCase(), displayName: i.displayName ?? null })
       .returning();
     return mapUser(r);
   }
-  async createPasswordReset(userId: string, tokenHash: string, expiresAt: Date) {
-    await this.db.insert(s.passwordResetTokens).values({ userId, tokenHash, expiresAt });
-  }
-  async consumePasswordReset(tokenHash: string) {
+  async findFirstUser() {
     const [r] = await this.db
-      .update(s.passwordResetTokens)
-      .set({ usedAt: new Date() })
-      .where(
-        and(
-          eq(s.passwordResetTokens.tokenHash, tokenHash),
-          isNull(s.passwordResetTokens.usedAt),
-          sql`${s.passwordResetTokens.expiresAt} > now()`,
-        ),
-      )
-      .returning({ userId: s.passwordResetTokens.userId });
-    if (!r) return null;
-    // Any other link mailed to this account stops working too.
-    await this.db
-      .update(s.passwordResetTokens)
-      .set({ usedAt: new Date() })
-      .where(and(eq(s.passwordResetTokens.userId, r.userId), isNull(s.passwordResetTokens.usedAt)));
-    return r.userId;
-  }
-  async resetPassword(userId: string, passwordHash: string) {
-    const now = new Date();
-    const [r] = await this.db
-      .update(s.users)
-      .set({
-        passwordHash,
-        emailVerifiedAt: sql`coalesce(${s.users.emailVerifiedAt}, now())`,
-        sessionsValidAfter: now,
-      })
-      .where(and(eq(s.users.id, userId), isNull(s.users.deletedAt)))
-      .returning();
+      .select()
+      .from(s.users)
+      .where(isNull(s.users.deletedAt))
+      .orderBy(asc(s.users.createdAt))
+      .limit(1);
     return r ? mapUser(r) : null;
-  }
-  async claimAccountWithGoogle(userId: string, passwordHash: string) {
-    const now = new Date();
-    return this.db.transaction(async (tx) => {
-      const [r] = await tx
-        .update(s.users)
-        // Whoever held the password may have linked their own chat or mailbox.
-        .set({ passwordHash, emailVerifiedAt: now, sessionsValidAfter: now, ...UNLINKED_TELEGRAM })
-        .where(and(eq(s.users.id, userId), isNull(s.users.deletedAt)))
-        .returning();
-      if (!r) return null;
-      await tx.delete(s.telegramPrompts).where(eq(s.telegramPrompts.userId, userId));
-      await tx
-        .delete(s.gmailConnections)
-        .where(
-          and(
-            eq(s.gmailConnections.userId, userId),
-            sql`lower(${s.gmailConnections.googleEmail}) <> lower(${r.email})`,
-          ),
-        );
-      return mapUser(r);
-    });
   }
   async findUserByEmail(email: string) {
     const [r] = await this.db
@@ -257,22 +196,6 @@ export class PostgresStore implements Store {
         and(eq(s.users.email, email.toLowerCase()), isNull(s.users.deletedAt)),
       )
       .limit(1);
-    return r ? mapUser(r) : null;
-  }
-  async findUserByAppleSub(appleSub: string) {
-    const [r] = await this.db
-      .select()
-      .from(s.users)
-      .where(and(eq(s.users.appleSub, appleSub), isNull(s.users.deletedAt)))
-      .limit(1);
-    return r ? mapUser(r) : null;
-  }
-  async setAppleSub(userId: string, appleSub: string) {
-    const [r] = await this.db
-      .update(s.users)
-      .set({ appleSub })
-      .where(and(eq(s.users.id, userId), isNull(s.users.deletedAt)))
-      .returning();
     return r ? mapUser(r) : null;
   }
   async findUserById(id: string) {
@@ -318,46 +241,6 @@ export class PostgresStore implements Store {
       .update(s.users)
       .set({ deletedAt: new Date() })
       .where(eq(s.users.id, userId));
-  }
-  async consumeInvite(code: string) {
-    const r = await this.db
-      .update(s.invites)
-      .set({ usedCount: sql`${s.invites.usedCount}+1` })
-      .where(
-        and(
-          eq(s.invites.code, code),
-          sql`${s.invites.usedCount}<${s.invites.maxUses}`,
-        ),
-      )
-      .returning({ code: s.invites.code });
-    return !!r.length;
-  }
-  async seedInvite(code: string, maxUses = 100) {
-    await this.db
-      .insert(s.invites)
-      .values({ code, maxUses })
-      .onConflictDoNothing();
-  }
-  async listAllowedEmails() {
-    const rows = await this.db
-      .select({ email: s.allowedEmails.email })
-      .from(s.allowedEmails)
-      .orderBy(asc(s.allowedEmails.email));
-    return rows.map((row) => row.email);
-  }
-  async approveEmail(email: string) {
-    const normalized = email.trim().toLowerCase();
-    await this.db
-      .insert(s.allowedEmails)
-      .values({ email: normalized })
-      .onConflictDoNothing();
-  }
-  async revokeEmail(email: string) {
-    const rows = await this.db
-      .delete(s.allowedEmails)
-      .where(eq(s.allowedEmails.email, email.trim().toLowerCase()))
-      .returning({ email: s.allowedEmails.email });
-    return rows.length > 0;
   }
   async listCategories(userId: string) {
     return (
@@ -671,8 +554,8 @@ export class PostgresStore implements Store {
   findImportByHash(u: string, h: string) {
     return this.imports.findImportByHash(u, h);
   }
-  findImportByGmailMessage(u: string, g: string) {
-    return this.imports.findImportByGmailMessage(u, g);
+  findImportByMailMessage(u: string, g: string) {
+    return this.imports.findImportByMailMessage(u, g);
   }
   insertTransactions(u: string, r: NewTransactionInput[]) {
     return this.imports.insertTransactions(u, r);
@@ -733,34 +616,34 @@ export class PostgresStore implements Store {
   ) {
     return this.imports.setStatementLineMatches(u, m);
   }
-  upsertGmailConnection(i: Omit<GmailConnectionRow, "id"> & { id?: string }) {
-    return this.gmail.upsertGmailConnection(i);
+  upsertMailConnection(i: Omit<MailConnectionRow, "id"> & { id?: string }) {
+    return this.mail.upsertMailConnection(i);
   }
-  getGmailConnection(u: string) {
-    return this.gmail.getGmailConnection(u);
+  getMailConnection(u: string) {
+    return this.mail.getMailConnection(u);
   }
-  disconnectGmail(u: string) {
-    return this.gmail.disconnectGmail(u);
+  disconnectMail(u: string) {
+    return this.mail.disconnectMail(u);
   }
-  listActiveGmailConnections() {
-    return this.gmail.listActiveGmailConnections();
+  listActiveMailConnections() {
+    return this.mail.listActiveMailConnections();
   }
   listPoolingAccounts() {
-    return this.gmail.listPoolingAccounts();
+    return this.mail.listPoolingAccounts();
   }
   upsertMailMessage(
     i: Omit<MailMessageRow, "id" | "createdAt"> & { id?: string },
   ) {
-    return this.gmail.upsertMailMessage(i);
+    return this.mail.upsertMailMessage(i);
   }
-  findMailMessageByGmailId(u: string, g: string) {
-    return this.gmail.findMailMessageByGmailId(u, g);
+  findMailMessageById(u: string, g: string) {
+    return this.mail.findMailMessageById(u, g);
   }
   listMailMessages(u: string, fromIso: string, toIso: string) {
-    return this.gmail.listMailMessages(u, fromIso, toIso);
+    return this.mail.listMailMessages(u, fromIso, toIso);
   }
   oldestMailReceivedAt(u: string) {
-    return this.gmail.oldestMailReceivedAt(u);
+    return this.mail.oldestMailReceivedAt(u);
   }
   createPoolingRun(
     i: Omit<PoolingRunRow, "id" | "startedAt" | "finishedAt" | "status"> & {
@@ -768,19 +651,19 @@ export class PostgresStore implements Store {
       status?: PoolingRunStatus;
     },
   ) {
-    return this.gmail.createPoolingRun(i);
+    return this.mail.createPoolingRun(i);
   }
   updatePoolingRun(id: string, p: Partial<PoolingRunRow>) {
-    return this.gmail.updatePoolingRun(id, p);
+    return this.mail.updatePoolingRun(id, p);
   }
   getLatestPoolingRun(u: string) {
-    return this.gmail.getLatestPoolingRun(u);
+    return this.mail.getLatestPoolingRun(u);
   }
   listPoolingRuns(u: string, l = 10) {
-    return this.gmail.listPoolingRuns(u, l);
+    return this.mail.listPoolingRuns(u, l);
   }
   hasRunningPoolingRun(u: string) {
-    return this.gmail.hasRunningPoolingRun(u);
+    return this.mail.hasRunningPoolingRun(u);
   }
   async findUserByTelegramChatId(chatId: string) {
     const [r] = await this.db
@@ -1091,9 +974,9 @@ export class PostgresStore implements Store {
         .set({ poolingEnabled: false, poolingStartedAt: null })
         .where(eq(s.accounts.userId, userId));
       await tx
-        .update(s.gmailConnections)
+        .update(s.mailConnections)
         .set({ lastScannedOn: null })
-        .where(eq(s.gmailConnections.userId, userId));
+        .where(eq(s.mailConnections.userId, userId));
       return {
         transactions: transactions.length,
         imports: imports.length,
@@ -1130,8 +1013,8 @@ export class PostgresStore implements Store {
         );
       await tx.delete(s.mailMessages).where(eq(s.mailMessages.userId, userId));
       await tx
-        .delete(s.gmailConnections)
-        .where(eq(s.gmailConnections.userId, userId));
+        .delete(s.mailConnections)
+        .where(eq(s.mailConnections.userId, userId));
       await tx.execute(sql`DELETE FROM upi_category_hints WHERE user_id = ${userId}`);
       const [user] = await tx
         .select({ phone: s.users.phoneE164 })
@@ -1145,7 +1028,7 @@ export class PostgresStore implements Store {
       const now = new Date();
       await tx
         .update(s.users)
-        .set({ ...SCRUBBED_USER, email: deletedEmail(userId), deletedAt: now, sessionsValidAfter: now })
+        .set({ ...SCRUBBED_USER, email: deletedEmail(userId), deletedAt: now })
         .where(eq(s.users.id, userId));
     });
   }

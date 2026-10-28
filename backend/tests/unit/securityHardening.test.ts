@@ -1,27 +1,12 @@
 import assert from "node:assert/strict";
-import type { IncomingMessage, Server } from "node:http";
+import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
-import jwt from "jsonwebtoken";
 import { createApp } from "../../src/app.js";
-import { signToken } from "../../src/auth/service.js";
+import { localHeaders } from "../helpers/local.js";
 import { config } from "../../src/config.js";
 import { resetStoreForTests } from "../../src/db/index.js";
 import { MemoryStore } from "../../src/db/memory.js";
-import {
-  holdGmailConnection,
-  sameVerifiedEmail,
-  takeGmailConnection,
-} from "../../src/gmail/pendingConnect.js";
-import { controlAllowed } from "../../src/worker/controlAuth.js";
-
-const tokens = {
-  refreshToken: "refresh",
-  accessToken: null,
-  expiry: null,
-  email: "other.mailbox@example.com",
-  name: null,
-};
 
 describe("security hardening", () => {
   let server: Server;
@@ -38,39 +23,50 @@ describe("security hardening", () => {
 
   after(() => server.close());
 
-  const session = (user: { id: string; email: string }) =>
-    signToken({ id: user.id, email: user.email, displayName: null } as Parameters<typeof signToken>[0]);
-  const bearer = (token: string) => ({ headers: { authorization: `Bearer ${token}` } });
+  const get = (path: string, headers: Record<string, string>) =>
+    fetch(`${base}${path}`, { headers });
 
-  it("does not accept an OAuth state token as a session", async () => {
-    const user = await store.createUser({ email: "state@example.com", passwordHash: "h" });
-    const state = jwt.sign({ sub: user.id, purpose: "gmail_connect" }, config.jwtSecret, {
-      expiresIn: "10m",
-    });
-    assert.equal((await fetch(`${base}/api/auth/me`, bearer(state))).status, 401);
-    assert.equal((await fetch(`${base}/api/imports/export`, bearer(state))).status, 401);
-    assert.equal((await fetch(`${base}/api/auth/me`, bearer(session(user)))).status, 200);
+  it("answers this computer's web app", async () => {
+    const res = await get("/api/me", localHeaders((await store.createUser({ email: "me@example.com" }))));
+    assert.equal(res.status, 200);
   });
 
-  it("gives admin rights only to a verified admin address", async () => {
-    config.adminEmails.splice(0, Infinity, "boss@example.com", "chief@example.com");
-    const squatter = await store.createUser({ email: "boss@example.com", passwordHash: "h" });
-    const chief = await store.createUser({
-      email: "chief@example.com",
-      passwordHash: "h",
-      emailVerified: true,
+  it("refuses calls without the web app's header, so other sites cannot post forms to it", async () => {
+    assert.equal((await get("/api/imports/export", {})).status, 403);
+    const form = new FormData();
+    form.append("file", new Blob(["%PDF-1.4"], { type: "application/pdf" }), "s.pdf");
+    assert.equal((await fetch(`${base}/api/parse`, { method: "POST", body: form })).status, 403);
+  });
+
+  it("refuses a Host header that is not this computer (DNS rebinding)", async () => {
+    const { request } = await import("node:http");
+    const port = (server.address() as AddressInfo).port;
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = request(
+        { host: "127.0.0.1", port, path: "/api/me", headers: { host: "evil.example:4000", ...localHeaders("x") } },
+        (res) => resolve(res.statusCode ?? 0),
+      );
+      req.on("error", reject);
+      req.end();
     });
-    const path = `${base}/api/admin/providers/00000000-0000-4000-8000-000000000000`;
-    const patch = (token: string) =>
-      fetch(path, {
-        method: "PATCH",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ logoUrl: null }),
+    assert.equal(status, 403);
+  });
+
+  it("lets only the local web app's origin through CORS", async () => {
+    const preflight = (origin: string) =>
+      fetch(`${base}/api/me`, {
+        method: "OPTIONS",
+        headers: {
+          origin,
+          "access-control-request-method": "DELETE",
+          "access-control-request-headers": "x-ledgerline-client",
+        },
       });
-    assert.equal((await patch(session(squatter))).status, 403);
-    // Past the admin check, the made-up provider id is simply not found.
-    assert.equal((await patch(session(chief))).status, 404);
-    config.adminEmails.splice(0, Infinity);
+    const local = await preflight("http://localhost:3000");
+    assert.equal(local.headers.get("access-control-allow-origin"), "http://localhost:3000");
+    // Without this the browser blocks every call the web app makes.
+    assert.match(local.headers.get("access-control-allow-headers") ?? "", /x-ledgerline-client/i);
+    assert.equal((await preflight("https://evil.example")).headers.get("access-control-allow-origin"), null);
   });
 
   it("ignores pushed Telegram updates while the API polls", async () => {
@@ -81,7 +77,7 @@ describe("security hardening", () => {
       webhookSecret: "a-long-enough-secret",
       webhookUrl: null,
     });
-    const res = await fetch(`${base}/api/telegram/webhook`, {
+    const res = await fetch(`${base}/api/v1/telegram/webhook`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -91,60 +87,5 @@ describe("security hardening", () => {
     });
     assert.equal(res.status, 404);
     Object.assign(config.telegram, saved);
-  });
-
-  it("refuses to confirm a Gmail grant for another account, and confirms only once", async () => {
-    const owner = await store.createUser({ email: "owner@example.com", passwordHash: "h" });
-    const victim = await store.createUser({ email: "victim@example.com", passwordHash: "h" });
-    const nonce = holdGmailConnection(owner.id, tokens);
-    const confirm = (token: string, pending: string) =>
-      fetch(`${base}/api/gmail/confirm`, {
-        method: "POST",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ pending }),
-      });
-    const asVictim = await confirm(session(victim), nonce);
-    assert.equal(asVictim.status, 400);
-    // The failed attempt used the grant up; the owner must connect again.
-    assert.equal(takeGmailConnection(nonce, owner.id), null);
-    assert.equal(await store.getGmailConnection(victim.id), null);
-
-    const fresh = holdGmailConnection(owner.id, tokens);
-    assert.deepEqual(takeGmailConnection(fresh, owner.id), tokens);
-    assert.equal(takeGmailConnection(fresh, owner.id), null);
-  });
-
-  it("saves Gmail directly only for the account's own verified address", () => {
-    const verified = { email: "Me@Example.com", emailVerifiedAt: "2026-01-01T00:00:00Z" };
-    assert.equal(sameVerifiedEmail(verified, "me@example.com"), true);
-    assert.equal(sameVerifiedEmail(verified, "someone@example.com"), false);
-    assert.equal(sameVerifiedEmail({ ...verified, emailVerifiedAt: null }, "me@example.com"), false);
-    assert.equal(sameVerifiedEmail(null, "me@example.com"), false);
-  });
-
-  it("retires every other reset link once one is used", async () => {
-    const user = await store.createUser({ email: "reset@example.com", passwordHash: "h" });
-    const later = new Date(Date.now() + 60_000);
-    await store.createPasswordReset(user.id, "hash-one", later);
-    await store.createPasswordReset(user.id, "hash-two", later);
-    assert.equal(await store.consumePasswordReset("hash-one"), user.id);
-    assert.equal(await store.consumePasswordReset("hash-two"), null);
-  });
-});
-
-describe("pooling worker control routes", () => {
-  const request = (remoteAddress: string, authorization?: string) =>
-    ({ socket: { remoteAddress }, headers: authorization ? { authorization } : {} }) as unknown as IncomingMessage;
-
-  it("without a token, answer loopback callers only", () => {
-    assert.equal(controlAllowed(request("127.0.0.1"), ""), true);
-    assert.equal(controlAllowed(request("::1"), ""), true);
-    assert.equal(controlAllowed(request("172.18.0.4"), ""), false);
-  });
-
-  it("with a token, require it from everyone", () => {
-    assert.equal(controlAllowed(request("172.18.0.4", "Bearer worker-secret"), "worker-secret"), true);
-    assert.equal(controlAllowed(request("127.0.0.1"), "worker-secret"), false);
-    assert.equal(controlAllowed(request("172.18.0.4", "Bearer wrong"), "worker-secret"), false);
   });
 });

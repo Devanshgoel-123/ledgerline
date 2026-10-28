@@ -2,7 +2,7 @@
 
 import { BookOpen, FileUp, Sparkles } from "lucide-react";
 import { SpotlightCard } from "@/components/SpotlightCard";
-import { appConfig } from "@/lib/config";
+import Link from "next/link";
 
 interface OnboardingWelcomeProps {
   onStartImport: () => void;
@@ -13,7 +13,7 @@ interface OnboardingWelcomeProps {
 }
 
 const WHAT_IT_DOES = [
-  "Reads UPI transactions from HDFC statement PDFs, or from bank alert emails if you connect Gmail",
+  "Reads payments from HDFC and ICICI statement PDFs, and from bank alert emails if you connect your mailbox",
   "Sorts spending into categories like food, travel, and shopping",
   "Splits bills with friends so only your share counts",
   "Flags days that go over a daily limit you set",
@@ -29,10 +29,10 @@ export function OnboardingWelcome({
     <div className="welcome-screen">
       <div className="welcome-inner">
         <header className="welcome-head">
-          <h1 className="login-headline">Welcome to Ledgerline</h1>
+          <h1 className="welcome-title">Welcome to Ledgerline</h1>
           <p className="meta">
-            See where your money goes each month. Start with your own statement, or look
-            around with sample data first.
+            See where your money goes each month. Everything you add stays on this computer.
+            Start with your own statement, or look around with sample data first.
           </p>
         </header>
 
@@ -51,9 +51,9 @@ export function OnboardingWelcome({
               <span className="welcome-copy">
                 <strong>Import your transactions</strong>
                 <span className="meta">
-                  Upload an HDFC statement PDF, or scan bank alert emails. Takes about a minute.
+                  Upload an HDFC or ICICI statement PDF, or connect bank alert emails. Takes about a minute.
                 </span>
-                <span className="welcome-cta">Start here →</span>
+                <span className="welcome-cta">Import a statement</span>
               </span>
             </SpotlightCard>
           </button>
@@ -76,31 +76,26 @@ export function OnboardingWelcome({
                   click whenever you are ready.
                 </span>
                 <span className="welcome-cta">
-                  {demoLoading ? "Adding sample data…" : "Try it →"}
+                  {demoLoading ? "Adding sample data…" : "Add sample data"}
                 </span>
               </span>
             </SpotlightCard>
           </button>
 
-          <a
-            href={`${appConfig.repoUrl}#readme`}
-            target="_blank"
-            rel="noreferrer"
-            className="welcome-option"
-          >
+          <Link href="/privacy" className="welcome-option">
             <SpotlightCard className="panel">
               <span className="welcome-icon" aria-hidden>
                 <BookOpen size={20} />
               </span>
               <span className="welcome-copy">
-                <strong>Read how it works</strong>
+                <strong>See how your data stays private</strong>
                 <span className="meta">
-                  The guide covers supported banks, what data is stored, and how to delete it.
+                  What Ledgerline keeps on this computer, what it reads, and how to erase it.
                 </span>
-                <span className="welcome-cta">Open the guide ↗</span>
+                <span className="welcome-cta">Read the privacy notes</span>
               </span>
             </SpotlightCard>
-          </a>
+          </Link>
         </div>
 
         <section className="welcome-about panel">
@@ -111,8 +106,8 @@ export function OnboardingWelcome({
             ))}
           </ul>
           <p className="meta">
-            Free and open source. Only you can see your data, and you can delete it any time
-            from Settings.
+            Free and open source. No account and no tracking: your data stays in a database on
+            this computer, and you can erase it any time from Settings.
           </p>
         </section>
       </div>

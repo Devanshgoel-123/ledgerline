@@ -155,7 +155,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const tick = async () => {
       if (!scanWatching.current) return;
       try {
-        const status = await api.gmailStatus();
+        const status = await api.mailStatus();
         if (!scanWatching.current) return;
         const run = status.latestRun;
         if (!run || run.status !== "running") {
@@ -210,7 +210,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (!api) return;
     let cancelled = false;
     void api
-      .gmailStatus()
+      .mailStatus()
       .then((status) => {
         if (cancelled) return;
         if (status.latestRun?.status === "running") {

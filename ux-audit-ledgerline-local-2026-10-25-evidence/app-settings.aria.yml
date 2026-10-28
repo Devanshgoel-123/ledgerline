@@ -1,0 +1,117 @@
+- alert
+- complementary "Dashboard navigation":
+  - paragraph: Ledgerline
+  - paragraph: Private · on this computer
+  - navigation:
+    - paragraph: Insights
+    - link "Overview This month at a glance":
+      - /url: /overview
+      - strong: Overview
+      - text: This month at a glance
+    - link "Lifestyle Where life costs go":
+      - /url: /lifestyle
+      - strong: Lifestyle
+      - text: Where life costs go
+    - link "Apps Spending by app and shop":
+      - /url: /apps
+      - strong: Apps
+      - text: Spending by app and shop
+    - link "People Money sent to people":
+      - /url: /people
+      - strong: People
+      - text: Money sent to people
+    - paragraph: Data
+    - link "Transactions Every payment, searchable":
+      - /url: /transactions
+      - strong: Transactions
+      - text: Every payment, searchable
+    - link "Import Add statements or scan email":
+      - /url: /import
+      - strong: Import
+      - text: Add statements or scan email
+    - link "Statement match Name the shops behind UPI IDs":
+      - /url: /statement-match
+      - strong: Statement match
+      - text: Name the shops behind UPI IDs
+    - paragraph: System
+    - link "Settings Limits & account":
+      - /url: /settings
+      - strong: Settings
+      - text: Limits & account
+  - link "Privacy":
+    - /url: /privacy
+- banner:
+  - text: Month
+  - textbox "Month": 2026-10
+  - button "Search views": Search ⌘K
+  - button "Switch to dark mode"
+- main:
+  - status:
+    - paragraph:
+      - strong: You are looking at sample data.
+      - text: These 20 transactions are made up so you can explore. Your real imports are kept separate.
+    - button "Remove sample data"
+  - paragraph: Settings
+  - heading "Limits and your data" [level=2]
+  - text: LL
+  - heading "Your name" [level=3]
+  - paragraph: Only stored on this computer
+  - button "Edit"
+  - heading "Spending categories" [level=3]
+  - paragraph: Rent counts in total spent and stays off the daily chart. Investments, salary, banks, family, and passed-on stay out of spending.
+  - button "View"
+  - checkbox "Food" [checked]
+  - text: Food
+  - checkbox "Shopping" [checked]
+  - text: Shopping
+  - checkbox "Travel" [checked]
+  - text: Travel
+  - checkbox "Healthcare" [checked]
+  - text: Healthcare
+  - checkbox "Family" [checked]
+  - text: Family
+  - checkbox "Outing" [checked]
+  - text: Outing
+  - checkbox "Investments"
+  - text: Investments
+  - checkbox "Self Transfer"
+  - text: Self Transfer
+  - checkbox "Banks"
+  - text: Banks
+  - checkbox "Furniture" [checked]
+  - text: Furniture
+  - checkbox "Rent" [checked]
+  - text: Rent
+  - checkbox "Cook & maid" [checked]
+  - text: Cook & maid
+  - checkbox "Household" [checked]
+  - text: Household
+  - checkbox "Rides" [checked]
+  - text: Rides
+  - checkbox "Stays" [checked]
+  - text: Stays
+  - checkbox "Passed on"
+  - text: Passed on
+  - checkbox "Other" [checked]
+  - text: Other
+  - paragraph: Rent is included in total spent and shown as a small label on the daily chart. Investments stay out of both.
+  - heading "Daily limit" [level=3]
+  - paragraph: Cap debit spend per day. Overview uses this as a calm health signal.
+  - text: Not set
+  - button "Edit"
+  - heading "Telegram" [level=3]
+  - paragraph: Telegram is not enabled on this server yet.
+  - text: Not linked
+  - button "Link"
+  - heading "Bank mail" [level=3]
+  - paragraph: Connect the mailbox that gets your bank alerts on Import. Turn on email alerts for transactions in your bank app first.
+  - text: Not connected
+  - link "Connect":
+    - /url: /import
+  - heading "Your data" [level=3]
+  - paragraph: Everything below lives in the database on this computer.
+  - button "Download all transactions (CSV)"
+  - button "Clear imported data"
+  - link "How your data stays private":
+    - /url: /privacy
+  - button "Erase everything…"

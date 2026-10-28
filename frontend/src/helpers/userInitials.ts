@@ -1,5 +1,5 @@
 export function userInitials(
-  user?: { email?: string | null; displayName?: string | null } | null,
+  user?: { displayName?: string | null } | null,
 ): string {
   const name = user?.displayName?.trim();
   if (name) {
@@ -9,6 +9,5 @@ export function userInitials(
     const initials = `${first}${last}`.toUpperCase();
     if (initials) return initials;
   }
-  const local = user?.email?.split("@")[0] ?? "LL";
-  return local.slice(0, 2).toUpperCase();
+  return "LL";
 }

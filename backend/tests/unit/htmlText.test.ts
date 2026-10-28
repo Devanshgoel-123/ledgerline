@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { htmlToText } from "../../src/gmail/htmlText.js";
+import { htmlToText } from "../../src/bankMail/htmlText.js";
 
 describe("htmlToText", () => {
   it("strips HDFC HTML so the amount is readable", () => {

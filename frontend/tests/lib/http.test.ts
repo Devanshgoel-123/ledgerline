@@ -1,45 +1,34 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { requestJson, SESSION_EXPIRED_EVENT } from "@/lib/api/http";
+import { requestJson } from "@/lib/api/http";
 
 function respond(status: number, body: unknown) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => new Response(JSON.stringify(body), { status })),
-  );
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
-describe("requestJson session handling", () => {
+describe("requestJson", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("keeps the user signed in when a statement password is wrong", async () => {
-    const expired = vi.fn();
-    window.addEventListener(SESSION_EXPIRED_EVENT, expired);
-    respond(422, {
-      error: { code: "PDF_PASSWORD_INCORRECT", message: "That password did not open the statement." },
-    });
-    await expect(requestJson("/api/parse", { token: "t" })).rejects.toThrow(/did not open/);
-    expect(expired).not.toHaveBeenCalled();
-    window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+  it("identifies itself as the web app, which the local API requires", async () => {
+    const fetchMock = respond(200, { ok: true });
+    await requestJson("/api/me");
+    const init = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect((init.headers as Record<string, string>)["X-Ledgerline-Client"]).toBe("web");
   });
 
-  it("signs out when the server rejects the session", async () => {
-    const expired = vi.fn();
-    window.addEventListener(SESSION_EXPIRED_EVENT, expired);
-    respond(401, { error: { code: "UNAUTHORIZED", message: "Invalid or expired token" } });
-    await expect(requestJson("/api/accounts", { token: "t" })).rejects.toThrow();
-    expect(expired).toHaveBeenCalledOnce();
-    window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
-  });
-});
-
-describe("requestJson error messages", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("explains a dropped connection instead of 'Failed to fetch'", async () => {
+  it("says how to start Ledgerline when the API does not answer", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => {
       throw new TypeError("Failed to fetch");
     }));
-    await expect(requestJson("/api/accounts", { token: "t" })).rejects.toThrow(/internet connection/);
+    await expect(requestJson("/api/accounts")).rejects.toThrow(/Make sure Ledgerline is running/);
+  });
+
+  it("shows a statement password error as is", async () => {
+    respond(422, {
+      error: { code: "PDF_PASSWORD_INCORRECT", message: "That password did not open the statement." },
+    });
+    await expect(requestJson("/api/parse")).rejects.toThrow(/did not open/);
   });
 
   it("shows a form message once, without a field-name prefix", async () => {
@@ -50,7 +39,7 @@ describe("requestJson error messages", () => {
         details: [{ path: "date", message: "The date cannot be in the future" }],
       },
     });
-    await expect(requestJson("/api/imports/transactions", { token: "t" })).rejects.toThrow(
+    await expect(requestJson("/api/imports/transactions")).rejects.toThrow(
       /^The date cannot be in the future$/,
     );
   });

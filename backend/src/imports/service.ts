@@ -104,7 +104,7 @@ export async function processPdfImport(input: {
   filename: string;
   password?: string;
   source?: ImportSource;
-  gmailMessageId?: string | null;
+  mailMessageId?: string | null;
   rescan?: RescanAlerts;
 }): Promise<{
   importId: string;
@@ -118,7 +118,7 @@ export async function processPdfImport(input: {
     filename: input.filename,
     password: input.password,
     source: input.source ?? ImportSource.Upload,
-    gmailMessageId: input.gmailMessageId ?? null,
+    mailMessageId: input.mailMessageId ?? null,
     rescan: input.rescan,
   });
   const rows = await store.listTransactions(input.userId);

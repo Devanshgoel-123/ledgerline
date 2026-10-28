@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DailyLimitForm, useSaveDailyLimit } from "@/components/DailyLimitForm";
-import { useAuth } from "@/lib/auth";
+import { useProfile } from "@/lib/profile";
 import { useApi } from "@/lib/useApi";
 import { useDashboard } from "@/lib/dashboard-context";
 import { pathForView } from "@/lib/dashboardViews";
 import { telegramConnectHint, telegramPill, type TelegramStatus } from "@/lib/telegram";
-import type { GmailStatus } from "@/lib/api/types";
+import type { MailStatus } from "@/lib/api/types";
 import { formatInr } from "@/helpers/currency";
 import { userInitials } from "@/helpers/userInitials";
 
@@ -52,7 +52,7 @@ function ruleMatchLabel(rule: Record<string, unknown>): string {
 export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
   const api = useApi();
   const { data } = useDashboard();
-  const { logout, destroyAccount, user, saveProfile } = useAuth();
+  const { eraseAllData, profile: user, saveProfile } = useProfile();
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [avatarBusy, setAvatarBusy] = useState(false);
   const saveLimit = useSaveDailyLimit();
@@ -86,7 +86,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
   }
   const [showDanger, setShowDanger] = useState(false);
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
-  const [gmail, setGmail] = useState<GmailStatus | null>(null);
+  const [mail, setMail] = useState<MailStatus | null>(null);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [telegramBusy, setTelegramBusy] = useState(false);
@@ -97,16 +97,16 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
   const refresh = useCallback(async () => {
     if (!api) return;
     try {
-      const [rulesRes, prefsRes, telegramRes, gmailRes] = await Promise.all([
+      const [rulesRes, prefsRes, telegramRes, mailRes] = await Promise.all([
         api.listRules(),
         api.fetchPreferences(),
         api.telegramStatus().catch(() => null),
-        api.gmailStatus().catch(() => null),
+        api.mailStatus().catch(() => null),
       ]);
       setRules(rulesRes.rules);
       setDailyLimit(prefsRes.dailySpendLimit);
       setTelegram(telegramRes);
-      setGmail(gmailRes);
+      setMail(mailRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load settings");
     }
@@ -158,7 +158,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
     <div className="settings-sections">
       <header>
         <p className="stat-kicker mb-2">Settings</p>
-        <h2 className="month-label">Limits and account</h2>
+        <h2 className="month-label">Limits and your data</h2>
       </header>
 
       {(message || error) && (
@@ -200,7 +200,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
           <div className="settings-row">
             <div>
               <h3 className="ui-header">{user?.displayName?.trim() || "Your name"}</h3>
-              <p className="meta">{avatarBusy ? "Saving photo…" : user?.email}</p>
+              <p className="meta">{avatarBusy ? "Saving photo…" : "Only stored on this computer"}</p>
             </div>
             <div className="settings-row-end">
               <button
@@ -406,7 +406,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
               >
                 Disconnect
               </button>
-            ) : telegram?.verify?.codeSent ? null : (
+            ) : telegram?.verify?.codeSent || telegram?.configured === false ? null : (
               <button
                 type="button"
                 className="ghost"
@@ -515,21 +515,21 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
       <section className="settings-section">
         <div className="settings-row">
           <div>
-            <h3 className="ui-header">Gmail</h3>
+            <h3 className="ui-header">Bank mail</h3>
             <p className="meta">
-              {gmail?.connected
-                ? gmail.email
-                  ? `Reading bank mail for ${gmail.email}.`
-                  : "Bank mail is connected."
-                : "Connect Gmail on Import to scan bank mail. Turn on email alerts for transactions in your bank app first."}
+              {mail?.connected
+                ? `Reading bank mail from ${mail.email}. The app password is encrypted on this computer.`
+                : mail?.needsPassword
+                  ? `${mail.email} needs an app password before the next scan.`
+                  : "Connect the mailbox that gets your bank alerts on Import. Turn on email alerts for transactions in your bank app first."}
             </p>
           </div>
           <div className="settings-row-end">
-            <span className={`status-pill ${gmail?.connected ? "is-on" : "is-off"}`}>
-              {gmail?.connected ? "Connected" : "Not connected"}
+            <span className={`status-pill ${mail?.connected ? "is-on" : "is-off"}`}>
+              {mail?.connected ? "Connected" : mail?.needsPassword ? "Needs password" : "Not connected"}
             </span>
             <Link href={pathForView("import")} className="ghost">
-              {gmail?.connected ? "Manage" : "Connect"}
+              {mail?.connected ? "Manage" : "Connect"}
             </Link>
           </div>
         </div>
@@ -586,8 +586,8 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
       ) : null}
 
       <section className="settings-section">
-        <h3 className="ui-header">Account</h3>
-        <p className="meta">Session and privacy controls.</p>
+        <h3 className="ui-header">Your data</h3>
+        <p className="meta">Everything below lives in the database on this computer.</p>
         <div className="settings-actions">
           <button
             type="button"
@@ -603,7 +603,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
             onClick={async () => {
               if (
                 !confirm(
-                  "Delete every imported transaction and mail record? Your account and Gmail stay. Download a copy first if you may want it later.",
+                  "Delete every imported transaction and mail record? Your settings and mailbox connection stay. Download a copy first if you may want it later.",
                 )
               ) {
                 return;
@@ -612,7 +612,7 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
                 setError(null);
                 const result = await api.clearImportedData();
                 setMessage(
-                  `Removed ${result.deleted.transactions} transactions from this account.`,
+                  `Removed ${result.deleted.transactions} transactions.`,
                 );
                 onChanged?.();
               } catch (err) {
@@ -624,18 +624,15 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
           >
             Clear imported data
           </button>
-          <button type="button" className="ghost" onClick={logout}>
-            Log out
-          </button>
           <Link href="/privacy" className="ghost">
-            Privacy policy
+            How your data stays private
           </Link>
           <button
             type="button"
             className="ghost"
             onClick={() => setShowDanger((v) => !v)}
           >
-            {showDanger ? "Hide delete options" : "Delete account…"}
+            {showDanger ? "Hide erase options" : "Erase everything…"}
           </button>
         </div>
         {showDanger ? (
@@ -648,25 +645,29 @@ export function SettingsPanel({ onChanged }: { onChanged?: () => void }) {
             }}
           >
             <p className="meta" style={{ color: "inherit", marginBottom: "0.65rem" }}>
-              This permanently deletes your account and financial data. It cannot be undone.
+              This erases every transaction, rule, mailbox connection and Telegram link that
+              Ledgerline keeps on this computer, and starts fresh. It cannot be undone.
               Download your transactions first if you want a copy.
             </p>
             <button
               type="button"
               className="ghost"
               onClick={async () => {
-                if (!confirm("Delete your account and all financial data? This cannot be undone.")) return;
+                if (!confirm("Erase everything Ledgerline keeps on this computer? This cannot be undone.")) return;
                 try {
                   setError(null);
-                  await destroyAccount();
+                  await eraseAllData();
+                  setShowDanger(false);
+                  setMessage("Everything was erased. Ledgerline is starting fresh.");
+                  onChanged?.();
                 } catch (err) {
                   setError(
-                    err instanceof Error ? err.message : "Could not delete the account. Try again.",
+                    err instanceof Error ? err.message : "Could not erase your data. Try again.",
                   );
                 }
               }}
             >
-              Confirm delete account
+              Erase everything
             </button>
           </div>
         ) : null}

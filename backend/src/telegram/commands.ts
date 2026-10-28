@@ -6,8 +6,8 @@ export const TELEGRAM_HELP = [
   "/spent food — one category this month",
   "/limit 800 — daily cap, or /limit off",
   "/remind 21:30 — a daily note in IST, or /remind off",
-  "/gmail — connect this account's email",
-  "/sync — pull new bank mail from Gmail",
+  "/mail — how to connect your mailbox",
+  "/sync — pull new bank mail from your mailbox",
   "/scan — same as /sync",
   "/statement — send a PDF statement in this chat",
   "/cancel — drop a statement that is waiting for a password",
@@ -25,7 +25,7 @@ export type TelegramCommand =
   | { kind: "limit"; amount: number | null; valid: boolean }
   | { kind: "remind"; minute: number | null; valid: boolean }
   | { kind: "unlink" }
-  | { kind: "gmail" }
+  | { kind: "mail" }
   | { kind: "sync"; password: string }
   | { kind: "statement" }
   | { kind: "cancel" }
@@ -90,9 +90,10 @@ export function parseTelegramCommand(text: string): TelegramCommand | null {
       }
     case "unlink":
       return { kind: "unlink" };
-    case "gmail":
+    case "mail":
     case "email":
-      return { kind: "gmail" };
+    case "gmail":
+      return { kind: "mail" };
     case "scan":
     case "sync":
       return { kind: "sync", password: command.rest };

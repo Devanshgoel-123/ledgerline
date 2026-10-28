@@ -246,6 +246,12 @@ export function DetailBarChart({
         </div>
       ) : null}
 
+      {scale === "sqrt" ? (
+        <p className="meta chart-scale-note">
+          Bar heights use a square-root scale, so small days stay visible next to big ones.
+        </p>
+      ) : null}
+
       {active && tip ? (
         <ChartTooltip x={tip.x} y={tip.y}>
           <TooltipBody

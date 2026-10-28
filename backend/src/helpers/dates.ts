@@ -35,11 +35,6 @@ export function monthBounds(month: string): PoolingBounds {
   return { from, to, after: from, before };
 }
 
-/** Gmail `after:`/`before:` date form (YYYY/MM/DD). */
-export function toGmailQueryDate(isoDate: string): string {
-  return isoDate.replace(/-/g, "/");
-}
-
 /** Parse a YYYY-MM-DD or ISO timestamp to epoch ms. Date-only values are IST midnight. */
 export function parsePoolingInstant(raw: string | null | undefined): number | null {
   if (!raw) return null;
@@ -94,15 +89,6 @@ export function monthsInPoolingWindow(now: Date = new Date()): string[] {
   return months;
 }
 
-/**
- * Gmail `after:` is exclusive of that calendar day, so pass the day before
- * the inclusive start. Then drop anything outside the window when parsing.
- */
-export function toGmailQueryAfter(isoDate: string): string {
-  const istDate = toIstCalendarDate(isoDate) ?? isoDate.slice(0, 10);
-  return toGmailQueryDate(addIsoDays(istDate, -1));
-}
-
 export function isWithinPoolingWindow(
   isoDate: string | null | undefined,
   now: Date = new Date(),
@@ -121,7 +107,7 @@ export function isOnOrAfterPoolingCutoff(
 }
 
 /**
- * Gmail after/before window. `after` is inclusive; `before` is exclusive.
+ * Mail search window. `after` is inclusive; `before` is exclusive.
  * Always clamped to the live scan window.
  */
 export function poolingDateWindow(month?: string | null): {
@@ -142,7 +128,7 @@ export function poolingDateWindow(month?: string | null): {
 }
 
 /**
- * Next Gmail query window for a user.
+ * Next mail search window for a user.
  * `lastScannedOn` is the last IST day that was fully scanned. The next
  * search starts the following day so that day is not listed again.
  * `covered` means that day is already today — nothing new to query.

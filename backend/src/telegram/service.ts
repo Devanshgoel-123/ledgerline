@@ -5,7 +5,7 @@ import { getStore } from "../db/index.js";
 import { BACKFILL_DEFAULT_MAX_MESSAGES } from "../constants/index.js";
 import { ClassificationSource, ImportSource, TxType } from "../enums/index.js";
 import { importReportLines, processPdfImport } from "../imports/service.js";
-import { getGmailConnectUrl, runGmailBackfillForUser } from "../gmail/service.js";
+import { scanMailForUser } from "../bankMail/service.js";
 import { AppError } from "../errors/AppError.js";
 import { logger } from "../logger/index.js";
 import { parseCategoryReply } from "./categories.js";
@@ -64,7 +64,6 @@ import {
   esc,
   homeKeyboard,
   limitKeyboard,
-  linkKeyboard,
   parseTelegramAction,
   remindKeyboard,
   settingsKeyboard,
@@ -84,7 +83,7 @@ import {
   TELEGRAM_CODE_TTL_MS,
   telegramCodeMatches,
 } from "./phone.js";
-import { followGmailSync, syncProgressText, type SyncRunSnapshot } from "./syncWatch.js";
+import { followMailScan, syncProgressText, type SyncRunSnapshot } from "./syncWatch.js";
 import type { InlineKeyboard } from "./ui.js";
 import type { TelegramPhoneChallenge, UserRow } from "../db/types.js";
 
@@ -113,12 +112,12 @@ const CLEAR_PROMPT = [
 const CLEARED =
   "🧹 <b>Chat cleared.</b>\nYour expenses, labels and settings are all still saved in Ledgerline.";
 
-function gmailLinkMessage(url: string): { text: string; keyboard: ReturnType<typeof linkKeyboard> } {
-  return {
-    text: "📧 <b>Connect email</b>\nSign in with Google to read your bank alerts. The link expires in 10 minutes.",
-    keyboard: linkKeyboard("🔗 Open Google sign-in", url),
-  };
-}
+/** The mailbox is connected in the app on the computer running Ledgerline; a link from here would not open there. */
+const CONNECT_MAIL_HELP = [
+  "📧 <b>Connect email</b>",
+  "Open Ledgerline on the computer it runs on, go to <b>Import</b>, and choose <b>Connect mailbox</b>.",
+  "You'll need an app password from your mail provider; the page shows how to get one.",
+].join("\n");
 
 export type TelegramVerifyState = {
   phone: string;
@@ -693,13 +692,12 @@ async function present(
 async function formatProfile(userId: string): Promise<string> {
   const store = await getStore();
   const user = await store.findUserById(userId);
-  const gmail = await store.getGmailConnection(userId);
-  const sameInbox =
-    gmail != null &&
-    !gmail.disconnectedAt &&
-    gmail.googleEmail.toLowerCase() === (user?.email ?? "").toLowerCase();
-  const gmailLine =
-    !gmail || gmail.disconnectedAt ? "Not connected" : sameInbox ? "Connected" : esc(gmail.googleEmail);
+  const mailbox = await store.getMailConnection(userId);
+  const mailLine = !mailbox
+    ? "Not connected"
+    : mailbox.passwordEncrypted
+      ? esc(mailbox.email)
+      : `${esc(mailbox.email)} (needs app password)`;
   const limit =
     user?.dailySpendLimit != null
       ? `₹${user.dailySpendLimit.toLocaleString("en-IN")}`
@@ -713,9 +711,8 @@ async function formatProfile(userId: string): Promise<string> {
     "👤 <b>Profile</b>",
     "",
     `Name  ${esc(user?.displayName?.trim() || "—")}`,
-    `Email  ${esc(user?.email || "—")}`,
     `Phone  ${phone}`,
-    `Gmail  ${gmailLine}`,
+    `Mailbox  ${mailLine}`,
     `Daily limit  ${limit}`,
     `Reminder  ${reminder}`,
   ].join("\n");
@@ -807,11 +804,11 @@ async function handleAction(
     return;
   }
   if (action.kind === "scan" || action.kind === "sync") {
-    await runGmailSync(chatId, user.id, "", send, messageId);
+    await runMailScan(chatId, user.id, "", send, messageId);
     return;
   }
-  if (action.kind === "gmail") {
-    await sendGmailLink(chatId, user.id, send);
+  if (action.kind === "mail") {
+    await show(CONNECT_MAIL_HELP, homeKeyboard());
     return;
   }
   const snapshot = await loadSpendSnapshot(user.id);
@@ -869,16 +866,6 @@ async function withDbRetry<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-async function sendGmailLink(chatId: string, userId: string, send: TelegramSender): Promise<void> {
-  try {
-    const { url } = getGmailConnectUrl(userId);
-    const link = gmailLinkMessage(url);
-    await send(chatId, link.text, { keyboard: link.keyboard });
-  } catch (error) {
-    await send(chatId, errorText(error, "Email connect is not available."), { keyboard: homeKeyboard() });
-  }
-}
-
 export async function handleTelegramUpdate(
   update: TelegramUpdate,
   send: TelegramSender = sendTelegramMessage,
@@ -924,7 +911,7 @@ export async function handleTelegramUpdate(
       : button === "status"
         ? "/status"
         : button === "connect email"
-          ? "/gmail"
+          ? "/mail"
           : button === "today"
             ? "/today"
             : text;
@@ -1110,7 +1097,7 @@ async function startMonthScan(userId: string, password: string): Promise<{ runId
   const running = recent.find((run) => run.status === "running" && runIsFresh(run));
   if (running) return { runId: running.id };
   const month = istClock(new Date()).date.slice(0, 7);
-  const started = await runGmailBackfillForUser(userId, {
+  const started = await scanMailForUser(userId, {
     month,
     password,
     maxMessages: BACKFILL_DEFAULT_MAX_MESSAGES,
@@ -1139,7 +1126,7 @@ function toSnapshot(run: {
   };
 }
 
-async function finishGmailSync(
+async function finishMailScan(
   chatId: string,
   userId: string,
   password: string,
@@ -1157,7 +1144,7 @@ async function finishGmailSync(
   try {
     await say(syncProgressText({ status: "running", scanned: 0, imported: 0, skipped: 0, errorMessage: null }));
     const started = await startMonthScan(userId, password);
-    const run = await followGmailSync({
+    const run = await followMailScan({
       publish: say,
       announce: false,
       read: async () => {
@@ -1179,11 +1166,11 @@ async function finishGmailSync(
     const asked = await sendNextPrompt(chatId, userId, send);
     if (asked) await store.markTelegramCategoryPinged(userId, new Date().toISOString());
   } catch (error) {
-    await say(errorText(error, "Could not sync Gmail."));
+    await say(errorText(error, "Could not scan bank mail."));
   }
 }
 
-async function runGmailSync(
+async function runMailScan(
   chatId: string,
   userId: string,
   password: string,
@@ -1191,11 +1178,13 @@ async function runGmailSync(
   messageId?: number,
 ): Promise<void> {
   const store = await getStore();
-  const connection = await store.getGmailConnection(userId);
-  if (!connection || connection.disconnectedAt) {
+  const connection = await store.getMailConnection(userId);
+  if (!connection?.passwordEncrypted) {
     await present(
       chatId,
-      "📧 Connect email first. Tap 📧 Connect email below.",
+      connection
+        ? "📧 Your mailbox needs its app password again. Connect email in Ledgerline on your computer."
+        : "📧 Connect email first: open Ledgerline on your computer and go to Import.",
       send,
       homeKeyboard(),
       messageId,
@@ -1204,9 +1193,9 @@ async function runGmailSync(
   }
   if (activeSyncs.has(userId)) return;
   activeSyncs.add(userId);
-  void finishGmailSync(chatId, userId, password, send, messageId)
+  void finishMailScan(chatId, userId, password, send, messageId)
     .catch((error: unknown) => {
-      logger.warn({ err: error, userId }, "telegram gmail sync failed");
+      logger.warn({ err: error, userId }, "telegram mail scan failed");
     })
     .finally(() => {
       activeSyncs.delete(userId);
@@ -1259,13 +1248,13 @@ async function handleCommand(
   if (command.kind === "sync") {
     const user = await requireLinked(chatId, send);
     if (!user) return;
-    await runGmailSync(chatId, user.id, command.password, send);
+    await runMailScan(chatId, user.id, command.password, send);
     return;
   }
-  if (command.kind === "gmail") {
+  if (command.kind === "mail") {
     const user = await requireLinked(chatId, send);
     if (!user) return;
-    await sendGmailLink(chatId, user.id, send);
+    await send(chatId, CONNECT_MAIL_HELP, { keyboard: homeKeyboard() });
     return;
   }
   if (command.kind === "unknown") {

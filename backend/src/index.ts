@@ -1,7 +1,7 @@
 import { createApp } from "./app.js";
 import { config } from "./config.js";
 import { closeStore, getStore } from "./db/index.js";
-import { startGmailJobs } from "./gmail/jobs.js";
+import { startMailJobs } from "./bankMail/jobs.js";
 import { logger } from "./logger/index.js";
 import { startTelegram } from "./telegram/poll.js";
 import { startTelegramSchedules } from "./telegram/service.js";
@@ -22,13 +22,10 @@ process.on("unhandledRejection", (reason) => {
 
 async function boot() {
   await getStore();
-  if (!config.google.inlineJobsEnabled) {
-    logger.info(
-      { workerPort: config.poolingWorker.port },
-      "inline Gmail jobs disabled — use the separate pooling worker",
-    );
+  if (config.mailJobs.enabled) {
+    startMailJobs();
   } else {
-    startGmailJobs();
+    logger.info("scheduled bank mail scans are off (DISABLE_MAIL_JOBS=1)");
   }
   startTelegram();
   startTelegramSchedules();

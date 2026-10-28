@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseBankAlertEmail } from "../../src/gmail/alertParser.js";
+import { parseBankAlertEmail } from "../../src/bankMail/alertParser.js";
 import { counterpartyFromNarration } from "../../src/narration/party.js";
 
 const HDFC_UPI_SUBJECT = "❗  You have done a UPI txn. Check details!";

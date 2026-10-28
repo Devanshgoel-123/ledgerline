@@ -19,8 +19,6 @@ export type {
 export interface UserRow {
   id: string;
   email: string;
-  passwordHash: string;
-  appleSub: string | null;
   displayName: string | null;
   avatarUrl: string | null;
   dailySpendLimit: number | null;
@@ -39,10 +37,6 @@ export interface UserRow {
   telegramPhoneChatId: string | null;
   telegramPhoneAttempts: number;
   telegramPhoneSentAt: string | null;
-  /** Null until Google sign-in proves the address. */
-  emailVerifiedAt: string | null;
-  /** Session tokens issued before this are rejected. */
-  sessionsValidAfter: string | null;
   createdAt: string;
   deletedAt: string | null;
 }
@@ -158,7 +152,7 @@ export interface ImportRow {
   source: ImportSource;
   status: ImportStatus;
   filename: string | null;
-  gmailMessageId: string | null;
+  mailMessageId: string | null;
   attachmentHash: string | null;
   bankAdapter: string | null;
   errorMessage: string | null;
@@ -220,17 +214,22 @@ export interface StatementLineRow {
 
 export type NewStatementLineInput = Omit<StatementLineRow, "id" | "userId" | "matchedTransactionId">;
 
-export interface GmailConnectionRow {
+export interface MailConnectionRow {
   id: string;
   userId: string;
-  googleEmail: string;
-  refreshTokenEncrypted: string;
-  accessTokenEncrypted: string | null;
-  tokenExpiry: string | null;
-  historyId: string | null;
-  watchExpiration: string | null;
+  /** Mailbox address; also the IMAP user name. */
+  email: string;
+  /** Provider preset id, e.g. "gmail" or "custom". */
+  provider: string;
+  host: string;
+  port: number;
+  /**
+   * App password, encrypted with ENCRYPTION_KEY. Null when it has to be entered again,
+   * e.g. a mailbox carried over from the old Google sign-in.
+   */
+  passwordEncrypted: string | null;
   lastSyncAt: string | null;
-  /** Inclusive IST calendar day already query-scanned. Null until the first full scan. */
+  /** Inclusive IST calendar day already scanned. Null until the first full scan. */
   lastScannedOn: string | null;
   disconnectedAt: string | null;
 }
@@ -239,7 +238,7 @@ export interface MailMessageRow {
   id: string;
   userId: string;
   accountId: string | null;
-  gmailMessageId: string;
+  mailMessageId: string;
   fromAddress: string;
   subject: string;
   receivedAt: string | null;
@@ -302,28 +301,11 @@ export interface Store {
   healthCheck(): Promise<boolean>;
   /** Release resources (connection pool). */
   close(): Promise<void>;
-  createUser(input: {
-    email: string;
-    passwordHash: string;
-    displayName?: string | null;
-    /** True when the address is already proven, e.g. by Google sign-in. */
-    emailVerified?: boolean;
-  }): Promise<UserRow>;
-  /**
-   * Google proved the owner of an unverified account: replace the password nobody proved,
-   * mark the email verified, and end every earlier session.
-   */
-  claimAccountWithGoogle(userId: string, passwordHash: string): Promise<UserRow | null>;
-  /** Store a reset link's token hash for this user. */
-  createPasswordReset(userId: string, tokenHash: string, expiresAt: Date): Promise<void>;
-  /** Mark an unused, unexpired reset token used; returns its user id, or null if it cannot be used. */
-  consumePasswordReset(tokenHash: string): Promise<string | null>;
-  /** New password after a reset: the email is proven and every earlier session ends. */
-  resetPassword(userId: string, passwordHash: string): Promise<UserRow | null>;
+  createUser(input: { email: string; displayName?: string | null }): Promise<UserRow>;
+  /** The oldest account that is not deleted; the single local user. */
+  findFirstUser(): Promise<UserRow | null>;
   findUserByEmail(email: string): Promise<UserRow | null>;
-  findUserByAppleSub(appleSub: string): Promise<UserRow | null>;
   findUserById(id: string): Promise<UserRow | null>;
-  setAppleSub(userId: string, appleSub: string): Promise<UserRow | null>;
   updateUserPreferences(
     userId: string,
     patch: Partial<UserPreferences>,
@@ -333,11 +315,6 @@ export interface Store {
     patch: { displayName?: string | null; avatarUrl?: string | null },
   ): Promise<UserRow | null>;
   softDeleteUser(userId: string): Promise<void>;
-  consumeInvite(code: string): Promise<boolean>;
-  seedInvite(code: string, maxUses?: number): Promise<void>;
-  listAllowedEmails(): Promise<string[]>;
-  approveEmail(email: string): Promise<void>;
-  revokeEmail(email: string): Promise<boolean>;
 
   listCategories(userId: string): Promise<CategoryRow[]>;
   upsertCategory(input: Omit<CategoryRow, "id"> & { id?: string }): Promise<CategoryRow>;
@@ -407,7 +384,7 @@ export interface Store {
         | "errorMessage"
         | "bankAdapter"
         | "attachmentHash"
-        | "gmailMessageId"
+        | "mailMessageId"
         | "filename"
         | "accountId"
       >
@@ -419,9 +396,9 @@ export interface Store {
     userId: string,
     attachmentHash: string,
   ): Promise<ImportRow | null>;
-  findImportByGmailMessage(
+  findImportByMailMessage(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<ImportRow | null>;
 
   insertTransactions(
@@ -523,20 +500,20 @@ export interface Store {
     matches: Array<{ lineId: string; transactionId: string | null }>,
   ): Promise<void>;
 
-  upsertGmailConnection(
-    input: Omit<GmailConnectionRow, "id"> & { id?: string },
-  ): Promise<GmailConnectionRow>;
-  getGmailConnection(userId: string): Promise<GmailConnectionRow | null>;
-  disconnectGmail(userId: string): Promise<void>;
-  listActiveGmailConnections(): Promise<GmailConnectionRow[]>;
+  upsertMailConnection(
+    input: Omit<MailConnectionRow, "id"> & { id?: string },
+  ): Promise<MailConnectionRow>;
+  getMailConnection(userId: string): Promise<MailConnectionRow | null>;
+  disconnectMail(userId: string): Promise<void>;
+  listActiveMailConnections(): Promise<MailConnectionRow[]>;
   listPoolingAccounts(): Promise<AccountRow[]>;
 
   upsertMailMessage(
     input: Omit<MailMessageRow, "id" | "createdAt"> & { id?: string },
   ): Promise<MailMessageRow>;
-  findMailMessageByGmailId(
+  findMailMessageById(
     userId: string,
-    gmailMessageId: string,
+    mailMessageId: string,
   ): Promise<MailMessageRow | null>;
   listMailMessages(
     userId: string,
@@ -612,7 +589,7 @@ export interface Store {
   expireTelegramPrompt(promptId: string): Promise<TelegramPromptRow | null>;
 
   audit(userId: string | null, action: string, meta?: Record<string, unknown>): Promise<void>;
-  /** Wipe imported mail/transactions. Keeps the user, Gmail, and bank setup. */
+  /** Wipe imported mail/transactions. Keeps the profile, mailbox connection, and bank setup. */
   clearUserRecords(userId: string): Promise<ClearedUserRecords>;
   deleteUserData(userId: string): Promise<void>;
 }

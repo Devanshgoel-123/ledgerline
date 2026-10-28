@@ -23,21 +23,20 @@ git remote add upstream https://github.com/Devanshgoel-123/ledgerline.git
 
 ### 2. Setup Development Environment
 
-**Option A: Docker (Recommended)**
+**Option A: the full app in Docker**
 ```bash
-cp .env.example .env
-docker compose up --build
+./ledgerline start
 ```
 
-**Option B: Local**
+**Option B: run the API and web app yourself (hot reload)**
 ```bash
-docker compose up -d postgres
-cd backend && npm install && npm run migrate
-cd ../frontend && npm install
-# Run in separate terminals:
-npm --prefix backend run dev
-npm --prefix frontend run dev
+docker run -d --name ledgerline-dev-db -e POSTGRES_PASSWORD=dev -p 127.0.0.1:5432:5432 postgres:16-alpine
+cd backend && npm install
+# Separate terminals:
+DATABASE_URL=postgres://postgres:dev@localhost:5432/postgres npm --prefix backend run dev
+npm --prefix frontend install && npm --prefix frontend run dev
 ```
+Never point a dev server at the database of the Ledgerline you actually use: migrations run on every restart.
 
 ### 3. Create Feature Branch
 
@@ -340,22 +339,21 @@ Once approved:
 
 **Title:** Short description
 ```
-Gmail connection fails on Firefox
+ICICI statement import adds no rows
 ```
 
 **Description:**
 ```markdown
 ## Reproduce
-1. Sign up with new account
-2. Go to Import → Connect Gmail
-3. Click "Authorize with Gmail"
-4. Firefox shows blank page
+1. ./ledgerline start on a fresh install
+2. Import → choose an ICICI statement PDF (do not attach it: it is private)
+3. Press Import statement
 
 ## Expected
-Gmail authorization popup opens
+The report lists the new payments
 
 ## Actual
-Blank white page (no error logged)
+"New payments added 0" (paste ./ledgerline logs api, with amounts and names removed)
 
 ## Environment
 - Browser: Firefox 120
@@ -419,16 +417,14 @@ export const featureTable = pgTable("feature_table", {
 ```
 
 **3. Add migration**
-```bash
-cd backend
-npm run db:create -- add_feature_table
-```
+Add the next numbered pair in `backend/src/db/migrations/`, e.g.
+`065_feature_table.up.sql` and `065_feature_table.down.sql`. They run on API start.
 
 **4. Add routes**
 ```typescript
 // backend/src/featureName/routes.ts
 export const featureRouter = Router();
-featureRouter.use(requireAuth);
+// app.ts mounts every /api route behind localOnly + requireLocalUser, so req.user is set.
 featureRouter.post("/", createFeatureHandler);
 ```
 
@@ -449,12 +445,11 @@ npm test
 **7. Add frontend integration**
 ```typescript
 // frontend/src/lib/api/client.ts
-export function createApiClient(token: string) {
+export function createApiClient() {
   return {
     createFeature: (body: FeatureBody) =>
       requestJson<FeatureResponse>("/api/feature", {
         method: "POST",
-        ...auth,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
@@ -466,7 +461,7 @@ export function createApiClient(token: string) {
 
 ✓ **Do**
 - Validate all inputs (use Zod schemas)
-- Enforce tenant isolation (`userId` on all queries)
+- Scope queries by `userId` (the local profile), as the existing stores do
 - Use descriptive type names
 - Keep services focused (single responsibility)
 - Test edge cases
@@ -474,7 +469,7 @@ export function createApiClient(token: string) {
 
 ✗ **Avoid**
 - `any` types (use `unknown` and narrow)
-- Cross-tenant data access
+- Sending data off the computer. Anything that does must be optional, off by default, and say so in the UI
 - Mutable global state
 - Callback hell (use async/await)
 - Over-abstraction (YAGNI principle)
@@ -503,14 +498,13 @@ export function createApiClient(token: string) {
 - Validate all user input
 - Never log sensitive data (secrets, tokens)
 - Use parameterized queries (Drizzle handles this)
-- Hash passwords with bcrypt (never store plaintext)
+- Encrypt any stored credential with `crypto/secrets.ts`
 
 ### When Adding Features
-1. Check data isolation (multi-tenant safety)
-2. Validate authorization (user owns this data?)
-3. Use HTTPS in production
-4. Review for XSS/SQL injection
-5. Consider rate limiting
+1. Keep new routes under `/api`, behind the local guard (see [SECURITY.md](SECURITY.md))
+2. Never add a network call to a third party without an off-by-default setting
+3. Review for XSS/SQL injection
+4. Don't log transaction details, mail bodies or secrets
 
 ---
 

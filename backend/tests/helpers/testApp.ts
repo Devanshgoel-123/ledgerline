@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { randomUUID } from "node:crypto";
 import { createApp } from "../../src/app.js";
-import { signToken } from "../../src/auth/service.js";
+import { localHeaders } from "./local.js";
 import { resetStoreForTests } from "../../src/db/index.js";
 import { MemoryStore } from "../../src/db/memory.js";
 import { PostgresStore } from "../../src/db/postgres.js";
@@ -39,16 +39,15 @@ export async function startTestApp(): Promise<{
     newUser: async (label) => {
       const user = await store.createUser({
         email: `${label}-${randomUUID().slice(0, 8)}@test.local`,
-        passwordHash: "x",
         displayName: null,
       });
-      return { id: user.id, email: user.email, token: signToken({ id: user.id, email: user.email }) };
+      return { id: user.id, email: user.email, token: user.id };
     },
     call: async (token, path, init) => {
       const res = await fetch(`${base}${path}`, {
         method: init?.method ?? "GET",
         headers: {
-          authorization: `Bearer ${token}`,
+          ...localHeaders(token),
           ...(init?.body === undefined ? {} : { "content-type": "application/json" }),
         },
         body: init?.body === undefined ? undefined : JSON.stringify(init.body),

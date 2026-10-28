@@ -1,11 +1,9 @@
 import { Router } from "express";
-import { requireAuth } from "../auth/service.js";
 import { getStore } from "../db/index.js";
 import { validate } from "../middleware/validate.js";
 import { updatePreferencesBodySchema } from "../validators/preferences.js";
 
 export const preferencesRouter = Router();
-preferencesRouter.use(requireAuth);
 
 preferencesRouter.get("/", async (req, res) => {
   const store = await getStore();
