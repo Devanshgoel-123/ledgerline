@@ -52,6 +52,8 @@ function entry(partial: Partial<Entry>): Entry {
     origin: "manual",
     statementRef: null,
     note: null,
+    messageRef: null,
+    needsReview: false,
     splits: [],
     createdAt: "2026-09-02T10:00:00Z",
     updatedAt: "2026-09-02T10:00:00Z",

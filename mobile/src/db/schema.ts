@@ -72,6 +72,14 @@ const MIGRATIONS: string[] = [
     checked_at TEXT NOT NULL
   );
   `,
+  // 2: payments captured from bank messages (SMS via an iOS Shortcut, or
+  // pasted). message_ref stops one message becoming two entries;
+  // needs_review keeps captured rows marked until the user has looked.
+  `
+  ALTER TABLE entries ADD COLUMN message_ref TEXT;
+  ALTER TABLE entries ADD COLUMN needs_review INTEGER NOT NULL DEFAULT 0;
+  CREATE INDEX entries_message_ref ON entries (message_ref);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

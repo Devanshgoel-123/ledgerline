@@ -34,6 +34,10 @@ export interface Entry {
   /** The statement line this row was added from. */
   statementRef: string | null;
   note: string | null;
+  /** The bank message this row was captured from (see core/capture). */
+  messageRef: string | null;
+  /** Captured automatically and not yet looked at. */
+  needsReview: boolean;
   splits: SplitShare[];
   createdAt: string;
   updatedAt: string;

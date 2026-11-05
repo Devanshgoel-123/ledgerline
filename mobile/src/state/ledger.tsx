@@ -1,11 +1,15 @@
 import { useSQLiteContext } from "expo-sqlite";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AppState } from "react-native";
+import { readInbox } from "@/capture/inbox";
+import { captureMessages } from "@/core/capture";
 import { BUILT_IN_CATEGORIES, type Category } from "@/core/catalog";
 import { currentMonth } from "@/core/dates";
 import type { Entry, Rule } from "@/core/model";
 import {
   getSetting,
   lastStatementCheck,
+  setSetting,
   listCustomCategories,
   listEntries,
   listRules,
@@ -73,6 +77,46 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 
   const custom = snapshot?.custom;
   const categories = useMemo(() => [...BUILT_IN_CATEGORIES, ...(custom ?? [])], [custom]);
+
+  // Payments captured in the background by the iOS "Log bank message" action
+  // wait in the App Group inbox; add them at launch and on every return to
+  // the app. One drain at a time.
+  const draining = useRef(false);
+  const ready = snapshot !== null;
+  useEffect(() => {
+    if (!ready) return;
+    const drain = async () => {
+      if (draining.current) return;
+      draining.current = true;
+      try {
+        const { messages, done } = await readInbox();
+        if (!messages.length) return;
+        const [entries, custom, rules] = await Promise.all([listEntries(db), listCustomCategories(db), listRules(db)]);
+        const outcomes = await captureMessages(
+          db,
+          messages,
+          { entries, rules, categories: [...BUILT_IN_CATEGORIES, ...custom] },
+          () => listEntries(db),
+        );
+        done();
+        await setSetting(db, "lastInbox", {
+          at: new Date().toISOString(),
+          received: messages.length,
+          added: outcomes.filter((outcome) => outcome.status === "added").length,
+        });
+        setSnapshot(await loadSnapshot(db));
+      } catch {
+        // Leave the files for the next try.
+      } finally {
+        draining.current = false;
+      }
+    };
+    void drain();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void drain();
+    });
+    return () => subscription.remove();
+  }, [ready, db]);
 
   // Keep the home-screen widget's totals current after every load and write.
   useEffect(() => {

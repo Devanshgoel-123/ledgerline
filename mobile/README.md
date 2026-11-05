@@ -6,6 +6,15 @@ phone. No account, no server, no bank login.
 - **Add as you spend.** Quick add is a keypad and a row of your most-used
   categories: amount, category, save. "More details" opens the full form (date,
   payee, splits). A reminder in the evening catches what you'd forget.
+- **Payments from bank SMS (iOS).** Set up once in Settings → "Set up
+  automatic capture": a Shortcuts automation runs Ledgerline's **Log bank
+  message** action for each message, in the background. The action only
+  writes the text to the App Group inbox; the app parses it on the phone
+  (`src/core/sms.ts`), skips OTPs, requests, offers and chats, never adds the
+  same payment twice, and lists new ones under "From your bank messages" for a
+  quick review. Fallbacks: the link `ledgerline://capture?text=…` (a Shortcut
+  "Open URLs" action, no native code), pasting a message, and the monthly
+  statement check.
 - **Home-screen widget (iOS).** Shows today's and this month's spend. Tap it to
   open Quick add; the medium size has four category shortcuts. Deep link:
   `ledgerline://quick?category=food`.
@@ -36,6 +45,7 @@ path in `tsconfig.json` point at it.
 | Storage | `src/db` (SQLite on the phone, via expo-sqlite) |
 | PDF reading | `src/pdf`: pdf.js in a hidden WebView, inlined so it works offline |
 | Reminders | `src/reminders`: local notifications scheduled on the phone |
+| Bank SMS capture | `src/core/sms.ts` (parser), `src/core/capture.ts` (dedupe, categorise, save), `src/capture/inbox.ts` (App Group inbox), `plugins/withBankMessageIntent.js` + `plugins/native/LogBankMessageIntent.swift` (the iOS action) |
 | Widget | `src/widget`: the `expo-widgets` layout (`QuickAddWidget.tsx`) and `sync.ts`, which pushes totals after every load and write |
 | Theme | `src/ui/theme.ts`; the tokens, contrast ratios and screen specs are in `docs/MOBILE_DESIGN_HANDOFF.md` |
 | Built-in categories and shops | `src/core/catalog.generated.json`, made from the backend migrations by `npm run catalog` |

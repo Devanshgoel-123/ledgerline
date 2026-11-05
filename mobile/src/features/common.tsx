@@ -65,7 +65,7 @@ export function EntryRow({ entry, showDate = true }: { entry: Entry; showDate?: 
     categoryLabel(entry.categorySlug, categories),
     showDate ? formatShortDate(entry.date) : null,
     entry.method === "cash" ? "Cash" : entry.method === "card" ? "Card" : null,
-    entry.origin === "statement" ? "From statement" : entry.origin === "sample" ? "Sample" : null,
+    entry.origin === "statement" ? "From statement" : entry.messageRef ? "From SMS" : entry.origin === "sample" ? "Sample" : null,
   ]
     .filter(Boolean)
     .join(" · ");

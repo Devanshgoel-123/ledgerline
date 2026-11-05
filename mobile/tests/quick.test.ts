@@ -20,6 +20,8 @@ function entry(date: string, categorySlug: string, extra: Partial<Entry> = {}): 
     origin: "manual",
     statementRef: null,
     note: null,
+    messageRef: null,
+    needsReview: false,
     splits: [],
     createdAt: date,
     updatedAt: date,

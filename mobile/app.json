@@ -74,7 +74,8 @@
           ]
         }
       ],
-      "./plugins/withAndroidShortcuts"
+      "./plugins/withAndroidShortcuts",
+      "./plugins/withBankMessageIntent"
     ],
     "experiments": {
       "typedRoutes": true,

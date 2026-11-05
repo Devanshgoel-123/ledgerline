@@ -35,6 +35,7 @@ export default function OverviewScreen() {
   const biggest = Math.max(...groups.map((group) => group.total), 1);
 
   const daysSinceCheck = lastCheck ? daysSince(lastCheck.checkedAt) : null;
+  const toReview = entries.filter((entry) => entry.needsReview).length;
   const nudgeStatement =
     ready && entries.length >= 5 && (daysSinceCheck === null || daysSinceCheck >= STATEMENT_NUDGE_DAYS);
 
@@ -73,6 +74,15 @@ export default function OverviewScreen() {
           onPress={() => router.push("/statement")}
         />
       </View>
+
+      {toReview ? (
+        <Notice
+          tone="info"
+          title={`${toReview} new ${toReview === 1 ? "payment" : "payments"} from your bank messages.`}
+          body="Already counted. Take a quick look at the categories."
+          action={<Button label="Review" icon="check" onPress={() => router.push("/review")} />}
+        />
+      ) : null}
 
       {nudgeStatement ? (
         <Notice

@@ -84,6 +84,8 @@ The question this answers: *how does someone who won't share email, or whose ban
 - **iOS:** ship **C′** first, since it's an afternoon of work. Then ship **C** with a guided setup ("Add automation" walk-through with screenshots) once the App Intent module is built. Add **D** on both platforms as the always-available manual fallback.
 - **Parsing:** reuse `backend/src/bankMail/alertParser.ts` (pure TypeScript, already handles "debited/credited/VPA" alert text) through the existing `@shared` path, and add SMS fixtures for HDFC, ICICI, SBI, Axis and Kotak. Captured payments are matched against existing entries with the same amount ± 1 day rule that statements use, so nothing is counted twice.
 
+**Status (6 Nov 2026):** iOS capture is built: R10, R13 (both the link and the App Intent), R14, R15 and R16. The App Intent is type-checked and wired in by prebuild, but compiles for the first time on EAS. Android (R11, R12) is next.
+
 | # | v1.1 requirement | Acceptance criteria |
 |---|---|---|
 | R10 | Opt-in screen explaining exactly what is read | Shows the list of bank sender IDs, "read on this phone, never sent anywhere", and an off switch in Settings. Nothing is read before opt-in |

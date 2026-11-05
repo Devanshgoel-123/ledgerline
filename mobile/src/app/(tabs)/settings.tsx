@@ -88,6 +88,15 @@ export default function SettingsScreen() {
       <PageHeader eyebrow="Settings" title="Limits and your data" sub="Everything here stays on this phone." />
 
       <Card>
+        <CardTitle
+          title="Add payments from bank SMS"
+          sub="Set up once and payments your bank texts you about are added by themselves. Read on this phone only."
+        />
+        <Button label="Set up automatic capture" icon="bell" onPress={() => router.push("/auto-capture")} />
+        <Button label="Paste a bank message" variant="secondary" onPress={() => router.push("/capture")} />
+      </Card>
+
+      <Card>
         <CardTitle title="Reminders" sub="Nudges from this phone. No account, no server." />
         <View style={s.switchRow}>
           <View style={{ flex: 1 }}>

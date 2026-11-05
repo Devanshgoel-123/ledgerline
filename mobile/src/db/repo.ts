@@ -25,6 +25,8 @@ type EntryRecord = {
   origin: Origin;
   statement_ref: string | null;
   note: string | null;
+  message_ref: string | null;
+  needs_review: number;
   created_at: string;
   updated_at: string;
 };
@@ -48,6 +50,8 @@ function toEntry(row: EntryRecord, splits: SplitShare[]): Entry {
     origin: row.origin,
     statementRef: row.statement_ref,
     note: row.note,
+    messageRef: row.message_ref ?? null,
+    needsReview: Boolean(row.needs_review),
     splits,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -84,6 +88,8 @@ export type EntryInput = {
   origin?: Origin;
   statementRef?: string | null;
   note?: string | null;
+  messageRef?: string | null;
+  needsReview?: boolean;
   splits?: { name: string; amount: number }[];
 };
 
@@ -142,13 +148,16 @@ async function insertRow(db: Db, id: string, input: EntryInput, stamp: string): 
     input.origin ?? "manual",
     input.statementRef ?? null,
     input.note?.trim() || null,
+    input.messageRef ?? null,
+    input.needsReview ? 1 : 0,
     stamp,
     stamp,
   ];
   await db.runAsync(
     `INSERT INTO entries (id, date, amount, type, description, merchant, payee, upi_id, provider_id,
-       category_slug, classification_source, method, origin, statement_ref, note, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       category_slug, classification_source, method, origin, statement_ref, note, message_ref, needs_review,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ...values,
   );
 }
@@ -180,7 +189,8 @@ export async function updateEntry(db: Db, id: string, input: EntryInput): Promis
   await db.withTransactionAsync(async () => {
     const result = await db.runAsync(
       `UPDATE entries SET date = ?, amount = ?, type = ?, description = ?, merchant = ?, payee = ?,
-         upi_id = ?, category_slug = ?, classification_source = ?, method = ?, note = ?, updated_at = ?
+         upi_id = ?, category_slug = ?, classification_source = ?, method = ?, note = ?, needs_review = 0,
+         updated_at = ?
        WHERE id = ?`,
       input.date,
       Math.round(input.amount * 100) / 100,
@@ -211,6 +221,46 @@ export async function setCategory(db: Db, ids: string[], categorySlug: string): 
         id,
       );
     }
+  });
+}
+
+// ── Captured from bank messages ──
+
+/** Mark captured entries as looked at. */
+export async function markReviewed(db: Db, ids: string[]): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    for (const id of ids) await db.runAsync("UPDATE entries SET needs_review = 0 WHERE id = ?", id);
+  });
+}
+
+/** Link an entry the user already added to the bank message for the same payment. */
+export async function linkMessage(db: Db, id: string, messageRef: string): Promise<void> {
+  await db.runAsync("UPDATE entries SET message_ref = ? WHERE id = ? AND message_ref IS NULL", messageRef, id);
+}
+
+/** Whether a message was seen before: captured into an entry, or dismissed by the user. */
+export async function messageSeen(db: Db, messageRef: string): Promise<boolean> {
+  const entry = await db.getFirstAsync<{ id: string }>("SELECT id FROM entries WHERE message_ref = ? LIMIT 1", messageRef);
+  if (entry) return true;
+  const ignored = await db.getFirstAsync<{ line_key: string }>(
+    "SELECT line_key FROM statement_ignores WHERE line_key = ?",
+    `msg:${messageRef}`,
+  );
+  return Boolean(ignored);
+}
+
+/** Delete a captured entry and remember its message, so it isn't captured again. */
+export async function dismissCaptured(db: Db, id: string): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    const row = await db.getFirstAsync<{ message_ref: string | null }>("SELECT message_ref FROM entries WHERE id = ?", id);
+    if (row?.message_ref) {
+      await db.runAsync(
+        "INSERT OR IGNORE INTO statement_ignores (line_key, created_at) VALUES (?, ?)",
+        `msg:${row.message_ref}`,
+        now(),
+      );
+    }
+    await db.runAsync("DELETE FROM entries WHERE id = ?", id);
   });
 }
 
@@ -352,7 +402,7 @@ export async function setSetting(db: Db, key: string, value: unknown): Promise<v
 // ── Statement checks ──
 
 export async function listIgnoredLines(db: Db): Promise<Set<string>> {
-  const rows = await db.getAllAsync<{ line_key: string }>("SELECT line_key FROM statement_ignores");
+  const rows = await db.getAllAsync<{ line_key: string }>("SELECT line_key FROM statement_ignores WHERE line_key NOT LIKE 'msg:%'");
   return new Set(rows.map((row) => row.line_key));
 }
 
@@ -369,7 +419,8 @@ export async function ignoreLines(db: Db, keys: string[]): Promise<void> {
 }
 
 export async function clearIgnoredLines(db: Db): Promise<void> {
-  await db.runAsync("DELETE FROM statement_ignores");
+  // Messages you dismissed (msg:…) stay dismissed.
+  await db.runAsync("DELETE FROM statement_ignores WHERE line_key NOT LIKE 'msg:%'");
 }
 
 export type StatementCheckRecord = {
