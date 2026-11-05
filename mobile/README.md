@@ -90,6 +90,26 @@ eas build --platform android --profile production
 eas submit --platform android
 ```
 
+**Android specifics.** Long-press the app icon for **Add expense** and
+**Upload statement** (static app shortcuts from `plugins/withAndroidShortcuts.js`,
+deep-linking to `/quick` and `/statement`). There's no Android home-screen
+widget yet: `expo-widgets` Android buttons can't open a deep link. The
+manifest blocks permissions the app doesn't use (`SYSTEM_ALERT_WINDOW` and
+legacy storage), so the Play listing shows only what's needed. New personal
+Play accounts must run a closed test with at least 12 testers for 14 days
+before the first production release.
+
+**Build an APK on your own Mac** (no EAS): JDK 17–21 and the Android SDK with
+platform 37, build-tools 37.0.0 and NDK 27.1.12297006 (React Native 0.88).
+
+```bash
+npx expo prebuild --platform android   # android/ is generated and git-ignored
+cd android && ./gradlew assembleRelease # app/build/outputs/apk/release/
+```
+
+A local release APK is signed with the debug key: fine for testing on your
+own phones, not for Play. Play builds come from EAS.
+
 **iOS.** Installing on an iPhone outside the App Store, or publishing to it,
 needs an Apple Developer account (US$99 a year).
 

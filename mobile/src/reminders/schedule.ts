@@ -21,13 +21,24 @@ export function configureNotifications(): void {
   });
 }
 
-async function ensureChannel(): Promise<void> {
-  if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync(CHANNEL, {
-    name: "Reminders",
-    description: "Your daily nudge to add expenses, and the monthly statement check",
-    importance: AndroidImportance.DEFAULT,
-  });
+/**
+ * Our Android channel, or null to use expo-notifications' default channel.
+ * Creating a channel can fail natively (seen with expo-notifications 58.1.8
+ * on Android 16: a NullPointerException inside setNotificationChannelAsync),
+ * and a missing channel must never stop reminders or onboarding.
+ */
+async function ensureChannel(): Promise<string | undefined> {
+  if (Platform.OS !== "android") return undefined;
+  try {
+    await Notifications.setNotificationChannelAsync(CHANNEL, {
+      name: "Reminders",
+      description: "Your daily nudge to add expenses, and the monthly statement check",
+      importance: AndroidImportance.DEFAULT,
+    });
+    return CHANNEL;
+  } catch {
+    return undefined;
+  }
 }
 
 export type PermissionState = "granted" | "denied" | "undetermined";
@@ -53,7 +64,7 @@ export async function askForNotifications(): Promise<PermissionState> {
 export async function applyReminders(settings: ReminderSettings): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (!settings.daily && !settings.monthlyStatement) return;
-  await ensureChannel();
+  const channelId = await ensureChannel();
   if ((await notificationPermission()) !== "granted") return;
 
   if (settings.daily) {
@@ -64,7 +75,7 @@ export async function applyReminders(settings: ReminderSettings): Promise<void> 
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour: time.hour,
           minute: time.minute,
-          channelId: CHANNEL,
+          channelId,
         },
       });
     }
@@ -77,7 +88,7 @@ export async function applyReminders(settings: ReminderSettings): Promise<void> 
         day: settings.monthlyDay,
         hour: 10,
         minute: 0,
-        channelId: CHANNEL,
+        channelId,
       },
     });
   }

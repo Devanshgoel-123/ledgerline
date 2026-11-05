@@ -1,6 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
-import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,6 +13,7 @@ import { useLedger } from "@/state/ledger";
 import { Button, Card, CardTitle, Divider, Empty, Field, Notice, Pill, T } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, useTheme } from "@/ui/theme";
+import { closeModal } from "@/features/navigation";
 
 type Step =
   | { kind: "start" }
@@ -140,7 +140,7 @@ export default function StatementScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {reader}
       <View style={[s.top, { paddingTop: Platform.OS === "android" ? insets.top + space[2] : space[4], borderColor: c.border }]}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} style={s.close}>
+        <Pressable onPress={() => closeModal()} accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} style={s.close}>
           <Icon name="close" size={20} color={c.foreground} />
         </Pressable>
         <Text style={[s.topTitle, { color: c.foreground }]} accessibilityRole="header">
@@ -312,7 +312,7 @@ export default function StatementScreen() {
             ) : (
               <Card>
                 <Empty title="Nothing is missing" body="Every payment in this statement is already in Ledgerline." />
-                <Button label="Done" onPress={() => router.back()} />
+                <Button label="Done" onPress={() => closeModal()} />
               </Card>
             )}
           </>
@@ -331,7 +331,7 @@ export default function StatementScreen() {
                   : "Your month is complete for this statement."
               }
             />
-            <Button label="Done" onPress={() => router.back()} />
+            <Button label="Done" onPress={() => closeModal()} />
             <Button label="Check another statement" variant="secondary" onPress={() => setStep({ kind: "start" })} />
           </Card>
         ) : null}

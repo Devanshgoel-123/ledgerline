@@ -12,6 +12,7 @@ import { useLedger } from "@/state/ledger";
 import { Button, Chip, Segmented, T } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
+import { closeModal } from "@/features/navigation";
 
 /** Categories shown before "More". */
 const QUICK_COUNT = 6;
@@ -71,7 +72,7 @@ export default function QuickAddScreen() {
         note: "",
       });
       await refresh();
-      router.back();
+      closeModal();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Couldn't save. Try again.");
     } finally {
@@ -85,7 +86,7 @@ export default function QuickAddScreen() {
   return (
     <View style={[s.root, { backgroundColor: c.bg, paddingBottom: insets.bottom + space[3] }]}>
       <View style={s.top}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close without saving" hitSlop={10} style={s.iconButton}>
+        <Pressable onPress={() => closeModal()} accessibilityRole="button" accessibilityLabel="Close without saving" hitSlop={10} style={s.iconButton}>
           <Icon name="close" size={20} color={c.foreground} />
         </Pressable>
         <Text style={[s.title, { color: c.foreground }]} accessibilityRole="header">

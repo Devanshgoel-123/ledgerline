@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
   type StyleProp,
+  type SwitchProps,
   type TextInputProps,
   type TextStyle,
   type ViewStyle,
@@ -382,6 +385,19 @@ export function Row({
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}>
       {content}
     </Pressable>
+  );
+}
+
+/** A switch in the brand colour; Android otherwise uses the system teal. */
+export function Toggle(props: SwitchProps) {
+  const { c } = useTheme();
+  return (
+    <Switch
+      trackColor={{ true: c.primary, false: c.borderStrong }}
+      thumbColor={Platform.OS === "android" ? "#ffffff" : undefined}
+      ios_backgroundColor={c.borderStrong}
+      {...props}
+    />
   );
 }
 

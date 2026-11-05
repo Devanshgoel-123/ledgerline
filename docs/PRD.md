@@ -118,9 +118,9 @@ The question this answers: *how does someone who won't share email, or whose ban
 |---|---|---|
 | Code | Shared Expo SDK 58 app | Same code |
 | Bundle builds | ✅ `expo export` | ✅ `expo export` |
-| Run on simulator or emulator | ✅ iPhone 16 Pro sim, light and dark | ❌ **Never run.** No emulator on the dev Mac |
+| Run on simulator or emulator | ✅ iPhone 16 Pro sim, light and dark (no taps) | ✅ Release APK on a Pixel 8 emulator (Android 16), tested with real taps: onboarding, reminders, Quick add, app shortcuts |
 | Device test | Pending TestFlight (membership 6 Nov) | Pending: EAS `preview` APK installs on any phone without a developer account |
-| Widget | Built, compiled only by EAS | Not built (`android: null`). Glance widget later |
+| Widget / shortcuts | Widget built, compiled only by EAS | No widget (Android widget buttons can't open a deep link). Long-press app shortcuts: Add expense, Upload statement |
 | Store account | Apple Developer (arriving) | 🔵 **Open question:** is there a Google Play developer account ($25 one-time)? New personal accounts must run a closed test with ≥ 12 testers for 14 days before production |
 | Ship date | Submit 7 Nov 2026 | 🔶 **Assumption:** about 2–3 weeks later, gated by the closed-test rule and the SMS declaration |
 

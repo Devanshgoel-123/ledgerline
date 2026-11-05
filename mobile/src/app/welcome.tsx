@@ -1,13 +1,13 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sampleEntries } from "@/core/sample";
 import { addEntries, setSetting } from "@/db/repo";
 import { applyReminders, askForNotifications } from "@/reminders/schedule";
 import { DEFAULT_REMINDERS } from "@/reminders/settings";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, Eyebrow, T } from "@/ui/components";
+import { Button, Card, Eyebrow, T, Toggle } from "@/ui/components";
 import { fonts, space, useTheme } from "@/ui/theme";
 
 const STEPS = [
@@ -27,10 +27,17 @@ export default function WelcomeScreen() {
     setBusy(true);
     try {
       if (remind) {
-        const permission = await askForNotifications();
-        const settings = { ...DEFAULT_REMINDERS, daily: permission === "granted" };
-        await setSetting(db, "reminders", settings);
-        await applyReminders(settings);
+        // Reminders are a nice-to-have: if the phone refuses or the
+        // notification library fails, the user still gets into the app with
+        // reminders off, and can turn them on in Settings later.
+        try {
+          const permission = await askForNotifications();
+          const settings = { ...DEFAULT_REMINDERS, daily: permission === "granted" };
+          await applyReminders(settings);
+          await setSetting(db, "reminders", settings);
+        } catch {
+          await setSetting(db, "reminders", { ...DEFAULT_REMINDERS, daily: false });
+        }
       }
       if (withSample) {
         const { month, entries } = sampleEntries();
@@ -79,7 +86,7 @@ export default function WelcomeScreen() {
               One nudge a day to add what you spent. Change or turn it off in Settings.
             </T>
           </View>
-          <Switch value={remind} onValueChange={setRemind} accessibilityLabel="Daily reminder at 9 pm" />
+          <Toggle value={remind} onValueChange={setRemind} accessibilityLabel="Daily reminder at 9 pm" />
         </View>
       </Card>
 

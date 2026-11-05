@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, StyleSheet, Switch, View } from "react-native";
+import { Alert, Linking, StyleSheet, View } from "react-native";
 import { categoryLabel } from "@/core/catalog";
 import { entriesCsv } from "@/core/csv";
 import { today } from "@/core/dates";
@@ -14,7 +14,7 @@ import { TimeChoice } from "@/features/pickers";
 import { applyReminders, askForNotifications, notificationPermission, type PermissionState } from "@/reminders/schedule";
 import type { ReminderSettings } from "@/reminders/settings";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, CardTitle, Chip, Divider, Field, PageHeader, Row, Screen, T } from "@/ui/components";
+import { Button, Card, CardTitle, Chip, Divider, Field, PageHeader, Row, Screen, T, Toggle } from "@/ui/components";
 import { space } from "@/ui/theme";
 
 export default function SettingsScreen() {
@@ -41,8 +41,13 @@ export default function SettingsScreen() {
         return;
       }
     }
-    await setSetting(db, "reminders", next);
-    await applyReminders(next);
+    try {
+      await applyReminders(next);
+      await setSetting(db, "reminders", next);
+    } catch {
+      Alert.alert("Couldn't set reminders", "This phone didn't accept the reminder. Try again, or check Ledgerline's notification settings.");
+      await setSetting(db, "reminders", { ...next, daily: false, monthlyStatement: false });
+    }
     await refresh();
   };
 
@@ -91,7 +96,7 @@ export default function SettingsScreen() {
               Every day at {reminders.times.map((time) => formatClock(time.hour, time.minute)).join(" and ")}
             </T>
           </View>
-          <Switch
+          <Toggle
             value={reminders.daily}
             onValueChange={(daily) => saveReminders({ ...reminders, daily })}
             accessibilityLabel="Daily reminder to add expenses"
@@ -136,7 +141,7 @@ export default function SettingsScreen() {
               Once a month, on day {reminders.monthlyDay}, to find payments you missed
             </T>
           </View>
-          <Switch
+          <Toggle
             value={reminders.monthlyStatement}
             onValueChange={(monthlyStatement) => saveReminders({ ...reminders, monthlyStatement })}
             accessibilityLabel="Monthly reminder to check your statement"

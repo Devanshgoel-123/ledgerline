@@ -1,9 +1,10 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { EntryForm } from "@/features/EntryForm";
 import { useLedger } from "@/state/ledger";
 import { Button, Empty } from "@/ui/components";
 import { space, useTheme } from "@/ui/theme";
+import { closeModal } from "@/features/navigation";
 
 export default function EditEntryScreen() {
   const { c } = useTheme();
@@ -17,7 +18,7 @@ export default function EditEntryScreen() {
       <Empty
         title="This payment is gone"
         body="It was deleted, or your data was erased."
-        action={<Button label="Back" variant="secondary" onPress={() => router.back()} />}
+        action={<Button label="Back" variant="secondary" onPress={() => closeModal()} />}
       />
     </View>
   );

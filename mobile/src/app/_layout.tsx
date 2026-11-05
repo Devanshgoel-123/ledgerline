@@ -16,6 +16,10 @@ import { configureNotifications, useOpenReminders } from "@/reminders/schedule";
 import { LedgerProvider } from "@/state/ledger";
 import { useTheme } from "@/ui/theme";
 
+// Deep links (widget, app shortcuts, reminders) open on top of the tabs, so
+// closing Quick add or a statement check always has somewhere to go back to.
+export const unstable_settings = { initialRouteName: "(tabs)" };
+
 void SplashScreen.preventAutoHideAsync();
 configureNotifications();
 

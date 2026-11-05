@@ -1,6 +1,5 @@
-import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryLabel } from "@/core/catalog";
 import { classify, ruleFor } from "@/core/classify";
@@ -11,11 +10,12 @@ import { evenShares, knownFriends } from "@/core/people";
 import { myShare, SplitInputError } from "@/core/shared";
 import { addEntry, deleteEntry, saveRule, updateEntry, type EntryInput } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, Chip, Eyebrow, Field, Segmented, T } from "@/ui/components";
+import { Button, Card, Chip, Eyebrow, Field, Segmented, T, Toggle } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, useTheme } from "@/ui/theme";
 import { CategoryPicker } from "./CategoryPicker";
 import { DateChoice } from "./pickers";
+import { closeModal } from "./navigation";
 
 type Friend = { key: string; name: string; amount: string };
 
@@ -129,7 +129,7 @@ export function EntryForm({
         if (rule) await saveRule(db, rule);
       }
       await refresh();
-      router.back();
+      closeModal();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Couldn't save. Try again.";
       if (error instanceof SplitInputError) setErrors({ split: message });
@@ -148,7 +148,7 @@ export function EntryForm({
         onPress: async () => {
           await deleteEntry(db, entry!.id);
           await refresh();
-          router.back();
+          closeModal();
         },
       },
     ]);
@@ -156,7 +156,7 @@ export function EntryForm({
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[s.top, { paddingTop: Platform.OS === "android" ? insets.top + space[2] : space[4], borderColor: c.border }]}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close without saving" hitSlop={10} style={s.close}>
+        <Pressable onPress={() => closeModal()} accessibilityRole="button" accessibilityLabel="Close without saving" hitSlop={10} style={s.close}>
           <Icon name="close" size={20} color={c.foreground} />
         </Pressable>
         <Text style={[s.topTitle, { color: c.foreground }]} accessibilityRole="header">
@@ -242,7 +242,7 @@ export function EntryForm({
               <T style={{ flex: 1 }}>
                 Always file {paidTo.trim() || "this"} under {categoryLabel(chosenCategory, categories)}
               </T>
-              <Switch value={remember} onValueChange={setRemember} accessibilityLabel="Remember this category" />
+              <Toggle value={remember} onValueChange={setRemember} accessibilityLabel="Remember this category" />
             </View>
           ) : null}
         </View>
@@ -281,7 +281,7 @@ export function EntryForm({
                   Only your share counts as your spending. People shows who owes you.
                 </T>
               </View>
-              <Switch
+              <Toggle
                 value={splitOn}
                 onValueChange={(on) => {
                   setSplitOn(on);

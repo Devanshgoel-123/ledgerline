@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +7,7 @@ import { useLedger } from "@/state/ledger";
 import { Button, Card, CardTitle, Chip, Divider, Empty, Field, Row, T } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { fonts, space, useTheme } from "@/ui/theme";
+import { closeModal } from "@/features/navigation";
 
 export default function CategoriesScreen() {
   const { c, categoryColor } = useTheme();
@@ -58,7 +58,7 @@ export default function CategoriesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={[s.top, { paddingTop: Platform.OS === "android" ? insets.top + space[2] : space[4], borderColor: c.border }]}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} style={s.close}>
+        <Pressable onPress={() => closeModal()} accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} style={s.close}>
           <Icon name="close" size={20} color={c.foreground} />
         </Pressable>
         <Text style={[s.topTitle, { color: c.foreground }]} accessibilityRole="header">
