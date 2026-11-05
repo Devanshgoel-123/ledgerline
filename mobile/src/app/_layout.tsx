@@ -51,6 +51,16 @@ export default function RootLayout() {
           }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
+          <Stack.Screen
+            name="quick"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [0.92],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 28,
+              contentStyle: { backgroundColor: c.bg },
+            }}
+          />
           <Stack.Screen name="add" options={{ presentation: "modal" }} />
           <Stack.Screen name="entry/[id]" options={{ presentation: "modal" }} />
           <Stack.Screen name="statement" options={{ presentation: "modal" }} />

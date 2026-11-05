@@ -40,10 +40,10 @@ type TabButtonProps = ComponentProps<typeof Pressable> & { label: string; icon: 
 // React 19 passes ref as a prop; TabTrigger asChild hands it to the Pressable.
 function TabButton({ label, icon, isFocused, ...rest }: TabButtonProps) {
   const { c } = useTheme();
-  const color = isFocused ? c.copper : c.muted;
+  const color = isFocused ? c.primary : c.muted;
   return (
     <Pressable {...rest} accessibilityRole="tab" accessibilityState={{ selected: Boolean(isFocused) }} style={s.tab}>
-      <View style={[s.pill, isFocused && { backgroundColor: c.copperSoft }]}>
+      <View style={[s.pill, isFocused && { backgroundColor: c.primarySoft }]}>
         <Icon name={icon} size={20} color={color} />
       </View>
       <Text style={[s.label, { color }]}>{label}</Text>

@@ -20,19 +20,26 @@ import { DateChoice } from "./pickers";
 type Friend = { key: string; name: string; amount: string };
 
 /** Add or edit one payment. Used by the Add screen and by tapping a transaction. */
-export function EntryForm({ entry }: { entry?: Entry }) {
+export function EntryForm({
+  entry,
+  initial,
+}: {
+  entry?: Entry;
+  /** Values carried over from Quick add. */
+  initial?: { amount?: string; category?: string; description?: string; type?: TxType };
+}) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const { db, refresh, categories, rules, entries } = useLedger();
   const editing = Boolean(entry);
 
-  const [type, setType] = useState<TxType>(entry?.type ?? "debit");
-  const [amount, setAmount] = useState(entry ? String(entry.amount) : "");
-  const [description, setDescription] = useState(entry?.description ?? "");
+  const [type, setType] = useState<TxType>(entry?.type ?? initial?.type ?? "debit");
+  const [amount, setAmount] = useState(entry ? String(entry.amount) : (initial?.amount ?? ""));
+  const [description, setDescription] = useState(entry?.description ?? initial?.description ?? "");
   const [paidTo, setPaidTo] = useState(entry?.payee ?? entry?.merchant ?? "");
   const [isPerson, setIsPerson] = useState(Boolean(entry?.payee));
-  const [category, setCategory] = useState<string | null>(entry?.categorySlug ?? null);
-  const [categoryTouched, setCategoryTouched] = useState(editing);
+  const [category, setCategory] = useState<string | null>(entry?.categorySlug ?? initial?.category ?? null);
+  const [categoryTouched, setCategoryTouched] = useState(editing || Boolean(initial?.category));
   const [date, setDate] = useState(entry?.date ?? today());
   const [method, setMethod] = useState<PaymentMethod>(entry?.method ?? "upi");
   const [note, setNote] = useState(entry?.note ?? "");
@@ -84,7 +91,6 @@ export function EntryForm({ entry }: { entry?: Entry }) {
   const save = async () => {
     const next: typeof errors = {};
     if (!parsedAmount) next.amount = "Add the amount in rupees.";
-    if (!description.trim() && !paidTo.trim()) next.what = "Add what it was for, for example Chai or Auto.";
     if (splitOn && type === "debit") {
       if (friendShares.some((friend) => !friend.name)) next.split = "Each friend needs a name.";
       else if (friendShares.some((friend) => friend.amount <= 0)) next.split = "Each share has to be more than zero.";
@@ -97,7 +103,8 @@ export function EntryForm({ entry }: { entry?: Entry }) {
       date,
       amount: parsedAmount!,
       type,
-      description: description.trim() || paidTo.trim(),
+      // Amount and category are enough; the category names the payment.
+      description: description.trim() || paidTo.trim() || categoryLabel(chosenCategory ?? "other", categories),
       merchant: isPerson ? null : paidTo.trim() || null,
       payee: isPerson ? paidTo.trim() || null : null,
       upiId: entry?.upiId ?? null,
@@ -157,7 +164,7 @@ export function EntryForm({ entry }: { entry?: Entry }) {
         </Text>
         <View style={s.close} />
       </View>
-      <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + space[6] }]} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[s.body, { paddingBottom: space[6] }]} keyboardShouldPersistTaps="handled">
         <Segmented
           label="Kind"
           value={type}
@@ -181,16 +188,16 @@ export function EntryForm({ entry }: { entry?: Entry }) {
               placeholder="0"
               placeholderTextColor={c.muted2}
               keyboardType="decimal-pad"
-              autoFocus={!editing}
+              autoFocus={!editing && !initial?.amount}
               accessibilityLabel="Amount in rupees"
-              style={[s.amountInput, { color: c.copper }]}
+              style={[s.amountInput, { color: c.accent }]}
             />
           </View>
           {errors.amount ? <T variant="small" tone="danger">{errors.amount}</T> : null}
         </View>
 
         <Field
-          label="What for"
+          label="What for (optional)"
           value={description}
           onChangeText={(text) => {
             setDescription(text);
@@ -351,12 +358,6 @@ export function EntryForm({ entry }: { entry?: Entry }) {
 
         <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="Anything to remember" multiline />
 
-        {errors.form ? (
-          <T tone="danger" style={{ textAlign: "center" }}>
-            {errors.form}
-          </T>
-        ) : null}
-        <Button label={editing ? "Save changes" : "Save"} onPress={save} busy={saving} />
         {editing ? <Button label="Delete payment" variant="danger" icon="trash" onPress={remove} /> : null}
         {entry?.origin === "statement" ? (
           <T variant="small" tone="muted" style={{ textAlign: "center" }}>
@@ -364,6 +365,19 @@ export function EntryForm({ entry }: { entry?: Entry }) {
           </T>
         ) : null}
       </ScrollView>
+      <View style={[s.footer, { paddingBottom: insets.bottom + space[3], backgroundColor: c.bg, borderColor: c.border }]}>
+        {errors.form ? (
+          <T tone="danger" style={{ textAlign: "center" }}>
+            {errors.form}
+          </T>
+        ) : null}
+        <Button
+          label={editing ? "Save changes" : parsedAmount ? `Save ${formatInr(parsedAmount)}` : "Save"}
+          onPress={save}
+          busy={saving}
+          style={{ minHeight: 56 }}
+        />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -380,6 +394,7 @@ const s = StyleSheet.create({
   topTitle: { fontFamily: fonts.display, fontSize: 18 },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   body: { padding: space[4], gap: space[5] },
+  footer: { paddingHorizontal: space[4], paddingTop: space[3], gap: space[2], borderTopWidth: StyleSheet.hairlineWidth },
   amountBox: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: space[4], gap: space[2] },
   rupee: { fontFamily: fonts.monoMedium, fontSize: 32 },
   amountInput: { flex: 1, minWidth: 0, fontFamily: fonts.monoMedium, fontSize: 40, paddingVertical: space[3] },

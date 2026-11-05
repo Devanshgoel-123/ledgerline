@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "./Icon";
-import { fonts, radius, space, useTheme } from "./theme";
+import { fonts, radius, space, tabular, useTheme } from "./theme";
 
 /** A scrolling page on the app background. */
 export function Screen({
@@ -112,7 +112,7 @@ export function CardTitle({ title, sub, right }: { title: string; sub?: string; 
   );
 }
 
-type Tone = "default" | "muted" | "copper" | "credit" | "debit" | "danger";
+type Tone = "default" | "muted" | "accent" | "credit" | "debit" | "danger";
 
 export function T({
   children,
@@ -131,7 +131,7 @@ export function T({
   const color = {
     default: c.foreground,
     muted: c.muted,
-    copper: c.copper,
+    accent: c.accent,
     credit: c.credit,
     debit: c.debit,
     danger: c.danger,
@@ -152,10 +152,10 @@ export function T({
 }
 
 /** A rounded label like the web's "17 payments" chips. */
-export function Pill({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "copper" | "warning" | "success" }) {
+export function Pill({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "accent" | "primary" | "warning" | "success" }) {
   const { c } = useTheme();
-  const bg = { muted: c.bgMuted, copper: c.copperSoft, warning: c.warningSoft, success: c.successSoft }[tone];
-  const fg = { muted: c.foreground, copper: c.copper, warning: c.parchmentInk, success: c.success }[tone];
+  const bg = { muted: c.bgMuted, accent: c.accentSoft, primary: c.primarySoft, warning: c.warningSoft, success: c.successSoft }[tone];
+  const fg = { muted: c.foreground, accent: c.accent, primary: c.primary, warning: c.parchmentInk, success: c.success }[tone];
   return (
     <View style={[styles.pill, { backgroundColor: bg, borderColor: c.border }]}>
       <Text style={[styles.pillText, { color: fg }]}>{children}</Text>
@@ -199,7 +199,12 @@ export function Button({
       accessibilityState={{ disabled: Boolean(disabled || busy), busy: Boolean(busy) }}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: look.bg, borderColor: look.border, opacity: disabled ? 0.45 : pressed ? 0.8 : 1 },
+        {
+          backgroundColor: look.bg,
+          borderColor: look.border,
+          opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
+          transform: [{ scale: pressed && !disabled ? 0.98 : 1 }],
+        },
         style,
       ]}>
       {busy ? <ActivityIndicator color={look.fg} size="small" /> : icon ? <Icon name={icon} size={18} color={look.fg} /> : null}
@@ -214,14 +219,19 @@ export function Chip({
   selected,
   onPress,
   color,
+  fillWithColor,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
   /** A category colour shown as a dot. */
   color?: string;
+  /** Fill the selected chip with `color` instead of the primary colour. */
+  fillWithColor?: boolean;
 }) {
-  const { c } = useTheme();
+  const { c, onCategory } = useTheme();
+  const fill = selected ? (fillWithColor && color ? color : c.primary) : c.surface;
+  const ink = selected ? (fillWithColor && color ? onCategory : c.primaryForeground) : c.foreground;
   return (
     <Pressable
       onPress={onPress}
@@ -231,13 +241,13 @@ export function Chip({
       style={({ pressed }) => [
         styles.chip,
         {
-          backgroundColor: selected ? c.primary : c.surface,
-          borderColor: selected ? c.primary : c.borderStrong,
+          backgroundColor: fill,
+          borderColor: selected ? fill : c.borderStrong,
           opacity: pressed ? 0.8 : 1,
         },
       ]}>
-      {color ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
-      <Text style={[styles.chipText, { color: selected ? c.primaryForeground : c.foreground }]}>{label}</Text>
+      {color ? <View style={[styles.dot, { backgroundColor: selected && fillWithColor ? ink : color }]} /> : null}
+      <Text style={[styles.chipText, { color: ink }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -319,7 +329,7 @@ export function Notice({
   tone?: "warning" | "info" | "danger";
 }) {
   const { c } = useTheme();
-  const bg = { warning: c.warningSoft, info: c.bgMuted, danger: c.dangerSoft }[tone];
+  const bg = { warning: c.warningSoft, info: c.primarySoft, danger: c.dangerSoft }[tone];
   return (
     <View style={[styles.notice, { backgroundColor: bg, borderColor: c.border }]} accessibilityRole="summary">
       <Text style={[styles.body, { color: c.foreground }]}>
@@ -400,16 +410,16 @@ export const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     padding: space[4],
     gap: space[3],
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 18,
     elevation: 1,
   },
   cardTitle: { fontFamily: fonts.display, fontSize: 18, lineHeight: 23 },
   body: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 21 },
   small: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 18 },
   strong: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20 },
-  mono: { fontFamily: fonts.monoMedium, fontSize: 15, lineHeight: 20 },
-  monoSmall: { fontFamily: fonts.mono, fontSize: 12, lineHeight: 16 },
+  mono: { fontFamily: fonts.monoMedium, fontSize: 15, lineHeight: 20, ...tabular },
+  monoSmall: { fontFamily: fonts.mono, fontSize: 12, lineHeight: 16, ...tabular },
   label: { fontFamily: fonts.sansMedium, fontSize: 14 },
   pill: { borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingVertical: 6 },
   pillText: { fontFamily: fonts.sansSemi, fontSize: 12.5 },

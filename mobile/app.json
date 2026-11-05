@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#141210",
+        "backgroundColor": "#4F46E5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -30,11 +30,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F5F8F6",
+          "backgroundColor": "#F6F6FB",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 96,
           "dark": {
-            "backgroundColor": "#0A0C0B",
+            "backgroundColor": "#0B0B14",
             "image": "./assets/images/splash-icon.png"
           }
         }
@@ -45,8 +45,28 @@
       [
         "expo-notifications",
         {
-          "color": "#C46B3A",
+          "color": "#4F46E5",
           "defaultChannel": "reminders"
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "QuickAdd",
+              "displayName": "Quick add",
+              "description": "Today's spend, and add an expense in a tap.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ],
+                "initialLayout": "src/widget/QuickAddWidget.tsx"
+              },
+              "android": null
+            }
+          ]
         }
       ]
     ],

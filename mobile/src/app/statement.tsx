@@ -2,7 +2,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryLabel } from "@/core/catalog";
 import { formatInrExact, formatShortDate } from "@/core/format";
@@ -154,13 +154,21 @@ export default function StatementScreen() {
         {step.kind === "start" ? (
           <>
             <Card>
+              <View style={[s.badge, { backgroundColor: c.primarySoft }]}>
+                <Icon name="statement" size={26} color={c.primary} />
+              </View>
               <CardTitle
-                title="Find what you missed"
-                sub="Choose your bank statement PDF. Ledgerline lists every payment in it that isn't in the app yet, and you add the ones you want."
+                title="Upload your bank statement"
+                sub="Ledgerline lists every payment in it that isn't in the app yet, and you add the ones you want in a tap."
               />
+              <View style={{ flexDirection: "row", gap: space[2] }}>
+                <Pill tone="primary">HDFC</Pill>
+                <Pill tone="primary">ICICI</Pill>
+                <Pill>More banks soon</Pill>
+              </View>
               <View style={{ gap: space[2] }}>
                 <Bullet icon="lock" text="Read on this phone. The file isn't uploaded or kept." />
-                <Bullet icon="statement" text="HDFC and ICICI statement PDFs from net banking. Password-protected files are fine." />
+                <Bullet icon="statement" text="The PDF from your net banking. Password-protected files are fine." />
                 <Bullet icon="check" text="Payments you already added are matched by amount and date, a day either way." />
               </View>
               <Button label="Choose statement PDF" icon="statement" onPress={choose} />
@@ -171,8 +179,21 @@ export default function StatementScreen() {
 
         {step.kind === "reading" ? (
           <Card>
-            <CardTitle title="Reading your statement" sub={step.name} />
-            <Button label="Reading…" busy onPress={() => {}} />
+            <View style={s.reading} accessibilityLiveRegion="polite">
+              <ActivityIndicator size="large" color={c.primary} />
+              <T variant="title" style={{ textAlign: "center" }}>
+                Reading your statement
+              </T>
+              <T variant="small" tone="muted" numberOfLines={1} style={{ textAlign: "center" }}>
+                {step.name}
+              </T>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space[2] }}>
+                <Icon name="lock" size={14} color={c.success} />
+                <T variant="small" tone="muted">
+                  On this phone. Nothing is uploaded.
+                </T>
+              </View>
+            </View>
           </Card>
         ) : null}
 
@@ -208,7 +229,7 @@ export default function StatementScreen() {
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space[2] }}>
                 <Pill>{`${step.check.lineCount} lines`}</Pill>
                 <Pill tone="success">{`${step.check.matchedCount} already here`}</Pill>
-                <Pill tone={step.check.missing.length ? "copper" : "success"}>{`${step.check.missing.length} missing`}</Pill>
+                <Pill tone={step.check.missing.length ? "accent" : "success"}>{`${step.check.missing.length} missing`}</Pill>
                 {step.check.ignoredCount ? <Pill>{`${step.check.ignoredCount} skipped before`}</Pill> : null}
               </View>
             </Card>
@@ -299,6 +320,9 @@ export default function StatementScreen() {
 
         {step.kind === "done" ? (
           <Card>
+            <View style={[s.badge, { backgroundColor: c.successSoft }]}>
+              <Icon name="check" size={26} color={c.success} />
+            </View>
             <CardTitle
               title={`Added ${step.added} ${step.added === 1 ? "payment" : "payments"}`}
               sub={
@@ -320,7 +344,7 @@ function Bullet({ icon, text }: { icon: "lock" | "statement" | "check"; text: st
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: "row", gap: space[3], alignItems: "flex-start" }}>
-      <Icon name={icon} size={18} color={c.copper} />
+      <Icon name={icon} size={18} color={c.primary} />
       <T style={{ flex: 1 }}>{text}</T>
     </View>
   );
@@ -362,6 +386,8 @@ const s = StyleSheet.create({
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   body: { padding: space[4], gap: space[4] },
   line: { flexDirection: "row", alignItems: "center", gap: space[3], paddingTop: space[2] },
+  badge: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
+  reading: { alignItems: "center", gap: space[3], paddingVertical: space[5] },
   check: { width: 26, height: 26, borderRadius: 7, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   lineActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingLeft: 26 + space[3] },
   catButton: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, minHeight: 36, justifyContent: "center" },

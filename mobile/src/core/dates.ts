@@ -39,3 +39,8 @@ export function fromIsoDate(iso: string): Date {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(year!, month! - 1, day!, 12);
 }
+
+/** Whole days from an ISO timestamp or date to now (0 if in the future). */
+export function daysSince(iso: string, now = new Date()): number {
+  return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000));
+}

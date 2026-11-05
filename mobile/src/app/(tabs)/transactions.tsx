@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { SectionList, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryLabel, type Category } from "@/core/catalog";
-import { formatDayLabel, formatInr, formatMonthTitle } from "@/core/format";
+import { formatDayLabel, formatInr } from "@/core/format";
 import type { Entry } from "@/core/model";
 import { AddButton, EntryRow, MonthSwitcher, SampleNotice } from "@/features/common";
 import { useLedger } from "@/state/ledger";
@@ -41,7 +41,7 @@ export default function TransactionsScreen() {
         <View style={{ gap: space[4], paddingBottom: space[2] }}>
           <PageHeader
             eyebrow="Transactions"
-            title={searching ? "Search" : formatMonthTitle(month)}
+            title={searching ? "Search" : "All payments"}
             sub={searching ? `${shown} found in every month` : `${shown} shown`}
             right={<AddButton />}
           />

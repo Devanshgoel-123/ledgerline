@@ -3,9 +3,12 @@
 The phone version of Ledgerline: an expense tracker that lives only on your
 phone. No account, no server, no bank login.
 
-- **Add as you spend.** Amount, what for, done. Category is suggested from the
-  shop name. A reminder in the evening (and optionally the afternoon) catches
-  what you'd forget.
+- **Add as you spend.** Quick add is a keypad and a row of your most-used
+  categories: amount, category, save. "More details" opens the full form (date,
+  payee, splits). A reminder in the evening catches what you'd forget.
+- **Home-screen widget (iOS).** Shows today's and this month's spend. Tap it to
+  open Quick add; the medium size has four category shortcuts. Deep link:
+  `ledgerline://quick?category=food`.
 - **Check your statement once a month.** Choose an HDFC or ICICI statement PDF.
   Ledgerline reads it on the phone and lists every payment that isn't in the
   app yet; tick the ones to add. Payments you already added are matched by
@@ -33,6 +36,8 @@ path in `tsconfig.json` point at it.
 | Storage | `src/db` (SQLite on the phone, via expo-sqlite) |
 | PDF reading | `src/pdf`: pdf.js in a hidden WebView, inlined so it works offline |
 | Reminders | `src/reminders`: local notifications scheduled on the phone |
+| Widget | `src/widget`: the `expo-widgets` layout (`QuickAddWidget.tsx`) and `sync.ts`, which pushes totals after every load and write |
+| Theme | `src/ui/theme.ts`; the tokens, contrast ratios and screen specs are in `docs/MOBILE_DESIGN_HANDOFF.md` |
 | Built-in categories and shops | `src/core/catalog.generated.json`, made from the backend migrations by `npm run catalog` |
 
 ## Run it on your phone (development)
@@ -50,7 +55,13 @@ Scan the QR code: with the Camera app on iPhone, or from inside Expo Go on
 Android. The app opens in Expo Go and reloads when you change code.
 
 Everything works in Expo Go, including reminders (they are local
-notifications) and reading statement PDFs.
+notifications) and reading statement PDFs, **except the home-screen widget**,
+which needs a development or store build (`expo-widgets` is a native module).
+In Expo Go the widget calls are skipped.
+
+Building iOS locally (`npx expo run:ios`) needs Xcode 26.4 or later for SDK 58.
+EAS builds in the cloud with the right Xcode, so you don't need it for store
+builds.
 
 To try it on a computer instead, press `w` for the web build. That build has
 no reminders, and it stores data in the browser.
@@ -89,6 +100,23 @@ eas submit --platform ios      # TestFlight, then App Store review
 
 The app ID is `app.ledgerline.mobile` on both platforms (`app.json`). Change
 it before your first store build if you publish under another name.
+
+### First App Store release: checklist
+
+1. `eas login`, then `eas build --platform ios --profile production`. EAS asks
+   to create the certificates and profiles. Say yes. It also registers the
+   widget extension (`app.ledgerline.mobile.ExpoWidgetsTarget`) and the App
+   Group `group.app.ledgerline.mobile` that the app and widget share.
+2. `eas submit --platform ios`, then install from TestFlight on a real iPhone.
+   Check: add from Quick add, add the widget (small and medium) and tap it,
+   tap a widget category, and check one real HDFC or ICICI statement.
+3. If the widget target fails to build or misbehaves, remove the
+   `expo-widgets` entry from `plugins` in `app.json` and rebuild. Nothing else
+   depends on it.
+4. App Store Connect: privacy label **Data Not Collected**. Category: Finance.
+   In the review notes, say there's no account, no bank login and no server.
+   Take screenshots on a 6.9" device: Overview, Quick add, Upload statement,
+   Lifestyle, widget.
 
 ## Checks
 

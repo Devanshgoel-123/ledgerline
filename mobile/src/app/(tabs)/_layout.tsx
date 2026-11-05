@@ -13,9 +13,9 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       backgroundColor={c.surface}
-      indicatorColor={c.copperSoft}
-      labelStyle={{ selected: { color: c.copper } }}
-      iconColor={{ selected: c.copper }}>
+      indicatorColor={c.primarySoft}
+      labelStyle={{ selected: { color: c.primary } }}
+      iconColor={{ selected: c.primary }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf={iconFor("overview").ios} md={iconFor("overview").android} />
         <NativeTabs.Trigger.Label>Overview</NativeTabs.Trigger.Label>

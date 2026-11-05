@@ -13,6 +13,7 @@ import {
 } from "@/db/repo";
 import type { Db } from "@/db/schema";
 import { DEFAULT_REMINDERS, type ReminderSettings } from "@/reminders/settings";
+import { syncWidget } from "@/widget/sync";
 
 export interface Ledger {
   db: Db;
@@ -72,6 +73,11 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 
   const custom = snapshot?.custom;
   const categories = useMemo(() => [...BUILT_IN_CATEGORIES, ...(custom ?? [])], [custom]);
+
+  // Keep the home-screen widget's totals current after every load and write.
+  useEffect(() => {
+    if (snapshot) syncWidget(snapshot.entries, categories);
+  }, [snapshot, categories]);
 
   const value = useMemo<Ledger>(
     () => ({

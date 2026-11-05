@@ -60,8 +60,8 @@ export default function WelcomeScreen() {
       <View style={{ gap: space[4] }}>
         {STEPS.map((step, index) => (
           <View key={step.title} style={s.step}>
-            <View style={[s.num, { backgroundColor: c.copperSoft }]}>
-              <Text style={[s.numText, { color: c.copper }]}>{index + 1}</Text>
+            <View style={[s.num, { backgroundColor: c.primarySoft }]}>
+              <Text style={[s.numText, { color: c.primary }]}>{index + 1}</Text>
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <T variant="strong">{step.title}</T>

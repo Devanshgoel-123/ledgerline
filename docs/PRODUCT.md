@@ -43,6 +43,8 @@ first audience.
 | Views | Overview, Lifestyle, Apps, People, Transactions, Daily limit | Kept | |
 | Alerts | Telegram bot | Kept, optional | The one feature that sends data off the machine; off unless a bot token is set |
 | Phone | Android and iOS app (`mobile/`) | **New** | Expo. Everything on the phone (SQLite), no account, no server. Replaces the old iOS app, which needed a hosted API |
+| Phone | Quick add (keypad + most-used categories) | **New** | Amount and category are enough; "More details" opens the full form |
+| Phone | iOS home-screen widget | **New** | Today and this month, tap to Quick add, four category shortcuts (medium). `expo-widgets`; store builds only |
 | Phone | Reminders to add expenses | **New** | Local notifications, daily at times you pick, plus a monthly "check your statement" nudge |
 | Phone | Statement check | **New** | Reads an HDFC/ICICI PDF on the phone with the backend's parsers and lists payments not in the app; tick to add, skip to hide |
 | Phone | Categories, splits, People, Overview, Lifestyle, Transactions | **New** | Totals come from the backend's own `buildAnalyticsFromRows`, so they match the web app |
@@ -66,8 +68,9 @@ first audience.
 5. **More alert templates** (SBI, Axis, Kotak), tested against real anonymised
    mail.
 6. **Phone app in the stores.** Test on real Android and iPhone hardware with real
-   statements, then publish (see `mobile/README.md`). After that: CSV statements
-   on the phone too, and a home-screen widget for quick add.
+   statements, then publish (see `mobile/README.md` and
+   `docs/MOBILE_LAUNCH_STRATEGY.md`). After that: CSV statements on the phone
+   too, and a "hide amounts" option for the widget.
 7. **Native desktop package** (Tauri with an embedded database) once the Docker
    version has real users. It removes the Docker requirement, the biggest
    install hurdle left.

@@ -13,7 +13,7 @@ import { fonts, space, useTheme } from "@/ui/theme";
 
 export default function LifestyleScreen() {
   const { c, categoryColor } = useTheme();
-  const { month, categories } = useLedger();
+  const { categories } = useLedger();
   const result = useMonthAnalytics();
   const groups = groupCategorySpend(result.categorySpend ?? [], categories);
   const biggest = Math.max(...groups.map((group) => group.total), 1);
@@ -29,7 +29,7 @@ export default function LifestyleScreen() {
 
   return (
     <Screen>
-      <PageHeader eyebrow="Lifestyle" title={formatMonthTitle(month)} sub="What kind of life is your spending creating?" />
+      <PageHeader eyebrow="Lifestyle" title="Where it went" sub="What kind of life is your spending creating?" />
       <MonthSwitcher />
       <SampleNotice />
 
@@ -53,7 +53,6 @@ export default function LifestyleScreen() {
                     total={group.total}
                     share={group.total / biggest}
                     color={categoryColor(group.slug)}
-                    highlight={index === 0}
                   />
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <T variant="small" tone="muted">

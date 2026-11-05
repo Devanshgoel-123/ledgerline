@@ -8,7 +8,7 @@ const CHART_HEIGHT = 140;
 
 /**
  * Spend per day for a month, like the web's "Daily spend". Bars are toned
- * by how they compare with your average; the tallest is copper. Tap a bar
+ * by how they compare with your average; the tallest stands out. Tap a bar
  * to read its day and amount.
  */
 export function DailyBars({
@@ -93,7 +93,7 @@ export function DailyBars({
   );
 }
 
-/** Spend per month, oldest to newest; the tallest is copper. */
+/** Spend per month, oldest to newest; the tallest stands out. */
 export function MonthBars({ months }: { months: { month: string; total: number }[] }) {
   const { c } = useTheme();
   const max = Math.max(...months.map((row) => row.total), 1);
@@ -136,14 +136,12 @@ export function CategoryBar({
   total,
   share,
   color,
-  highlight,
 }: {
   label: string;
   total: number;
   /** 0 to 1, of the biggest category. */
   share: number;
   color: string;
-  highlight?: boolean;
 }) {
   const { c } = useTheme();
   return (
@@ -163,7 +161,7 @@ export function CategoryBar({
             width: `${Math.max(2, Math.min(1, share) * 100)}%`,
             height: "100%",
             borderRadius: 3,
-            backgroundColor: highlight ? c.copper : color,
+            backgroundColor: color,
           }}
         />
       </View>

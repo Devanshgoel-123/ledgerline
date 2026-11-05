@@ -11,7 +11,7 @@ import { removeSamples } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
 import { Button, Notice } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
-import { fonts, radius, space, useTheme } from "@/ui/theme";
+import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
 /** The selected month's numbers, from the backend's totals code. */
 export function useMonthAnalytics() {
@@ -57,7 +57,7 @@ export function MonthSwitcher() {
 
 /** One payment in a list: who or what, category, date, amount. */
 export function EntryRow({ entry, showDate = true }: { entry: Entry; showDate?: boolean }) {
-  const { c, dark, categoryColor } = useTheme();
+  const { c, onCategory, categoryColor } = useTheme();
   const { categories } = useLedger();
   const title = entry.merchant || entry.description || entry.payee || "Payment";
   const share = entry.type === "debit" && entry.splits.length ? myShare(entry.amount, entry.splits) : null;
@@ -77,7 +77,7 @@ export function EntryRow({ entry, showDate = true }: { entry: Entry; showDate?: 
       accessibilityLabel={`${title}, ${meta}, ${entry.type === "credit" ? "received" : "spent"} ${formatInr(entry.amount)}${share != null ? `, your share ${formatInr(share)}` : ""}`}
       style={({ pressed }) => [s.entry, { opacity: pressed ? 0.7 : 1 }]}>
       <View style={[s.mark, { backgroundColor: categoryColor(entry.categorySlug) }]}>
-        <Text style={[s.markText, { color: dark ? "#0a0c0b" : "#ffffff" }]}>{title.slice(0, 1).toUpperCase()}</Text>
+        <Text style={[s.markText, { color: onCategory }]}>{title.slice(0, 1).toUpperCase()}</Text>
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[s.entryTitle, { color: c.foreground }]} numberOfLines={1}>
@@ -127,14 +127,15 @@ export function SampleNotice() {
   );
 }
 
-export function AddButton({ label = "Add" }: { label?: string }) {
+/** Header "Add" button. Opens Quick add unless told otherwise (People opens the full form for splits). */
+export function AddButton({ label = "Add", href = "/quick" }: { label?: string; href?: "/quick" | "/add" }) {
   const { c } = useTheme();
   return (
     <Pressable
-      onPress={() => router.push("/add")}
+      onPress={() => router.push(href)}
       accessibilityRole="button"
-      accessibilityLabel="Add expense"
-      style={({ pressed }) => [s.add, { backgroundColor: c.primary, opacity: pressed ? 0.8 : 1 }]}>
+      accessibilityLabel={label === "Add" ? "Add expense" : label}
+      style={({ pressed }) => [s.add, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}>
       <Icon name="add" size={18} color={c.primaryForeground} />
       <Text style={[s.addText, { color: c.primaryForeground }]}>{label}</Text>
     </Pressable>
@@ -154,11 +155,11 @@ const s = StyleSheet.create({
   arrow: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   month: { fontFamily: fonts.sansSemi, fontSize: 16 },
   entry: { flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 56, paddingVertical: 6 },
-  mark: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  mark: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   markText: { fontFamily: fonts.sansSemi, fontSize: 15 },
   entryTitle: { fontFamily: fonts.sansSemi, fontSize: 15 },
   entryMeta: { fontFamily: fonts.sans, fontSize: 12.5 },
-  entryAmount: { fontFamily: fonts.monoMedium, fontSize: 15 },
+  entryAmount: { fontFamily: fonts.monoMedium, fontSize: 15, ...tabular },
   add: {
     flexDirection: "row",
     alignItems: "center",

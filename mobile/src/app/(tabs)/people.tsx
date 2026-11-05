@@ -35,7 +35,7 @@ export default function PeopleScreen() {
         eyebrow="People"
         title={owedTotal > 0 ? `${formatInr(owedTotal)} owed to you` : "Friends and family"}
         sub="Bills you split, and money that moved between you and people."
-        right={<AddButton label="Split" />}
+        right={<AddButton label="Split" href="/add" />}
       />
 
       <Card>
@@ -55,8 +55,8 @@ export default function PeopleScreen() {
                   accessibilityState={{ expanded }}
                   accessibilityLabel={`${friend.name}, ${friend.owed > 0 ? `owes you ${formatInr(friend.owed)}` : "all paid back"}`}
                   style={s.friend}>
-                  <View style={[s.avatar, { backgroundColor: c.copperSoft }]}>
-                    <Text style={[s.avatarText, { color: c.copper }]}>{friend.name.slice(0, 1).toUpperCase()}</Text>
+                  <View style={[s.avatar, { backgroundColor: c.primarySoft }]}>
+                    <Text style={[s.avatarText, { color: c.primary }]}>{friend.name.slice(0, 1).toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <T variant="strong">{friend.name}</T>
@@ -66,7 +66,7 @@ export default function PeopleScreen() {
                     </T>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <T variant="mono" tone={friend.owed > 0 ? "copper" : "muted"}>
+                    <T variant="mono" tone={friend.owed > 0 ? "accent" : "muted"}>
                       {friend.owed > 0 ? formatInr(friend.owed) : "Settled"}
                     </T>
                     {friend.owed > 0 ? (
