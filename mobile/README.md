@@ -15,12 +15,19 @@ phone. No account, no server, no bank login.
   quick review. Fallbacks: the link `ledgerline://capture?text=…` (a Shortcut
   "Open URLs" action, no native code), pasting a message, and the monthly
   statement check.
+- **Payments from bank SMS (Android).** One tap in the same place: Ledgerline
+  asks for SMS access, adds this month's bank payments, then reads new ones
+  each time it opens. The native reader (`modules/ledgerline-sms`) returns
+  only messages from business sender IDs, so messages from people never reach
+  the app. Same parser, same dedupe as iOS.
 - **Home-screen widget (iOS).** Shows today's and this month's spend. Tap it to
   open Quick add; the medium size has four category shortcuts. Deep link:
   `ledgerline://quick?category=food`.
-- **Check your statement once a month.** Choose an HDFC or ICICI statement PDF.
-  Ledgerline reads it on the phone and lists every payment that isn't in the
-  app yet; tick the ones to add. Payments you already added are matched by
+- **Check your statement once a month.** Choose an HDFC or ICICI statement
+  PDF, or a CSV export from any bank (`src/core/csvStatement.ts` finds the
+  header row and recognises the columns; if a bank names them oddly, you tap
+  which is which). Ledgerline reads it on the phone and lists every payment
+  that isn't in the app yet; tick the ones to add. Payments you already added are matched by
   amount and date (a day either way). Cash entries are never matched, because
   cash isn't in a statement.
 - **See where it went.** Overview, Insights (categories, daily spend, trend,
@@ -29,7 +36,12 @@ phone. No account, no server, no bank login.
 - **Split bills.** Split an expense with friends; only your share counts as
   your spending, and People shows who owes you until they pay you back.
 - **Your data.** Export CSV, back up to a file and restore it on another phone,
-  erase everything.
+  erase everything. Settings shows when you last backed up; Overview nudges
+  after 30 days, and an optional reminder comes on the 1st of each month. The
+  phone's own iCloud or Google backup also includes the database.
+- **App lock.** Face ID, fingerprint or the phone's passcode when Ledgerline
+  opens and after 30 seconds away (`src/features/AppLock.tsx`).
+- **Share a month on X.** Category shares, amounts only if you choose.
 
 ## How it fits with the rest of the repo
 

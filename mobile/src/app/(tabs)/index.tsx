@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { groupCategorySpend } from "@/core/analytics";
+import { backupAge, backupStatus } from "@/core/backupStatus";
 import { categoryLabel } from "@/core/catalog";
 import { currentMonth, daysSince, today } from "@/core/dates";
 import { formatInr, formatMonthShort, formatMonthTitle, formatShortDate } from "@/core/format";
@@ -25,7 +26,8 @@ function greeting(now = new Date()): string {
 
 export default function OverviewScreen() {
   const { c, categoryColor } = useTheme();
-  const { entries, month, dailyLimit, lastCheck, ready, categories } = useLedger();
+  const { entries, month, dailyLimit, lastCheck, ready, categories, lastBackupAt } = useLedger();
+  const backup = backupStatus(lastBackupAt, entries.length);
   const result = useMonthAnalytics();
   const { summary } = result;
   const isThisMonth = month === currentMonth();
@@ -80,6 +82,13 @@ export default function OverviewScreen() {
           title={daysSinceCheck === null ? "Check your first statement" : "Time for this month's statement"}
           body={daysSinceCheck === null ? "Find payments you haven't added." : `Last checked ${daysSinceCheck} days ago.`}
           onPress={() => router.push("/statement")}
+        />
+      ) : ready && backup.due ? (
+        <Prompt
+          icon="lock"
+          title="Back up your payments"
+          body={`They live only on this phone. Last backup: ${backupAge(backup.daysSince)}.`}
+          onPress={() => router.push("/settings")}
         />
       ) : null}
 

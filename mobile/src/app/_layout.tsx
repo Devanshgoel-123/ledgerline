@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { migrate } from "@/db/schema";
 import { configureNotifications, useOpenReminders } from "@/reminders/schedule";
+import { AppLockGate } from "@/features/AppLock";
 import { LedgerProvider } from "@/state/ledger";
 import { useTheme } from "@/ui/theme";
 
@@ -68,6 +69,7 @@ export default function RootLayout() {
           <Stack.Screen name="review" options={{ presentation: "modal" }} />
           <Stack.Screen name="auto-capture" options={{ presentation: "modal" }} />
         </Stack>
+        <AppLockGate />
       </LedgerProvider>
     </SQLiteProvider>
   );

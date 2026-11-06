@@ -1,7 +1,8 @@
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, StyleSheet, View } from "react-native";
+import { Alert, Linking, Platform, StyleSheet, View } from "react-native";
+import { backupAge, backupStatus } from "@/core/backupStatus";
 import { categoryLabel } from "@/core/catalog";
 import { entriesCsv } from "@/core/csv";
 import { today } from "@/core/dates";
@@ -9,17 +10,22 @@ import { formatClock, formatInr, parseRupeeAmount } from "@/core/format";
 import { sampleEntries } from "@/core/sample";
 import { exportBackup, parseBackup, restoreBackup } from "@/db/backup";
 import { addEntries, deleteRule, eraseEverything, getSetting, setSetting } from "@/db/repo";
+import { confirmOwner, unlockMethod } from "@/features/AppLock";
 import { pickTextFile, shareFile } from "@/features/files";
 import { TimeChoice } from "@/features/pickers";
 import { applyReminders, askForNotifications, notificationPermission, type PermissionState } from "@/reminders/schedule";
 import type { ReminderSettings } from "@/reminders/settings";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, CardTitle, Chip, Divider, Field, PageHeader, Row, Screen, T, Toggle } from "@/ui/components";
-import { space } from "@/ui/theme";
+import { Icon } from "@/ui/Icon";
+import { space, useTheme } from "@/ui/theme";
 
 export default function SettingsScreen() {
   const ledger = useLedger();
-  const { db, refresh, entries, categories, rules, dailyLimit, reminders } = ledger;
+  const { c } = useTheme();
+  const { db, refresh, entries, categories, rules, dailyLimit, reminders, lastBackupAt, appLock } = ledger;
+  const backup = backupStatus(lastBackupAt, entries.length);
+  const [lock, setLock] = useState<{ available: boolean; label: string } | null>(null);
   // What's typed, until saved; otherwise the saved limit.
   const [limitDraft, setLimitDraft] = useState<string | null>(null);
   const limitText = limitDraft ?? (dailyLimit ? String(dailyLimit) : "");
@@ -29,14 +35,36 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     void notificationPermission().then(setPermission);
+    void unlockMethod().then(setLock);
   }, []);
 
+  const toggleLock = async (on: boolean) => {
+    const method = await unlockMethod();
+    setLock(method);
+    if (on && !method.available) {
+      Alert.alert("Set a screen lock first", "App lock uses your phone's own Face ID, fingerprint or passcode. Turn one on in your phone's settings, then come back.");
+      return;
+    }
+    // Turning it on or off both need the owner, so a borrowed phone can't change it.
+    const result = await confirmOwner(on ? "Turn on app lock" : "Turn off app lock");
+    if (!result.ok) return;
+    await setSetting(db, "appLock", on);
+    await refresh();
+  };
+
+  const makeBackup = async () => {
+    const file = JSON.stringify(await exportBackup(db));
+    await shareFile(`ledgerline-backup-${today()}.json`, file, "application/json");
+    await setSetting(db, "lastBackupAt", new Date().toISOString());
+    await refresh();
+  };
+
   const saveReminders = async (next: ReminderSettings) => {
-    if ((next.daily || next.monthlyStatement) && permission !== "granted") {
+    if ((next.daily || next.monthlyStatement || next.backup) && permission !== "granted") {
       const state = await askForNotifications();
       setPermission(state);
       if (state !== "granted") {
-        await setSetting(db, "reminders", { ...next, daily: false, monthlyStatement: false });
+        await setSetting(db, "reminders", { ...next, daily: false, monthlyStatement: false, backup: false });
         await refresh();
         return;
       }
@@ -46,7 +74,7 @@ export default function SettingsScreen() {
       await setSetting(db, "reminders", next);
     } catch {
       Alert.alert("Couldn't set reminders", "This phone didn't accept the reminder. Try again, or check Ledgerline's notification settings.");
-      await setSetting(db, "reminders", { ...next, daily: false, monthlyStatement: false });
+      await setSetting(db, "reminders", { ...next, daily: false, monthlyStatement: false, backup: false });
     }
     await refresh();
   };
@@ -221,7 +249,37 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
+        <CardTitle
+          title="App lock"
+          sub={
+            lock?.available === false
+              ? "Turn on a screen lock in your phone's settings to use this."
+              : `Ask for ${lock?.label ?? "Face ID or your passcode"} when Ledgerline opens, and after 30 seconds away.`
+          }
+        />
+        <View style={s.switchRow}>
+          <View style={{ flex: 1 }}>
+            <T variant="strong">Lock Ledgerline</T>
+          </View>
+          <Toggle value={appLock} onValueChange={(on) => void toggleLock(on)} accessibilityLabel="Lock Ledgerline" />
+        </View>
+      </Card>
+
+      <Card>
         <CardTitle title="Your data" sub="Ledgerline has no account and no server. Your data lives only in this app, so back it up." />
+        <View style={[s.backupLine, { backgroundColor: backup.due ? c.warningSoft : c.bgMuted }]}>
+          <Icon name={backup.due ? "info" : "check"} size={18} color={backup.due ? c.parchmentInk : c.success} />
+          <View style={{ flex: 1 }}>
+            <T variant="strong">{`Last backup: ${backupAge(backup.daysSince)}`}</T>
+            <T variant="small" tone="muted">
+              {backup.due
+                ? `${entries.length} payments aren't in a backup file yet. Save one to iCloud Drive, Google Drive or Files.`
+                : Platform.OS === "ios"
+                  ? "Your iPhone's iCloud backup also includes Ledgerline, if it's turned on."
+                  : "Your phone's Google backup also includes Ledgerline, if it's turned on."}
+            </T>
+          </View>
+        </View>
         <Button
           label="Export CSV"
           variant="secondary"
@@ -230,16 +288,25 @@ export default function SettingsScreen() {
           onPress={() => run("csv", () => shareFile(`ledgerline-${today()}.csv`, entriesCsv(entries, categories), "text/csv"))}
         />
         <Button
-          label="Back up"
-          variant="secondary"
+          label="Back up now"
+          variant={backup.due ? "primary" : "secondary"}
           busy={busy === "backup"}
-          onPress={() =>
-            run("backup", async () =>
-              shareFile(`ledgerline-backup-${today()}.json`, JSON.stringify(await exportBackup(db)), "application/json"),
-            )
-          }
+          onPress={() => run("backup", makeBackup)}
           accessibilityHint="Saves a file you can restore on this or another phone"
         />
+        <View style={s.switchRow}>
+          <View style={{ flex: 1 }}>
+            <T variant="strong">Remind me to back up</T>
+            <T variant="small" tone="muted">
+              On the 1st of every month
+            </T>
+          </View>
+          <Toggle
+            value={reminders.backup}
+            onValueChange={(on) => saveReminders({ ...reminders, backup: on })}
+            accessibilityLabel="Monthly reminder to back up"
+          />
+        </View>
         <Button
           label="Restore from a backup"
           variant="secondary"
@@ -301,7 +368,7 @@ export default function SettingsScreen() {
                   onPress: () =>
                     run("erase", async () => {
                       await eraseEverything(db);
-                      await applyReminders({ daily: false, monthlyStatement: false, times: [], monthlyDay: 5 });
+                      await applyReminders({ daily: false, monthlyStatement: false, times: [], monthlyDay: 5, backup: false });
                       await refresh();
                     }),
                 },
@@ -326,4 +393,5 @@ export default function SettingsScreen() {
 
 const s = StyleSheet.create({
   switchRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  backupLine: { flexDirection: "row", gap: space[3], alignItems: "flex-start", padding: space[3], borderRadius: 12 },
 });

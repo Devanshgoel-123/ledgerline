@@ -63,7 +63,7 @@ export async function askForNotifications(): Promise<PermissionState> {
 /** Replaces every scheduled reminder with what the settings say. */
 export async function applyReminders(settings: ReminderSettings): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  if (!settings.daily && !settings.monthlyStatement) return;
+  if (!settings.daily && !settings.monthlyStatement && !settings.backup) return;
   const channelId = await ensureChannel();
   if ((await notificationPermission()) !== "granted") return;
 
@@ -92,13 +92,25 @@ export async function applyReminders(settings: ReminderSettings): Promise<void> 
       },
     });
   }
+  if (settings.backup) {
+    await Notifications.scheduleNotificationAsync({
+      content: { ...REMINDER_COPY.backup, data: { url: REMINDER_ROUTES.backup } },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+        day: 1,
+        hour: 20,
+        minute: 0,
+        channelId,
+      },
+    });
+  }
 }
 
 /** The screen a tapped reminder asks for, if it is one of ours. */
 export function routeFromResponse(response: Notifications.NotificationResponse | null): string | null {
   if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return null;
   const url = response.notification.request.content.data?.url;
-  return url === REMINDER_ROUTES.daily || url === REMINDER_ROUTES.monthly ? url : null;
+  return url === REMINDER_ROUTES.daily || url === REMINDER_ROUTES.monthly || url === REMINDER_ROUTES.backup ? url : null;
 }
 
 /** A tapped reminder opens Add expense (daily) or the statement check (monthly). */

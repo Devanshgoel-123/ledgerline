@@ -1,7 +1,9 @@
 import { useSQLiteContext } from "expo-sqlite";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
+import { readNewSms } from "@/capture/androidSms";
 import { readInbox } from "@/capture/inbox";
+import type { IncomingMessage } from "@/core/capture";
 import { captureMessages } from "@/core/capture";
 import { BUILT_IN_CATEGORIES, type Category } from "@/core/catalog";
 import { currentMonth } from "@/core/dates";
@@ -29,22 +31,28 @@ export interface Ledger {
   reminders: ReminderSettings;
   welcomed: boolean;
   lastCheck: StatementCheckRecord | null;
+  /** When a backup file was last made, ISO; null if never. */
+  lastBackupAt: string | null;
+  /** Ask for Face ID, fingerprint or the passcode when Ledgerline opens. */
+  appLock: boolean;
   /** The month the insight tabs show, YYYY-MM. */
   month: string;
   setMonth(month: string): void;
   /** Reload after a write. */
   refresh(): Promise<void>;
+  /** Add waiting bank messages now (iOS inbox, Android SMS). Returns how many were added. */
+  captureNow(): Promise<number>;
 }
 
 const LedgerContext = createContext<Ledger | null>(null);
 
-type Snapshot = Pick<Ledger, "entries" | "rules" | "dailyLimit" | "reminders" | "welcomed" | "lastCheck"> & {
+type Snapshot = Pick<Ledger, "entries" | "rules" | "dailyLimit" | "reminders" | "welcomed" | "lastCheck" | "lastBackupAt" | "appLock"> & {
   custom: Category[];
 };
 
 /** Everything the screens read, in one pass over the database. */
 async function loadSnapshot(db: Db): Promise<Snapshot> {
-  const [entries, custom, rules, dailyLimit, reminders, welcomed, lastCheck] = await Promise.all([
+  const [entries, custom, rules, dailyLimit, reminders, welcomed, lastCheck, lastBackupAt, appLock] = await Promise.all([
     listEntries(db),
     listCustomCategories(db),
     listRules(db),
@@ -52,8 +60,20 @@ async function loadSnapshot(db: Db): Promise<Snapshot> {
     getSetting<ReminderSettings>(db, "reminders", DEFAULT_REMINDERS),
     getSetting<boolean>(db, "welcomed", false),
     lastStatementCheck(db),
+    getSetting<string | null>(db, "lastBackupAt", null),
+    getSetting<boolean>(db, "appLock", false),
   ]);
-  return { entries, custom, rules, dailyLimit, reminders: { ...DEFAULT_REMINDERS, ...reminders }, welcomed, lastCheck };
+  return {
+    entries,
+    custom,
+    rules,
+    dailyLimit,
+    reminders: { ...DEFAULT_REMINDERS, ...reminders },
+    welcomed,
+    lastCheck,
+    lastBackupAt,
+    appLock,
+  };
 }
 
 export function LedgerProvider({ children }: { children: ReactNode }) {
@@ -78,45 +98,52 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   const custom = snapshot?.custom;
   const categories = useMemo(() => [...BUILT_IN_CATEGORIES, ...(custom ?? [])], [custom]);
 
-  // Payments captured in the background by the iOS "Log bank message" action
-  // wait in the App Group inbox; add them at launch and on every return to
-  // the app. One drain at a time.
+  // Bank messages waiting to be added: on iOS, written to the App Group inbox
+  // by the "Log bank message" action; on Android, new SMS in the phone's
+  // inbox. Added at launch and on every return to the app. One drain at a time.
   const draining = useRef(false);
   const ready = snapshot !== null;
+  const captureNow = useCallback(async (): Promise<number> => {
+    if (draining.current) return 0;
+    draining.current = true;
+    try {
+      const sources: { messages: IncomingMessage[]; done: () => void | Promise<void> }[] = [
+        await readInbox(),
+        await readNewSms(db),
+      ];
+      const messages = sources.flatMap((source) => source.messages);
+      if (!messages.length) return 0;
+      const [entries, custom, rules] = await Promise.all([listEntries(db), listCustomCategories(db), listRules(db)]);
+      const outcomes = await captureMessages(
+        db,
+        messages,
+        { entries, rules, categories: [...BUILT_IN_CATEGORIES, ...custom] },
+        () => listEntries(db),
+      );
+      for (const source of sources) await source.done();
+      const added = outcomes.filter((outcome) => outcome.status === "added").length;
+      await setSetting(db, "lastInbox", { at: new Date().toISOString(), received: messages.length, added });
+      setSnapshot(await loadSnapshot(db));
+      return added;
+    } catch {
+      // Leave the messages for the next try.
+      return 0;
+    } finally {
+      draining.current = false;
+    }
+  }, [db]);
   useEffect(() => {
     if (!ready) return;
-    const drain = async () => {
-      if (draining.current) return;
-      draining.current = true;
-      try {
-        const { messages, done } = await readInbox();
-        if (!messages.length) return;
-        const [entries, custom, rules] = await Promise.all([listEntries(db), listCustomCategories(db), listRules(db)]);
-        const outcomes = await captureMessages(
-          db,
-          messages,
-          { entries, rules, categories: [...BUILT_IN_CATEGORIES, ...custom] },
-          () => listEntries(db),
-        );
-        done();
-        await setSetting(db, "lastInbox", {
-          at: new Date().toISOString(),
-          received: messages.length,
-          added: outcomes.filter((outcome) => outcome.status === "added").length,
-        });
-        setSnapshot(await loadSnapshot(db));
-      } catch {
-        // Leave the files for the next try.
-      } finally {
-        draining.current = false;
-      }
-    };
-    void drain();
+    // Next tick: the first read never blocks the first render.
+    const first = setTimeout(() => void captureNow(), 0);
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void drain();
+      if (state === "active") void captureNow();
     });
-    return () => subscription.remove();
-  }, [ready, db]);
+    return () => {
+      clearTimeout(first);
+      subscription.remove();
+    };
+  }, [ready, captureNow]);
 
   // Keep the home-screen widget's totals current after every load and write.
   useEffect(() => {
@@ -134,11 +161,14 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       reminders: snapshot?.reminders ?? DEFAULT_REMINDERS,
       welcomed: snapshot?.welcomed ?? true,
       lastCheck: snapshot?.lastCheck ?? null,
+      lastBackupAt: snapshot?.lastBackupAt ?? null,
+      appLock: snapshot?.appLock ?? false,
       month,
       setMonth,
       refresh,
+      captureNow,
     }),
-    [db, snapshot, categories, month, refresh],
+    [db, snapshot, categories, month, refresh, captureNow],
   );
 
   return <LedgerContext.Provider value={value}>{children}</LedgerContext.Provider>;

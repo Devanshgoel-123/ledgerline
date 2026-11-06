@@ -112,3 +112,31 @@ describe("amounts", () => {
     expect(amount("Rs 100,000 debited from A/c XX1234 to LANDLORD")).toBe(100000);
   });
 });
+
+describe("which bank, and who paid", () => {
+  it("names your bank, not the payee's bank in their UPI id", () => {
+    const p = parseBankMessage(
+      "Sent Rs.649.00 from Kotak Bank AC X1234 to netflix@hdfcbank on 08-11-26.UPI Ref 630777777777. Not you, https://kotak.com/KBANKT/Fraud",
+      ON,
+    );
+    expect(p?.bank).toBe("Kotak");
+    expect(p?.upiId).toBe("netflix@hdfcbank");
+  });
+
+  it("prefers the Android sender ID when there is one", () => {
+    const p = parseBankMessage("Rs.250.00 debited from a/c **1234 on 07-11-26 to VPA shop@okhdfcbank (UPI Ref No 630799999999)", {
+      ...ON,
+      sender: "VM-AXISBK-S",
+    });
+    expect(p?.bank).toBe("Axis");
+  });
+
+  it("doesn't take the amount for the payer", () => {
+    const p = parseBankMessage(
+      "Your A/c XXXXX1234 is credited by Rs.65,000.00 on 03-11-2026 by NEFT ACME CORP. Avl Bal Rs.75,048.00 -Yes Bank",
+      ON,
+    );
+    expect(p?.type).toBe("credit");
+    expect(p?.party).toBe("ACME CORP");
+  });
+});

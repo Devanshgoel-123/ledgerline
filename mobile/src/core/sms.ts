@@ -122,7 +122,9 @@ function partyOf(text: string, type: TxType): string | null {
         ]
       : [
           new RegExp(String.raw`\bfrom\s+(?:vpa\s+)?${name}${STOP}`, "i"),
-          new RegExp(String.raw`\bby\s+(?!neft|imps|rtgs|upi|cash\b)${name}${STOP}`, "i"),
+          new RegExp(String.raw`\bby\s+(?:neft|imps|rtgs)[\s/:*-]+${name}${STOP}`, "i"),
+          // "credited by Rs.500" is the amount, not who paid.
+          new RegExp(String.raw`\bby\s+(?!neft|imps|rtgs|upi|cash\b|rs\b|inr\b|₹)${name}${STOP}`, "i"),
           new RegExp(String.raw`;\s*${name}\s+debited\b`, "i"),
         ];
   for (const pattern of patterns) {
@@ -162,7 +164,11 @@ const BANKS: [RegExp, string][] = [
 ];
 
 function bankOf(text: string, sender: string | null): string | null {
-  for (const [pattern, name] of BANKS) if (pattern.test(sender ?? "") || pattern.test(text)) return name;
+  // The sender ID names the bank best ("AD-KOTAKB"). In the text, a UPI id
+  // like netflix@hdfcbank names the payee's bank, not yours: leave those out.
+  for (const [pattern, name] of BANKS) if (pattern.test(sender ?? "")) return name;
+  const own = text.replace(/\S+@\S+/g, " ");
+  for (const [pattern, name] of BANKS) if (pattern.test(own)) return name;
   return null;
 }
 

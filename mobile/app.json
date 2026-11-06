@@ -2,7 +2,7 @@
   "expo": {
     "name": "Ledgerline",
     "slug": "ledgerline",
-    "version": "1.0",
+    "version": "1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ledgerline",
@@ -28,7 +28,8 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE"
-      ]
+      ],
+      "allowBackup": true
     },
     "plugins": [
       "expo-router",
@@ -46,6 +47,12 @@
       ],
       "expo-sqlite",
       "expo-sharing",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Ledgerline uses Face ID to unlock the app when you turn on app lock."
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",
