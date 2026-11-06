@@ -1,0 +1,1515 @@
+{
+ "categories": [
+  {
+   "slug": "food",
+   "label": "Food",
+   "blurb": "Swiggy · Zomato · Zepto · Blinkit · Instamart",
+   "sortOrder": 1,
+   "parent": null
+  },
+  {
+   "slug": "shopping",
+   "label": "Shopping",
+   "blurb": "Amazon · Nykaa · Reliance · fashion",
+   "sortOrder": 2,
+   "parent": null
+  },
+  {
+   "slug": "travel",
+   "label": "Travel",
+   "blurb": "Rides · stays · fuel",
+   "sortOrder": 3,
+   "parent": null
+  },
+  {
+   "slug": "healthcare",
+   "label": "Healthcare",
+   "blurb": "Clinics · pharmacies · insurance",
+   "sortOrder": 4,
+   "parent": null
+  },
+  {
+   "slug": "family",
+   "label": "Family",
+   "blurb": "Home · parents · kids",
+   "sortOrder": 5,
+   "parent": null
+  },
+  {
+   "slug": "outing",
+   "label": "Outing",
+   "blurb": "Dinner · sports · fun",
+   "sortOrder": 6,
+   "parent": null
+  },
+  {
+   "slug": "investments",
+   "label": "Investments",
+   "blurb": "Brokers · SIPs · mutual funds · Grow",
+   "sortOrder": 7,
+   "parent": null
+  },
+  {
+   "slug": "vices",
+   "label": "Booze & smokes",
+   "blurb": "Drinks · cigarettes",
+   "sortOrder": 8,
+   "parent": null
+  },
+  {
+   "slug": "self-transfer",
+   "label": "Self Transfer",
+   "blurb": "Internal transfers between accounts",
+   "sortOrder": 8,
+   "parent": "investments"
+  },
+  {
+   "slug": "banks",
+   "label": "Banks",
+   "blurb": "HDFC · SBI · ICICI · Axis",
+   "sortOrder": 9,
+   "parent": null
+  },
+  {
+   "slug": "rent",
+   "label": "Rent",
+   "blurb": "House rent · deposits",
+   "sortOrder": 11,
+   "parent": "household"
+  },
+  {
+   "slug": "brokerage",
+   "label": "Brokerage",
+   "blurb": "Brokerage · agent fees",
+   "sortOrder": 12,
+   "parent": "household"
+  },
+  {
+   "slug": "household",
+   "label": "Household",
+   "blurb": "Cook · maid · furniture · rent · brokerage · cleaning · Pronto · Furlenco",
+   "sortOrder": 13,
+   "parent": null
+  },
+  {
+   "slug": "personal",
+   "label": "Personal",
+   "blurb": "Personal spending",
+   "sortOrder": 14,
+   "parent": null
+  },
+  {
+   "slug": "random-expense",
+   "label": "Random expense",
+   "blurb": "Personal · unplanned spend",
+   "sortOrder": 15,
+   "parent": "personal"
+  },
+  {
+   "slug": "booze",
+   "label": "Booze",
+   "blurb": "Alcohol · drinks out",
+   "sortOrder": 16,
+   "parent": "vices"
+  },
+  {
+   "slug": "cigarettes",
+   "label": "Cigarettes",
+   "blurb": "Cigarettes · smokes",
+   "sortOrder": 17,
+   "parent": "vices"
+  },
+  {
+   "slug": "scooty-rental",
+   "label": "Scooty rental",
+   "blurb": "Scooter · monthly rental",
+   "sortOrder": 18,
+   "parent": "travel"
+  },
+  {
+   "slug": "dinner",
+   "label": "Dinner",
+   "blurb": "Dinner out",
+   "sortOrder": 19,
+   "parent": "outing"
+  },
+  {
+   "slug": "sports",
+   "label": "Sports",
+   "blurb": "Games · gym · play",
+   "sortOrder": 20,
+   "parent": "outing"
+  },
+  {
+   "slug": "fun-activity",
+   "label": "Fun activity",
+   "blurb": "Movies · plans · nights out",
+   "sortOrder": 21,
+   "parent": "outing"
+  },
+  {
+   "slug": "grocery",
+   "label": "Grocery",
+   "blurb": "Kirana · supermarkets",
+   "sortOrder": 22,
+   "parent": "household"
+  },
+  {
+   "slug": "from-home",
+   "label": "Money from home",
+   "blurb": "Money received from home",
+   "sortOrder": 23,
+   "parent": "family"
+  },
+  {
+   "slug": "petrol",
+   "label": "Petrol",
+   "blurb": "Fuel · diesel · CNG",
+   "sortOrder": 23,
+   "parent": "travel"
+  },
+  {
+   "slug": "salon",
+   "label": "Salon",
+   "blurb": "Haircut · parlour",
+   "sortOrder": 24,
+   "parent": "personal"
+  },
+  {
+   "slug": "pharmacy",
+   "label": "Pharmacy",
+   "blurb": "Medicines · chemist",
+   "sortOrder": 25,
+   "parent": "healthcare"
+  },
+  {
+   "slug": "rides",
+   "label": "Rides",
+   "blurb": "Cabs · autos · bikes",
+   "sortOrder": 26,
+   "parent": "travel"
+  },
+  {
+   "slug": "salary",
+   "label": "Salary",
+   "blurb": "Salary · income",
+   "sortOrder": 26,
+   "parent": "personal"
+  },
+  {
+   "slug": "stays",
+   "label": "Stays",
+   "blurb": "Hotels · stays",
+   "sortOrder": 27,
+   "parent": "travel"
+  },
+  {
+   "slug": "passed-on",
+   "label": "Passed on",
+   "blurb": "Someone else's money that you passed on",
+   "sortOrder": 28,
+   "parent": "household"
+  },
+  {
+   "slug": "other",
+   "label": "Other",
+   "blurb": "Uncategorized apps & people",
+   "sortOrder": 99,
+   "parent": null
+  }
+ ],
+ "providers": [
+  {
+   "id": "catalog:adidas",
+   "canonicalName": "Adidas",
+   "aliases": [
+    "Adidas"
+   ],
+   "upiHandles": [
+    "adidas"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:airbnb",
+   "canonicalName": "Airbnb",
+   "aliases": [
+    "Airbnb"
+   ],
+   "upiHandles": [
+    "airbnb"
+   ],
+   "categorySlug": "stays"
+  },
+  {
+   "id": "catalog:airtel payments",
+   "canonicalName": "Airtel Payments",
+   "aliases": [
+    "Airtel Payments"
+   ],
+   "upiHandles": [
+    "airtelpayments"
+   ],
+   "categorySlug": "household"
+  },
+  {
+   "id": "catalog:ajio",
+   "canonicalName": "Ajio",
+   "aliases": [
+    "Ajio",
+    "Reliance Ajio"
+   ],
+   "upiHandles": [
+    "ajio"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:allen solly",
+   "canonicalName": "Allen Solly",
+   "aliases": [
+    "Allen Solly"
+   ],
+   "upiHandles": [
+    "allensolly"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:amazon",
+   "canonicalName": "Amazon",
+   "aliases": [
+    "Amazon",
+    "Amazon Pay"
+   ],
+   "upiHandles": [
+    "amazon"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:angel one",
+   "canonicalName": "Angel One",
+   "aliases": [
+    "Angel One",
+    "Angel Broking"
+   ],
+   "upiHandles": [
+    "angelone",
+    "angelbroking"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:apollo hospital",
+   "canonicalName": "Apollo Hospital",
+   "aliases": [
+    "Apollo Hospital",
+    "Apollo Hospitals",
+    "Apollo",
+    "Apollo Pharmacy"
+   ],
+   "upiHandles": [
+    "apollo",
+    "apollohospital",
+    "apollohospitals",
+    "apollopharmacy"
+   ],
+   "categorySlug": "healthcare"
+  },
+  {
+   "id": "catalog:apple",
+   "canonicalName": "Apple",
+   "aliases": [
+    "Apple",
+    "Apple Store",
+    "App Store",
+    "iTunes",
+    "Apple Media",
+    "Apple Services"
+   ],
+   "upiHandles": [
+    "apple",
+    "applestore",
+    "itunes",
+    "appleservices"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:axis bank",
+   "canonicalName": "Axis Bank",
+   "aliases": [
+    "Axis",
+    "AXIS"
+   ],
+   "upiHandles": [],
+   "categorySlug": "banks"
+  },
+  {
+   "id": "catalog:bata",
+   "canonicalName": "Bata",
+   "aliases": [
+    "Bata"
+   ],
+   "upiHandles": [
+    "bata"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:bewakoof",
+   "canonicalName": "Bewakoof",
+   "aliases": [
+    "Bewakoof"
+   ],
+   "upiHandles": [
+    "bewakoof"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:biba",
+   "canonicalName": "Biba",
+   "aliases": [
+    "Biba"
+   ],
+   "upiHandles": [
+    "biba"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:bigbasket",
+   "canonicalName": "BigBasket",
+   "aliases": [
+    "BigBasket",
+    "Big Basket"
+   ],
+   "upiHandles": [
+    "bigbasket"
+   ],
+   "categorySlug": "grocery"
+  },
+  {
+   "id": "catalog:bistro",
+   "canonicalName": "Bistro",
+   "aliases": [
+    "Bistro",
+    "Swiggy Bistro",
+    "Bistor",
+    "Blinkit Bistro"
+   ],
+   "upiHandles": [
+    "bistro"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:blinkit",
+   "canonicalName": "Blinkit",
+   "aliases": [
+    "Blinkit",
+    "Grofers"
+   ],
+   "upiHandles": [
+    "blinkit"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:burger king",
+   "canonicalName": "Burger King",
+   "aliases": [
+    "Burger King"
+   ],
+   "upiHandles": [
+    "burgerking"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:chaayos",
+   "canonicalName": "Chaayos",
+   "aliases": [
+    "Chaayos"
+   ],
+   "upiHandles": [
+    "chaayos"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:croma",
+   "canonicalName": "Croma",
+   "aliases": [
+    "Croma",
+    "Infiniti Retail"
+   ],
+   "upiHandles": [
+    "croma",
+    "infinitiretail"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:cult.fit",
+   "canonicalName": "Cult.fit",
+   "aliases": [
+    "Cult.fit",
+    "Cultfit",
+    "Cure.fit"
+   ],
+   "upiHandles": [
+    "cultfit",
+    "curefit"
+   ],
+   "categorySlug": "sports"
+  },
+  {
+   "id": "catalog:dmart",
+   "canonicalName": "DMart",
+   "aliases": [
+    "DMart",
+    "D-Mart",
+    "Avenue Supermarts"
+   ],
+   "upiHandles": [
+    "dmart",
+    "avenuesupermarts"
+   ],
+   "categorySlug": "grocery"
+  },
+  {
+   "id": "catalog:decathlon",
+   "canonicalName": "Decathlon",
+   "aliases": [
+    "Decathlon"
+   ],
+   "upiHandles": [
+    "decathlon"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:district",
+   "canonicalName": "District",
+   "aliases": [
+    "District"
+   ],
+   "upiHandles": [
+    "district"
+   ],
+   "categorySlug": "outing"
+  },
+  {
+   "id": "catalog:dominos",
+   "canonicalName": "Dominos",
+   "aliases": [
+    "Dominos",
+    "Domino's",
+    "Dominoz",
+    "Dominos Pizza"
+   ],
+   "upiHandles": [
+    "dominos",
+    "dominospizza"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:et money",
+   "canonicalName": "ET Money",
+   "aliases": [
+    "ET Money",
+    "ETMoney"
+   ],
+   "upiHandles": [
+    "etmoney"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:eatsure",
+   "canonicalName": "EatSure",
+   "aliases": [
+    "EatSure",
+    "Eat Sure"
+   ],
+   "upiHandles": [
+    "eatsure"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:fabindia",
+   "canonicalName": "Fabindia",
+   "aliases": [
+    "Fabindia"
+   ],
+   "upiHandles": [
+    "fabindia"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:firstcry",
+   "canonicalName": "FirstCry",
+   "aliases": [
+    "FirstCry",
+    "First Cry"
+   ],
+   "upiHandles": [
+    "firstcry"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:flipkart",
+   "canonicalName": "Flipkart",
+   "aliases": [
+    "Flipkart"
+   ],
+   "upiHandles": [
+    "flipkart"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:furlenco",
+   "canonicalName": "Furlenco",
+   "aliases": [
+    "Furlenco"
+   ],
+   "upiHandles": [
+    "furlenco"
+   ],
+   "categorySlug": "household"
+  },
+  {
+   "id": "catalog:goibibo",
+   "canonicalName": "Goibibo",
+   "aliases": [
+    "Goibibo",
+    "Ibibo"
+   ],
+   "upiHandles": [
+    "goibibo"
+   ],
+   "categorySlug": "travel"
+  },
+  {
+   "id": "catalog:groww",
+   "canonicalName": "Groww",
+   "aliases": [
+    "Groww",
+    "Grow",
+    "Groww Invest"
+   ],
+   "upiHandles": [
+    "groww"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:h&m",
+   "canonicalName": "H&M",
+   "aliases": [
+    "H&M",
+    "H and M",
+    "Hennes"
+   ],
+   "upiHandles": [
+    "handm",
+    "hmhennes"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:hdfc bank",
+   "canonicalName": "HDFC Bank",
+   "aliases": [
+    "HDFC"
+   ],
+   "upiHandles": [],
+   "categorySlug": "banks"
+  },
+  {
+   "id": "catalog:icici bank",
+   "canonicalName": "ICICI Bank",
+   "aliases": [
+    "ICICI"
+   ],
+   "upiHandles": [],
+   "categorySlug": "banks"
+  },
+  {
+   "id": "catalog:ikea",
+   "canonicalName": "IKEA",
+   "aliases": [
+    "IKEA"
+   ],
+   "upiHandles": [
+    "ikea"
+   ],
+   "categorySlug": "household"
+  },
+  {
+   "id": "catalog:indmoney",
+   "canonicalName": "INDmoney",
+   "aliases": [
+    "INDmoney",
+    "IND Money"
+   ],
+   "upiHandles": [
+    "indmoney"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:irctc",
+   "canonicalName": "IRCTC",
+   "aliases": [
+    "IRCTC",
+    "Indian Railway Catering"
+   ],
+   "upiHandles": [
+    "irctc"
+   ],
+   "categorySlug": "travel"
+  },
+  {
+   "id": "catalog:indigo",
+   "canonicalName": "IndiGo",
+   "aliases": [
+    "IndiGo",
+    "InterGlobe Aviation"
+   ],
+   "upiHandles": [
+    "goindigo",
+    "interglobe"
+   ],
+   "categorySlug": "travel"
+  },
+  {
+   "id": "catalog:instamart",
+   "canonicalName": "Instamart",
+   "aliases": [
+    "Instamart",
+    "Swiggy Instamart"
+   ],
+   "upiHandles": [
+    "instamart"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:jio wifi",
+   "canonicalName": "Jio WiFi",
+   "aliases": [
+    "Jio WiFi",
+    "JioWifi",
+    "Jio Fiber",
+    "JioFiber",
+    "JioAirFiber",
+    "Jio AirFiber",
+    "JioFiber Postpaid"
+   ],
+   "upiHandles": [
+    "jiofiber",
+    "jiowifi"
+   ],
+   "categorySlug": "household"
+  },
+  {
+   "id": "catalog:jiomart",
+   "canonicalName": "JioMart",
+   "aliases": [
+    "JioMart",
+    "Jio Mart"
+   ],
+   "upiHandles": [
+    "jiomart"
+   ],
+   "categorySlug": "grocery"
+  },
+  {
+   "id": "catalog:kfc",
+   "canonicalName": "KFC",
+   "aliases": [
+    "KFC",
+    "Kentucky Fried Chicken"
+   ],
+   "upiHandles": [
+    "kfc"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:kuvera",
+   "canonicalName": "Kuvera",
+   "aliases": [
+    "Kuvera"
+   ],
+   "upiHandles": [
+    "kuvera"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:lapinoz",
+   "canonicalName": "Lapinoz",
+   "aliases": [
+    "Lapinoz",
+    "Lapinoz Pizza"
+   ],
+   "upiHandles": [
+    "lapinoz",
+    "lapinozpizza"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:lenskart",
+   "canonicalName": "Lenskart",
+   "aliases": [
+    "Lenskart"
+   ],
+   "upiHandles": [
+    "lenskart"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:levi's",
+   "canonicalName": "Levi's",
+   "aliases": [
+    "Levi's",
+    "Levis",
+    "Levi Strauss"
+   ],
+   "upiHandles": [
+    "levis",
+    "levistrauss"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:lifestyle",
+   "canonicalName": "Lifestyle",
+   "aliases": [
+    "Lifestyle",
+    "Lifestyle Stores"
+   ],
+   "upiHandles": [
+    "lifestylestores"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:louis philippe",
+   "canonicalName": "Louis Philippe",
+   "aliases": [
+    "Louis Philippe"
+   ],
+   "upiHandles": [
+    "louisphilippe"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:makemytrip",
+   "canonicalName": "MakeMyTrip",
+   "aliases": [
+    "MakeMyTrip",
+    "MMT"
+   ],
+   "upiHandles": [
+    "makemytrip"
+   ],
+   "categorySlug": "rides"
+  },
+  {
+   "id": "catalog:mamaearth",
+   "canonicalName": "Mamaearth",
+   "aliases": [
+    "Mamaearth",
+    "Honasa"
+   ],
+   "upiHandles": [
+    "mamaearth",
+    "honasa"
+   ],
+   "categorySlug": "personal"
+  },
+  {
+   "id": "catalog:marks & spencer",
+   "canonicalName": "Marks & Spencer",
+   "aliases": [
+    "Marks & Spencer",
+    "Marks and Spencer",
+    "M&S"
+   ],
+   "upiHandles": [
+    "marksandspencer",
+    "marksspencer"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:max fashion",
+   "canonicalName": "Max Fashion",
+   "aliases": [
+    "Max Fashion"
+   ],
+   "upiHandles": [
+    "maxfashion"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:mcdonald's",
+   "canonicalName": "McDonald's",
+   "aliases": [
+    "McDonald's",
+    "McDonalds"
+   ],
+   "upiHandles": [
+    "mcdonalds"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:meesho",
+   "canonicalName": "Meesho",
+   "aliases": [
+    "Meesho",
+    "Fashnear"
+   ],
+   "upiHandles": [
+    "meesho",
+    "fashnear"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:metro shoes",
+   "canonicalName": "Metro Shoes",
+   "aliases": [
+    "Metro Shoes",
+    "Mochi Shoes"
+   ],
+   "upiHandles": [
+    "metroshoes",
+    "mochishoes"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:myntra",
+   "canonicalName": "Myntra",
+   "aliases": [
+    "Myntra",
+    "Myntra Designs"
+   ],
+   "upiHandles": [
+    "myntra"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:namma yatri",
+   "canonicalName": "Namma Yatri",
+   "aliases": [
+    "Namma Yatri",
+    "NammaYatri"
+   ],
+   "upiHandles": [
+    "nammayatri",
+    "yatri"
+   ],
+   "categorySlug": "rides"
+  },
+  {
+   "id": "catalog:netmeds",
+   "canonicalName": "Netmeds",
+   "aliases": [
+    "Netmeds"
+   ],
+   "upiHandles": [
+    "netmeds"
+   ],
+   "categorySlug": "pharmacy"
+  },
+  {
+   "id": "catalog:nike",
+   "canonicalName": "Nike",
+   "aliases": [
+    "Nike"
+   ],
+   "upiHandles": [
+    "nike"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:nykaa",
+   "canonicalName": "Nykaa",
+   "aliases": [
+    "Nykaa",
+    "Nykaa Fashion",
+    "Nykaa Man",
+    "FSN E-Commerce"
+   ],
+   "upiHandles": [
+    "nykaa",
+    "nykaafashion",
+    "fsnecommerce"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:oyo",
+   "canonicalName": "OYO",
+   "aliases": [
+    "OYO",
+    "OYO Rooms",
+    "Oravel Stays"
+   ],
+   "upiHandles": [
+    "oyorooms",
+    "oravel"
+   ],
+   "categorySlug": "stays"
+  },
+  {
+   "id": "catalog:ola",
+   "canonicalName": "Ola",
+   "aliases": [
+    "Ola",
+    "Ola Cabs",
+    "ANI Technologies"
+   ],
+   "upiHandles": [
+    "olacabs",
+    "olamoney",
+    "anitechnologies"
+   ],
+   "categorySlug": "rides"
+  },
+  {
+   "id": "catalog:ownly",
+   "canonicalName": "Ownly",
+   "aliases": [
+    "Ownly",
+    "Ownly By Rapido",
+    "CTRLX",
+    "CTRLX Technologies",
+    "Ctrlx Technologies"
+   ],
+   "upiHandles": [
+    "ownly",
+    "ctrlx",
+    "ctrlxtechnologies"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:pantaloons",
+   "canonicalName": "Pantaloons",
+   "aliases": [
+    "Pantaloons",
+    "Aditya Birla Fashion",
+    "ABFRL"
+   ],
+   "upiHandles": [
+    "pantaloons",
+    "abfrl"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:paytm money",
+   "canonicalName": "Paytm Money",
+   "aliases": [
+    "Paytm Money"
+   ],
+   "upiHandles": [
+    "paytmmoney"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:peter england",
+   "canonicalName": "Peter England",
+   "aliases": [
+    "Peter England"
+   ],
+   "upiHandles": [
+    "peterengland"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:pharmeasy",
+   "canonicalName": "PharmEasy",
+   "aliases": [
+    "PharmEasy"
+   ],
+   "upiHandles": [
+    "pharmeasy"
+   ],
+   "categorySlug": "pharmacy"
+  },
+  {
+   "id": "catalog:pizza hut",
+   "canonicalName": "Pizza Hut",
+   "aliases": [
+    "Pizza Hut",
+    "PizzaHut",
+    "Pizzahut"
+   ],
+   "upiHandles": [
+    "pizzahut"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:pronto",
+   "canonicalName": "Pronto",
+   "aliases": [
+    "Pronto",
+    "Pronnto"
+   ],
+   "upiHandles": [
+    "pronto"
+   ],
+   "categorySlug": "household"
+  },
+  {
+   "id": "catalog:puma",
+   "canonicalName": "Puma",
+   "aliases": [
+    "Puma"
+   ],
+   "upiHandles": [
+    "puma"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:purplle",
+   "canonicalName": "Purplle",
+   "aliases": [
+    "Purplle"
+   ],
+   "upiHandles": [
+    "purplle"
+   ],
+   "categorySlug": "personal"
+  },
+  {
+   "id": "catalog:rapido",
+   "canonicalName": "Rapido",
+   "aliases": [
+    "Rapido"
+   ],
+   "upiHandles": [
+    "rapido"
+   ],
+   "categorySlug": "rides"
+  },
+  {
+   "id": "catalog:reliance digital",
+   "canonicalName": "Reliance Digital",
+   "aliases": [
+    "Reliance Digital"
+   ],
+   "upiHandles": [
+    "reliancedigital"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:reliance fresh",
+   "canonicalName": "Reliance Fresh",
+   "aliases": [
+    "Reliance Fresh"
+   ],
+   "upiHandles": [
+    "reliancefresh"
+   ],
+   "categorySlug": "grocery"
+  },
+  {
+   "id": "catalog:reliance retail",
+   "canonicalName": "Reliance Retail",
+   "aliases": [
+    "Reliance Retail",
+    "Reliance Retail Ventures",
+    "RRVL"
+   ],
+   "upiHandles": [
+    "relianceretail",
+    "rrvl"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:reliance trends",
+   "canonicalName": "Reliance Trends",
+   "aliases": [
+    "Reliance Trends",
+    "Trends Footwear"
+   ],
+   "upiHandles": [
+    "reliancetrends",
+    "trendsfootwear"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:sbi",
+   "canonicalName": "SBI",
+   "aliases": [
+    "SBI",
+    "State Bank of India"
+   ],
+   "upiHandles": [],
+   "categorySlug": "banks"
+  },
+  {
+   "id": "catalog:shoppers stop",
+   "canonicalName": "Shoppers Stop",
+   "aliases": [
+    "Shoppers Stop"
+   ],
+   "upiHandles": [
+    "shoppersstop"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:skechers",
+   "canonicalName": "Skechers",
+   "aliases": [
+    "Skechers"
+   ],
+   "upiHandles": [
+    "skechers"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:smart bazaar",
+   "canonicalName": "Smart Bazaar",
+   "aliases": [
+    "Smart Bazaar",
+    "Reliance Smart"
+   ],
+   "upiHandles": [
+    "smartbazaar",
+    "reliancesmart"
+   ],
+   "categorySlug": "grocery"
+  },
+  {
+   "id": "catalog:snitch",
+   "canonicalName": "Snitch",
+   "aliases": [
+    "Snitch"
+   ],
+   "upiHandles": [
+    "snitch"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:starbucks",
+   "canonicalName": "Starbucks",
+   "aliases": [
+    "Starbucks",
+    "Tata Starbucks"
+   ],
+   "upiHandles": [
+    "starbucks",
+    "tatastarbucks"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:sugar cosmetics",
+   "canonicalName": "Sugar Cosmetics",
+   "aliases": [
+    "Sugar Cosmetics",
+    "SUGAR"
+   ],
+   "upiHandles": [
+    "sugarcosmetics"
+   ],
+   "categorySlug": "personal"
+  },
+  {
+   "id": "catalog:swiggy",
+   "canonicalName": "Swiggy",
+   "aliases": [
+    "Swiggy"
+   ],
+   "upiHandles": [
+    "swiggy"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:swish",
+   "canonicalName": "Swish",
+   "aliases": [
+    "Swish"
+   ],
+   "upiHandles": [
+    "swish"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:tanishq",
+   "canonicalName": "Tanishq",
+   "aliases": [
+    "Tanishq"
+   ],
+   "upiHandles": [
+    "tanishq"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:tata 1mg",
+   "canonicalName": "Tata 1mg",
+   "aliases": [
+    "Tata 1mg",
+    "1mg"
+   ],
+   "upiHandles": [
+    "onemg",
+    "1mg"
+   ],
+   "categorySlug": "pharmacy"
+  },
+  {
+   "id": "catalog:tata cliq",
+   "canonicalName": "Tata CLiQ",
+   "aliases": [
+    "Tata CLiQ",
+    "Tata Cliq"
+   ],
+   "upiHandles": [
+    "tatacliq"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:the souled store",
+   "canonicalName": "The Souled Store",
+   "aliases": [
+    "The Souled Store",
+    "Souled Store"
+   ],
+   "upiHandles": [
+    "thesouledstore",
+    "souledstore"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:titan",
+   "canonicalName": "Titan",
+   "aliases": [
+    "Titan",
+    "Titan Eyeplus"
+   ],
+   "upiHandles": [
+    "titan",
+    "titaneyeplus"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:uber",
+   "canonicalName": "Uber",
+   "aliases": [
+    "Uber"
+   ],
+   "upiHandles": [
+    "uber"
+   ],
+   "categorySlug": "rides"
+  },
+  {
+   "id": "catalog:uniqlo",
+   "canonicalName": "Uniqlo",
+   "aliases": [
+    "Uniqlo"
+   ],
+   "upiHandles": [
+    "uniqlo"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:upstox",
+   "canonicalName": "Upstox",
+   "aliases": [
+    "Upstox",
+    "RKSV"
+   ],
+   "upiHandles": [
+    "upstox"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:urban company",
+   "canonicalName": "Urban Company",
+   "aliases": [
+    "Urban Company",
+    "UrbanClap"
+   ],
+   "upiHandles": [
+    "urbancompany",
+    "urbanclap"
+   ],
+   "categorySlug": "personal"
+  },
+  {
+   "id": "catalog:van heusen",
+   "canonicalName": "Van Heusen",
+   "aliases": [
+    "Van Heusen"
+   ],
+   "upiHandles": [
+    "vanheusen"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:w for woman",
+   "canonicalName": "W for Woman",
+   "aliases": [
+    "W for Woman",
+    "WforWoman"
+   ],
+   "upiHandles": [
+    "wforwoman"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:wakefit",
+   "canonicalName": "Wakefit",
+   "aliases": [
+    "Wakefit"
+   ],
+   "upiHandles": [
+    "wakefit"
+   ],
+   "categorySlug": "household"
+  },
+  {
+   "id": "catalog:westside",
+   "canonicalName": "Westside",
+   "aliases": [
+    "Westside",
+    "Trent Limited"
+   ],
+   "upiHandles": [
+    "westside",
+    "trentlimited"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:woodland",
+   "canonicalName": "Woodland",
+   "aliases": [
+    "Woodland"
+   ],
+   "upiHandles": [
+    "woodland"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:zara",
+   "canonicalName": "Zara",
+   "aliases": [
+    "Zara"
+   ],
+   "upiHandles": [
+    "zara"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:zepto",
+   "canonicalName": "Zepto",
+   "aliases": [
+    "Zepto"
+   ],
+   "upiHandles": [
+    "zepto"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:zerodha",
+   "canonicalName": "Zerodha",
+   "aliases": [
+    "Zerodha",
+    "Zerodha Broking",
+    "Kite",
+    "Coin by Zerodha"
+   ],
+   "upiHandles": [
+    "zerodha",
+    "zerodhabroking"
+   ],
+   "categorySlug": "investments"
+  },
+  {
+   "id": "catalog:zomato",
+   "canonicalName": "Zomato",
+   "aliases": [
+    "Zomato"
+   ],
+   "upiHandles": [
+    "zomato"
+   ],
+   "categorySlug": "food"
+  },
+  {
+   "id": "catalog:boat",
+   "canonicalName": "boAt",
+   "aliases": [
+    "boAt",
+    "boAt Lifestyle",
+    "Imagine Marketing"
+   ],
+   "upiHandles": [
+    "boatlifestyle",
+    "imaginemarketing"
+   ],
+   "categorySlug": "shopping"
+  },
+  {
+   "id": "catalog:smallcase",
+   "canonicalName": "smallcase",
+   "aliases": [
+    "smallcase"
+   ],
+   "upiHandles": [
+    "smallcase"
+   ],
+   "categorySlug": "investments"
+  }
+ ]
+}

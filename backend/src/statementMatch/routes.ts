@@ -3,7 +3,7 @@ import multer from "multer";
 import { bankAdapters, runAdapters } from "../adapters/index.js";
 import { getStore } from "../db/index.js";
 import { AppError } from "../errors/AppError.js";
-import { extractTextFromPdf } from "../parser.js";
+import { extractTextFromPdf } from "../pdfText.js";
 import { uploadRateLimiter } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 import { parsePasswordBodySchema } from "../validators/imports.js";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { bankAdapters, detectAdapter } from "../../src/adapters/index.js";
-import { extractTextFromPdf } from "../../src/parser.js";
+import { extractTextFromPdf } from "../../src/pdfText.js";
 import { hdfcStatement, iciciStatement, type IciciRow } from "../helpers/statementPdf.js";
 
 /** Made-up rows in the shapes ICICI prints (1 to 4 wrapped PARTICULARS lines). */

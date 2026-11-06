@@ -79,6 +79,19 @@ starts.
 
 ---
 
+## On your phone
+
+There is also an Android and iOS app in [`mobile/`](mobile/README.md). It needs
+no computer and no Docker. It keeps everything on the phone, reminds you to add
+what you spend, and once a month checks your bank statement PDF for payments
+you missed. Categories, splits, People and the charts work as they do here.
+Until it's in the stores, run it with Expo Go or build an APK. The steps are in
+[mobile/README.md](mobile/README.md).
+
+The phone app and this install don't sync. Each keeps its own data.
+
+---
+
 ## Using it
 
 1. Open <http://localhost:3000>. The welcome screen offers three things: import
@@ -184,6 +197,7 @@ so a payment is never counted twice. Every page reads the same Postgres data.
 | API | `backend/` | Express 5, TypeScript strict, Drizzle ORM, pdf.js parser |
 | Database | Docker volume `ledgerline_pg` | Postgres 16. Migrations run on start |
 | CLI | `ledgerline`, `install.sh` | Bash; no dependencies beyond Docker |
+| Phone app | `mobile/` | Expo (React Native), SQLite on the phone. Runs the backend's parsers and totals from `backend/src` |
 
 ---
 

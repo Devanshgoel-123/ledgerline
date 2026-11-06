@@ -22,7 +22,8 @@ import { poolingScanWindow } from "../helpers/index.js";
 import { classifyTransaction } from "../imports/classification.js";
 import { loadClassificationContext } from "../imports/context.js";
 import { counterpartyFromNarration } from "../narration/party.js";
-import { extractTextFromPdf, type StatementLine } from "../parser.js";
+import type { StatementLine } from "../parser.js";
+import { extractTextFromPdf } from "../pdfText.js";
 import { shiftIsoDate, unrecordedLines } from "./match.js";
 
 /** Largest monthly difference (per direction) accepted without a flag. */
