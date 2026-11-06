@@ -268,7 +268,11 @@ export default function SettingsScreen() {
       <Card>
         <CardTitle title="Your data" sub="Ledgerline has no account and no server. Your data lives only in this app, so back it up." />
         <View style={[s.backupLine, { backgroundColor: backup.due ? c.warningSoft : c.bgMuted }]}>
-          <Icon name={backup.due ? "info" : "check"} size={18} color={backup.due ? c.parchmentInk : c.success} />
+          <Icon
+            name={backup.due || backup.daysSince === null ? "info" : "check"}
+            size={18}
+            color={backup.due ? c.parchmentInk : backup.daysSince === null ? c.muted : c.success}
+          />
           <View style={{ flex: 1 }}>
             <T variant="strong">{`Last backup: ${backupAge(backup.daysSince)}`}</T>
             <T variant="small" tone="muted">

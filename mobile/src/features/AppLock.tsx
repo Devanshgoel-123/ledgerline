@@ -50,7 +50,15 @@ export function AppLockGate() {
   const insets = useSafeAreaInsets();
   const { db, ready, appLock, refresh } = useLedger();
   const [unlocked, setUnlocked] = useState(false);
+  const [opened, setOpened] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // Once the settings have loaded: if the lock was off at launch, this
+  // session starts unlocked, so turning the lock on in Settings doesn't lock
+  // you out on the spot. It takes effect after the next time away.
+  if (ready && !opened) {
+    setOpened(true);
+    if (!appLock) setUnlocked(true);
+  }
   const awaySince = useRef<number | null>(null);
   const asking = useRef(false);
   const locked = ready && appLock && !unlocked;
@@ -77,14 +85,24 @@ export function AppLockGate() {
   }, [db, refresh]);
 
   // Lock again after time away. "inactive" alone (a system prompt, the
-  // Face ID sheet itself) never locks.
+  // Face ID sheet itself) never locks. While in the background the app is
+  // covered, so payments don't flash on screen before the lock comes back,
+  // or show in the app switcher.
+  const [covered, setCovered] = useState(false);
+  const lockOn = useRef(appLock);
+  useEffect(() => {
+    lockOn.current = appLock;
+  }, [appLock]);
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "background") awaySince.current = Date.now();
-      if (state === "active" && awaySince.current !== null) {
-        const away = Date.now() - awaySince.current;
+      if (state === "background") {
+        awaySince.current = Date.now();
+        if (lockOn.current) setCovered(true);
+      }
+      if (state === "active") {
+        if (awaySince.current !== null && Date.now() - awaySince.current > LOCK_GRACE_MS) setUnlocked(false);
         awaySince.current = null;
-        if (away > LOCK_GRACE_MS) setUnlocked(false);
+        setCovered(false);
       }
     });
     return () => subscription.remove();
@@ -98,7 +116,7 @@ export function AppLockGate() {
   }, [locked, unlock]);
 
   return (
-    <Modal visible={locked} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => {}} statusBarTranslucent>
+    <Modal visible={locked || (covered && appLock)} animationType="none" presentationStyle="fullScreen" onRequestClose={() => {}} statusBarTranslucent>
       <View style={[s.screen, { backgroundColor: c.bg, paddingTop: insets.top + space[6], paddingBottom: insets.bottom + space[6] }]}>
         <View style={s.middle}>
           <Image source={require("../../assets/images/icon.png")} style={s.icon} accessibilityIgnoresInvertColors />
