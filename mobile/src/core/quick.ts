@@ -1,4 +1,4 @@
-import { categoryTree, rootCategory, type Category } from "./catalog";
+import { categoryTree, fitsType, rootCategory, type Category } from "./catalog";
 import { fromIsoDate, isoDate } from "./dates";
 import type { Entry, TxType } from "./model";
 
@@ -22,7 +22,7 @@ export function quickCategories(
   for (const entry of entries) {
     if (entry.type !== options.type || entry.origin === "sample" || entry.date < cutoff) continue;
     const slug = entry.categorySlug;
-    if (!slug || slug === "other" || !known.has(slug)) continue;
+    if (!slug || slug === "other" || !known.has(slug) || !fitsType(slug, options.type, categories)) continue;
     counts.set(slug, (counts.get(slug) ?? 0) + 1);
     if ((lastUsed.get(slug) ?? "") < entry.date) lastUsed.set(slug, entry.date);
   }
@@ -32,11 +32,7 @@ export function quickCategories(
 
   const roots = categoryTree(categories)
     .map((node) => node.parent.slug)
-    .filter((slug) =>
-      options.type === "credit"
-        ? ["family", "personal", "investments", "banks", "other"].includes(slug)
-        : slug !== "banks",
-    );
+    .filter((slug) => fitsType(slug, options.type, categories) && (options.type === "credit" || slug !== "transfers"));
 
   const order: string[] = [];
   const push = (slug: string | null | undefined) => {
@@ -52,7 +48,7 @@ export function quickCategories(
 /** The four categories a widget shows as shortcuts. */
 export function widgetShortcuts(entries: Entry[], categories: Category[], today: string): string[] {
   const order = quickCategories(entries, categories, { type: "debit", today });
-  const fallback = ["food", "travel", "shopping", "household"];
+  const fallback = ["food", "grocery", "transport", "shopping"];
   // Prefer distinct roots so the four tiles differ in colour.
   const picked: string[] = [];
   const roots = new Set<string>();

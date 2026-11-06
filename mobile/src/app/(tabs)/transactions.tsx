@@ -1,14 +1,14 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryLabel, type Category } from "@/core/catalog";
 import { formatDayLabel, formatInr } from "@/core/format";
 import type { Entry } from "@/core/model";
-import { AddButton, EntryRow, MonthSwitcher, SampleNotice } from "@/features/common";
+import { EntryRow, MonthSwitcher, SampleNotice } from "@/features/common";
 import { useLedger } from "@/state/ledger";
-import { Button, Chip, Empty, PageHeader, Segmented } from "@/ui/components";
-import { fonts, radius, space, useTheme } from "@/ui/theme";
+import { Chip, Empty, PageHeader, Segmented } from "@/ui/components";
+import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
 type Kind = "all" | "debit" | "credit";
 
@@ -26,7 +26,6 @@ export default function TransactionsScreen() {
     () => groupByDay(filterEntries(entries, { month, query, kind, category, categories })),
     [entries, month, query, kind, category, categories],
   );
-  const shown = sections.reduce((n, section) => n + section.data.length, 0);
   const searching = query.trim().length > 0;
 
   return (
@@ -39,13 +38,7 @@ export default function TransactionsScreen() {
       stickySectionHeadersEnabled={false}
       ListHeaderComponent={
         <View style={{ gap: space[4], paddingBottom: space[2] }}>
-          <PageHeader
-            eyebrow="Transactions"
-            title={searching ? "Search" : "All payments"}
-            sub={searching ? `${shown} found in every month` : `${shown} shown`}
-            right={<AddButton />}
-          />
-          {searching ? null : <MonthSwitcher />}
+          <PageHeader title="Transactions" right={searching ? undefined : <MonthSwitcher />} />
           <SampleNotice />
           <TextInput
             value={query}
@@ -55,7 +48,7 @@ export default function TransactionsScreen() {
             accessibilityLabel="Search transactions"
             returnKeyType="search"
             clearButtonMode="while-editing"
-            style={[s.search, { color: c.foreground, backgroundColor: c.surface, borderColor: c.borderStrong }]}
+            style={[s.search, { color: c.foreground, backgroundColor: c.bgMuted }]}
           />
           <Segmented
             label="Show"
@@ -77,20 +70,39 @@ export default function TransactionsScreen() {
               />
             </View>
           ) : null}
-          <Button label="Check a statement for missing payments" icon="statement" variant="secondary" onPress={() => router.push("/statement")} />
         </View>
       }
       renderSectionHeader={({ section }) => (
         <View style={s.dayHeader}>
           <Text style={[s.day, { color: c.muted }]}>{formatDayLabel(section.title)}</Text>
-          <Text style={[s.dayTotal, { color: c.muted }]}>{section.spent ? `−${formatInr(section.spent)}` : ""}</Text>
+          <Text style={[s.dayTotal, { color: c.muted }]}>{section.spent ? formatInr(section.spent) : ""}</Text>
         </View>
       )}
-      renderItem={({ item }) => (
-        <View style={[s.item, { backgroundColor: c.surface, borderColor: c.border }]}>
-          <EntryRow entry={item} showDate={false} />
-        </View>
-      )}
+      renderItem={({ item, index, section }) => {
+        const first = index === 0;
+        const last = index === section.data.length - 1;
+        return (
+          <View
+            style={[
+              s.item,
+              {
+                backgroundColor: c.surface,
+                borderColor: c.border,
+                borderTopWidth: first ? StyleSheet.hairlineWidth : 0,
+                borderBottomWidth: last ? StyleSheet.hairlineWidth : 0,
+                borderTopLeftRadius: first ? radius.lg : 0,
+                borderTopRightRadius: first ? radius.lg : 0,
+                borderBottomLeftRadius: last ? radius.lg : 0,
+                borderBottomRightRadius: last ? radius.lg : 0,
+                paddingTop: first ? space[1] : 0,
+                paddingBottom: last ? space[1] : 0,
+              },
+            ]}>
+            {first ? null : <View style={[s.inset, { backgroundColor: c.border }]} />}
+            <EntryRow entry={item} showDate={false} />
+          </View>
+        );
+      }}
       ListEmptyComponent={
         <Empty
           title={searching ? "Nothing matches" : "Nothing here yet"}
@@ -135,10 +147,11 @@ function groupByDay(entries: Entry[]) {
 }
 
 const s = StyleSheet.create({
-  search: { minHeight: 48, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: 14, fontFamily: fonts.sans, fontSize: 16 },
+  search: { minHeight: 44, borderRadius: radius.md, paddingHorizontal: 14, fontFamily: fonts.sans, fontSize: 16 },
   filterText: { fontFamily: fonts.sans, fontSize: 14 },
-  dayHeader: { flexDirection: "row", justifyContent: "space-between", paddingTop: space[4], paddingBottom: space[2] },
-  day: { fontFamily: fonts.sansMedium, fontSize: 13, letterSpacing: 0.3 },
-  dayTotal: { fontFamily: fonts.mono, fontSize: 13 },
-  item: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.md, paddingHorizontal: space[3], marginBottom: 6 },
+  dayHeader: { flexDirection: "row", justifyContent: "space-between", paddingTop: space[5], paddingBottom: space[2], paddingHorizontal: 2 },
+  day: { fontFamily: fonts.sansSemi, fontSize: 13 },
+  dayTotal: { fontFamily: fonts.sansMedium, fontSize: 13, ...tabular },
+  item: { borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth, paddingHorizontal: space[4] },
+  inset: { height: StyleSheet.hairlineWidth, marginLeft: 52 },
 });

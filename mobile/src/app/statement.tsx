@@ -12,7 +12,8 @@ import { PdfPasswordError, usePdfReader } from "@/pdf/usePdfReader";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, CardTitle, Divider, Empty, Field, Notice, Pill, T } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
-import { fonts, radius, space, useTheme } from "@/ui/theme";
+import { MerchantAvatar } from "@/ui/CategoryVisual";
+import { fonts, space, tabular, useTheme } from "@/ui/theme";
 import { closeModal } from "@/features/navigation";
 
 type Step =
@@ -248,7 +249,7 @@ export default function StatementScreen() {
               <Card>
                 <CardTitle
                   title="Missing from Ledgerline"
-                  sub="Ticked payments are added with the category shown. Tap a category to change it. Skip the ones that aren't spending, like your own transfers."
+                  sub="Ticked ones are added. Tap a category to change it or skip the payment."
                 />
                 {step.check.missing.map((line, index) => {
                   const on = selected.has(line.key);
@@ -273,28 +274,28 @@ export default function StatementScreen() {
                           style={[s.check, { borderColor: c.borderStrong, backgroundColor: on ? c.primary : "transparent" }]}>
                           {on ? <Icon name="check" size={14} color={c.primaryForeground} /> : null}
                         </Pressable>
+                        <MerchantAvatar providerId={line.providerId} merchant={line.merchant ?? line.party} categorySlug={slug} size={36} />
                         <View style={{ flex: 1, gap: 2 }}>
-                          <T variant="strong" numberOfLines={1}>
-                            {line.party ?? (line.type === "credit" ? "Money in" : "Payment")}
-                          </T>
-                          <T variant="small" tone="muted" numberOfLines={2}>
-                            {formatShortDate(line.date)} · {line.description}
-                          </T>
+                          <Text style={[s.lineTitle, { color: c.foreground }]} numberOfLines={1}>
+                            {line.merchant ?? line.party ?? (line.type === "credit" ? "Money in" : "Payment")}
+                          </Text>
+                          <Pressable
+                            onPress={() => setEditing(editing === line.key ? null : line.key)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Category: ${categoryLabel(slug, categories)}. Change`}
+                            accessibilityState={{ expanded: editing === line.key }}
+                            hitSlop={8}
+                            style={s.catButton}>
+                            <Text style={[s.lineMeta, { color: c.muted }]} numberOfLines={1}>
+                              {`${formatShortDate(line.date)} · `}
+                              <Text style={{ color: c.primary, fontFamily: fonts.sansMedium }}>{categoryLabel(slug, categories)}</Text>
+                            </Text>
+                            <Icon name={editing === line.key ? "back" : "chevron"} size={11} color={c.primary} />
+                          </Pressable>
                         </View>
-                        <T variant="mono" tone={line.type === "credit" ? "credit" : "default"}>
-                          {line.type === "credit" ? "+" : "−"}
-                          {formatInrExact(line.amount)}
-                        </T>
-                      </View>
-                      <View style={s.lineActions}>
-                        <Pressable
-                          onPress={() => setEditing(editing === line.key ? null : line.key)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Category: ${categoryLabel(slug, categories)}. Change`}
-                          style={[s.catButton, { borderColor: c.borderStrong }]}>
-                          <Text style={[s.catText, { color: c.foreground }]}>{categoryLabel(slug, categories)}</Text>
-                        </Pressable>
-                        <Button label="Skip" variant="ghost" onPress={() => skip(step.check, line)} accessibilityHint="Won't be listed again" />
+                        <Text style={[s.lineAmount, { color: line.type === "credit" ? c.credit : c.foreground }]}>
+                          {`${line.type === "credit" ? "+" : ""}${formatInrExact(line.amount)}`}
+                        </Text>
                       </View>
                       {line.needsCheck ? (
                         <T variant="small" tone="muted">
@@ -302,12 +303,16 @@ export default function StatementScreen() {
                         </T>
                       ) : null}
                       {editing === line.key ? (
+                        <View style={{ gap: space[3] }}>
+                        <Text style={[s.lineMeta, { color: c.muted }]}>{line.description}</Text>
                         <CategoryPicker
                           categories={categories}
                           value={slug}
                           type={line.type}
                           onChange={(next) => setCategoryFor((map) => ({ ...map, [line.key]: next }))}
                         />
+                        <Button label="Skip this payment" variant="ghost" onPress={() => skip(step.check, line)} accessibilityHint="Won't be listed again" />
+                        </View>
                       ) : null}
                     </View>
                   );
@@ -395,11 +400,12 @@ const s = StyleSheet.create({
   topTitle: { fontFamily: fonts.display, fontSize: 18 },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   body: { padding: space[4], gap: space[4] },
-  line: { flexDirection: "row", alignItems: "center", gap: space[3], paddingTop: space[2] },
+  line: { flexDirection: "row", alignItems: "center", gap: space[3], paddingVertical: space[2] },
   badge: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
   reading: { alignItems: "center", gap: space[3], paddingVertical: space[5] },
   check: { width: 26, height: 26, borderRadius: 7, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  lineActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingLeft: 26 + space[3] },
-  catButton: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, minHeight: 36, justifyContent: "center" },
-  catText: { fontFamily: fonts.sansMedium, fontSize: 13 },
+  catButton: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", minHeight: 24 },
+  lineTitle: { fontFamily: fonts.sansMedium, fontSize: 15, lineHeight: 20 },
+  lineMeta: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 17 },
+  lineAmount: { fontFamily: fonts.sansSemi, fontSize: 15, ...tabular },
 });

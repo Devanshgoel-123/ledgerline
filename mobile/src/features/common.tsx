@@ -4,12 +4,13 @@ import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { monthAnalytics } from "@/core/analytics";
 import { categoryLabel } from "@/core/catalog";
 import { currentMonth, shiftMonth } from "@/core/dates";
-import { formatInr, formatMonthTitle, formatShortDate } from "@/core/format";
+import { formatInr, formatMonthShort, formatMonthTitle, formatShortDate } from "@/core/format";
 import type { Entry } from "@/core/model";
 import { myShare } from "@/core/shared";
 import { removeSamples } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
 import { Button, Notice } from "@/ui/components";
+import { MerchantAvatar } from "@/ui/CategoryVisual";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
@@ -29,17 +30,17 @@ export function MonthSwitcher() {
   const latest = currentMonth();
   const canGoForward = month < latest;
   return (
-    <View style={[s.switcher, { backgroundColor: c.surface, borderColor: c.borderStrong }]}>
+    <View style={[s.switcher, { backgroundColor: c.bgMuted }]}>
       <Pressable
         onPress={() => setMonth(shiftMonth(month, -1))}
         accessibilityRole="button"
         accessibilityLabel={`Previous month, ${formatMonthTitle(shiftMonth(month, -1))}`}
         hitSlop={8}
         style={s.arrow}>
-        <Icon name="back" size={16} color={c.foreground} />
+        <Icon name="back" size={13} color={c.foreground} />
       </Pressable>
-      <Text style={[s.month, { color: c.foreground }]} accessibilityRole="header">
-        {formatMonthTitle(month)}
+      <Text style={[s.month, { color: c.foreground }]} accessibilityLabel={formatMonthTitle(month)}>
+        {`${formatMonthShort(month)} ${month.slice(0, 4)}`}
       </Text>
       <Pressable
         onPress={() => canGoForward && setMonth(shiftMonth(month, 1))}
@@ -49,7 +50,7 @@ export function MonthSwitcher() {
         accessibilityState={{ disabled: !canGoForward }}
         hitSlop={8}
         style={[s.arrow, { opacity: canGoForward ? 1 : 0.3 }]}>
-        <Icon name="chevron" size={16} color={c.foreground} />
+        <Icon name="chevron" size={13} color={c.foreground} />
       </Pressable>
     </View>
   );
@@ -57,28 +58,22 @@ export function MonthSwitcher() {
 
 /** One payment in a list: who or what, category, date, amount. */
 export function EntryRow({ entry, showDate = true }: { entry: Entry; showDate?: boolean }) {
-  const { c, onCategory, categoryColor } = useTheme();
+  const { c } = useTheme();
   const { categories } = useLedger();
-  const title = entry.merchant || entry.description || entry.payee || "Payment";
+  const title = entry.merchant || entry.payee || entry.description || "Payment";
   const share = entry.type === "debit" && entry.splits.length ? myShare(entry.amount, entry.splits) : null;
-  const meta = [
-    categoryLabel(entry.categorySlug, categories),
-    showDate ? formatShortDate(entry.date) : null,
-    entry.method === "cash" ? "Cash" : entry.method === "card" ? "Card" : null,
-    entry.origin === "statement" ? "From statement" : entry.messageRef ? "From SMS" : entry.origin === "sample" ? "Sample" : null,
-  ]
+  // Category and date only; where a row came from lives on its detail screen.
+  const meta = [categoryLabel(entry.categorySlug, categories), showDate ? formatShortDate(entry.date) : null, entry.method === "cash" ? "Cash" : null]
     .filter(Boolean)
     .join(" · ");
-  const amount = `${entry.type === "credit" ? "+" : "−"}${formatInr(entry.amount)}`;
+  const amount = `${entry.type === "credit" ? "+" : ""}${formatInr(entry.amount)}`;
   return (
     <Pressable
       onPress={() => router.push({ pathname: "/entry/[id]", params: { id: entry.id } })}
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${meta}, ${entry.type === "credit" ? "received" : "spent"} ${formatInr(entry.amount)}${share != null ? `, your share ${formatInr(share)}` : ""}`}
-      style={({ pressed }) => [s.entry, { opacity: pressed ? 0.7 : 1 }]}>
-      <View style={[s.mark, { backgroundColor: categoryColor(entry.categorySlug) }]}>
-        <Text style={[s.markText, { color: onCategory }]}>{title.slice(0, 1).toUpperCase()}</Text>
-      </View>
+      style={({ pressed }) => [s.entry, { opacity: pressed ? 0.6 : 1 }]}>
+      <MerchantAvatar providerId={entry.providerId} merchant={entry.merchant} categorySlug={entry.categorySlug} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[s.entryTitle, { color: c.foreground }]} numberOfLines={1}>
           {title}
@@ -89,7 +84,7 @@ export function EntryRow({ entry, showDate = true }: { entry: Entry; showDate?: 
       </View>
       <View style={{ alignItems: "flex-end", gap: 2 }}>
         <Text style={[s.entryAmount, { color: entry.type === "credit" ? c.credit : c.foreground }]}>{amount}</Text>
-        {share != null ? <Text style={[s.entryMeta, { color: c.muted }]}>yours {formatInr(share)}</Text> : null}
+        {share != null ? <Text style={[s.entryMeta, { color: c.muted }]}>you {formatInr(share)}</Text> : null}
       </View>
     </Pressable>
   );
@@ -146,20 +141,16 @@ const s = StyleSheet.create({
   switcher: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: radius.md,
-    borderWidth: 1,
-    minHeight: 48,
-    paddingHorizontal: space[1],
+    alignSelf: "flex-start",
+    borderRadius: radius.pill,
+    minHeight: 40,
   },
-  arrow: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  month: { fontFamily: fonts.sansSemi, fontSize: 16 },
+  arrow: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  month: { fontFamily: fonts.sansSemi, fontSize: 14, minWidth: 64, textAlign: "center" },
   entry: { flexDirection: "row", alignItems: "center", gap: space[3], minHeight: 56, paddingVertical: 6 },
-  mark: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  markText: { fontFamily: fonts.sansSemi, fontSize: 15 },
-  entryTitle: { fontFamily: fonts.sansSemi, fontSize: 15 },
-  entryMeta: { fontFamily: fonts.sans, fontSize: 12.5 },
-  entryAmount: { fontFamily: fonts.monoMedium, fontSize: 15, ...tabular },
+  entryTitle: { fontFamily: fonts.sansMedium, fontSize: 15, lineHeight: 20 },
+  entryMeta: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 17 },
+  entryAmount: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20, ...tabular },
   add: {
     flexDirection: "row",
     alignItems: "center",

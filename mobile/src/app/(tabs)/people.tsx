@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-import { formatInr, formatMonthTitle, formatShortDate } from "@/core/format";
+import { formatInr, formatShortDate } from "@/core/format";
 import { friendBalances } from "@/core/people";
 import { AddButton, MonthSwitcher, useMonthAnalytics } from "@/features/common";
 import { setShareSettled, settleFriend } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, CardTitle, Divider, Empty, PageHeader, Screen, T } from "@/ui/components";
+import { Button, Card, CardTitle, Divider, Empty, PageHeader, Screen, Section, T } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, useTheme } from "@/ui/theme";
 
 export default function PeopleScreen() {
   const { c } = useTheme();
-  const { entries, month, db, refresh } = useLedger();
+  const { entries, db, refresh } = useLedger();
   const balances = friendBalances(entries);
   const owedTotal = balances.reduce((sum, friend) => sum + friend.owed, 0);
   const result = useMonthAnalytics();
@@ -32,9 +32,8 @@ export default function PeopleScreen() {
   return (
     <Screen>
       <PageHeader
-        eyebrow="People"
-        title={owedTotal > 0 ? `${formatInr(owedTotal)} owed to you` : "Friends and family"}
-        sub="Bills you split, and money that moved between you and people."
+        title="People"
+        sub={owedTotal > 0 ? `${formatInr(owedTotal)} owed to you` : undefined}
         right={<AddButton label="Split" href="/add" />}
       />
 
@@ -116,9 +115,8 @@ export default function PeopleScreen() {
         )}
       </Card>
 
-      <MonthSwitcher />
+      <Section title="Paid to people" right={<MonthSwitcher />}>
       <Card>
-        <CardTitle title="People you paid" sub={`${formatMonthTitle(month)} · from the person you name on each payment`} />
         {result.payeeSpend.length ? (
           result.payeeSpend.map((person, index) => (
             <View key={person.name}>
@@ -134,8 +132,8 @@ export default function PeopleScreen() {
                     {person.received ? ` · received ${formatInr(person.received)}` : ""}
                   </T>
                 </View>
-                <T variant="mono" tone={person.total > 0 ? "debit" : "credit"}>
-                  {person.total > 0 ? `−${formatInr(person.total)}` : `+${formatInr(-person.total)}`}
+                <T variant="mono" tone={person.total > 0 ? "default" : "credit"}>
+                  {person.total > 0 ? formatInr(person.total) : `+${formatInr(-person.total)}`}
                 </T>
               </View>
             </View>
@@ -144,6 +142,7 @@ export default function PeopleScreen() {
           <Empty title="No one this month" body='When you add a payment, fill in "Paid to" with a name, like Mom or Kabir.' />
         )}
       </Card>
+      </Section>
     </Screen>
   );
 }

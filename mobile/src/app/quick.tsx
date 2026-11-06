@@ -9,13 +9,14 @@ import type { TxType } from "@/core/model";
 import { pressKey, quickCategories } from "@/core/quick";
 import { addEntry } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
-import { Button, Chip, Segmented, T } from "@/ui/components";
+import { Button, Segmented, T } from "@/ui/components";
+import { CategoryTile } from "@/ui/CategoryVisual";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 import { closeModal } from "@/features/navigation";
 
-/** Categories shown before "More". */
-const QUICK_COUNT = 6;
+/** Categories shown before "All": two rows of four, with All as the eighth. */
+const QUICK_COUNT = 7;
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "back"] as const;
 
@@ -24,7 +25,7 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "back"] as 
  * home-screen widget opens this (ledgerline://quick?category=food).
  */
 export default function QuickAddScreen() {
-  const { c, categoryColor } = useTheme();
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ category?: string }>();
   const { db, entries, categories, refresh } = useLedger();
@@ -43,14 +44,14 @@ export default function QuickAddScreen() {
   const [picked, setPicked] = useState<string | null>(null);
   const category = picked && order.includes(picked) ? picked : (order[0] ?? "other");
   const [showAll, setShowAll] = useState(false);
-  // The chosen category always stays visible, even when picked from "More".
+  // The chosen category always stays in view, even when picked from All.
   const top = order.slice(0, QUICK_COUNT);
   const visible = top.includes(category) ? top : [...top.slice(0, QUICK_COUNT - 1), category];
 
   const value = parseRupeeAmount(amount);
   const label = categoryLabel(category, categories);
   const digits = amount.replace(".", "").length;
-  const amountSize = digits >= 9 ? 36 : digits >= 7 ? 44 : 56;
+  const amountSize = digits >= 9 ? 34 : digits >= 7 ? 42 : 52;
 
   const save = async () => {
     if (!value) return;
@@ -129,13 +130,14 @@ export default function QuickAddScreen() {
         </Text>
       </View>
 
+      {/* Seven most-used categories and "All"; All swaps the keypad for every category. */}
       <View style={s.categories} accessibilityRole="radiogroup" accessibilityLabel="Category">
         {(showAll ? order : visible).map((slug) => (
-          <Chip
+          <CategoryTile
             key={slug}
+            slug={slug}
             label={categoryLabel(slug, categories)}
-            color={categoryColor(slug)}
-            fillWithColor
+            width="25%"
             selected={slug === category}
             onPress={() => {
               setPicked(slug);
@@ -143,9 +145,18 @@ export default function QuickAddScreen() {
             }}
           />
         ))}
-        {order.length > QUICK_COUNT ? (
-          <Chip label={showAll ? "Fewer" : "More"} selected={false} onPress={() => setShowAll((open) => !open)} />
-        ) : null}
+        {showAll ? null : (
+          <Pressable
+            onPress={() => setShowAll(true)}
+            accessibilityRole="button"
+            accessibilityLabel="All categories"
+            style={({ pressed }) => [s.allTile, { opacity: pressed ? 0.6 : 1 }]}>
+            <View style={[s.allWell, { borderColor: c.borderStrong }]}>
+              <Icon name="overview" size={20} color={c.muted} />
+            </View>
+            <Text style={[s.allLabel, { color: c.muted }]}>All</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={{ paddingHorizontal: space[4] }}>
@@ -159,7 +170,7 @@ export default function QuickAddScreen() {
           onFocus={() => setNoteFocused(true)}
           onBlur={() => setNoteFocused(false)}
           onSubmitEditing={() => Keyboard.dismiss()}
-          style={[s.note, { color: c.foreground, backgroundColor: c.surface, borderColor: c.borderStrong }]}
+          style={[s.note, { color: c.foreground, backgroundColor: c.bgMuted }]}
         />
       </View>
 
@@ -173,7 +184,7 @@ export default function QuickAddScreen() {
               accessibilityRole="keyboardkey"
               accessibilityLabel={key === "back" ? "Delete" : key === "." ? "Decimal point" : key}
               accessibilityHint={key === "back" ? "Long press to clear" : undefined}
-              style={({ pressed }) => [s.key, { backgroundColor: pressed ? c.primarySoft : c.surface, borderColor: c.border }]}>
+              style={({ pressed }) => [s.key, { backgroundColor: pressed ? c.bgMuted : "transparent" }]}>
               {key === "back" ? (
                 <Icon name="back" size={22} color={c.foreground} />
               ) : (
@@ -191,7 +202,7 @@ export default function QuickAddScreen() {
           </T>
         ) : null}
         <Button
-          label={value ? `Save ${formatInr(value)} · ${label}` : "Enter an amount"}
+          label={value ? `Save ${formatInr(value)}` : "Enter an amount"}
           onPress={save}
           disabled={!value}
           busy={saving}
@@ -203,27 +214,22 @@ export default function QuickAddScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, gap: space[3], paddingTop: space[2] },
+  root: { flex: 1, gap: space[2], paddingTop: space[2] },
   top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space[3], paddingTop: space[2] },
   iconButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   title: { fontFamily: fonts.display, fontSize: 18 },
   more: { minHeight: 44, justifyContent: "center", paddingHorizontal: space[2] },
   moreText: { fontFamily: fonts.sansSemi, fontSize: 15 },
-  amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], paddingHorizontal: space[4], minHeight: 64 },
+  amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], paddingHorizontal: space[4], minHeight: 60, marginVertical: space[1] },
   rupee: { fontFamily: fonts.displayBold, fontSize: 32 },
   amount: { fontFamily: fonts.displayBold, letterSpacing: -1, flexShrink: 1 },
-  categories: { flexDirection: "row", flexWrap: "wrap", gap: space[2], paddingHorizontal: space[4] },
-  note: { minHeight: 48, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: 14, fontFamily: fonts.sans, fontSize: 16 },
-  keypad: { flexDirection: "row", flexWrap: "wrap", gap: space[2], paddingHorizontal: space[4] },
-  key: {
-    width: "31.5%",
-    flexGrow: 1,
-    height: 52,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  keyText: { fontFamily: fonts.sansSemi, fontSize: 24 },
-  save: { minHeight: 56, borderRadius: radius.lg },
+  categories: { flexDirection: "row", flexWrap: "wrap", rowGap: space[1], paddingHorizontal: space[3] },
+  allTile: { width: "25%", alignItems: "center", gap: 6, paddingVertical: 4 },
+  allWell: { width: 52, height: 52, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
+  allLabel: { fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 15 },
+  note: { minHeight: 44, borderRadius: radius.md, paddingHorizontal: 14, fontFamily: fonts.sans, fontSize: 16 },
+  keypad: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: space[4], rowGap: 2 },
+  key: { width: "33.333%", height: 50, borderRadius: radius.lg, alignItems: "center", justifyContent: "center" },
+  keyText: { fontFamily: fonts.sansMedium, fontSize: 26 },
+  save: { minHeight: 52, borderRadius: radius.lg },
 });

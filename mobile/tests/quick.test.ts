@@ -56,11 +56,11 @@ describe("quick add categories", () => {
   });
 
   it("gives the widget four shortcuts from different groups", () => {
-    const entries = [entry("2026-11-01", "dinner"), entry("2026-11-01", "dinner"), entry("2026-11-02", "sports")];
+    const entries = [entry("2026-11-01", "dinner"), entry("2026-11-01", "dinner"), entry("2026-11-02", "cafes")];
     const shortcuts = widgetShortcuts(entries, BUILT_IN_CATEGORIES, today);
     expect(shortcuts).toHaveLength(4);
     expect(shortcuts[0]).toBe("dinner");
-    expect(shortcuts).not.toContain("sports"); // same group as dinner
+    expect(shortcuts).not.toContain("cafes"); // same group as dinner
   });
 });
 

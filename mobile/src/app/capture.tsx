@@ -19,7 +19,7 @@ import { fonts, radius, space, useTheme } from "@/ui/theme";
  * - ledgerline://capture : paste a message yourself.
  */
 export default function CaptureScreen() {
-  const { c, categoryColor } = useTheme();
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ text?: string; sender?: string }>();
   const { db, entries, rules, categories, refresh } = useLedger();
@@ -93,7 +93,6 @@ export default function CaptureScreen() {
               <View style={{ flexDirection: "row", gap: space[2], flexWrap: "wrap" }}>
                 <Pill tone="primary">{categoryLabel(entry.categorySlug, categories)}</Pill>
                 {outcome.parsed.bank ? <Pill>{outcome.parsed.bank}</Pill> : null}
-                <View style={[s.dot, { backgroundColor: categoryColor(entry.categorySlug) }]} />
               </View>
             ) : null}
             {entry ? (
