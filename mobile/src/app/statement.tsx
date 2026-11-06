@@ -37,6 +37,9 @@ export default function StatementScreen() {
 
   const analyse = async (name: string, base64: string, pdfPassword: string) => {
     setError(null);
+    // The password is used for this one attempt only: the field is emptied
+    // whether it opens the file or not, so it never lingers on screen.
+    setPassword("");
     setStep({ kind: "reading", name });
     try {
       const pages = await read(base64, pdfPassword);
@@ -58,7 +61,6 @@ export default function StatementScreen() {
       await refresh();
       setSelected(new Set(check.missing.map((line) => line.key)));
       setCategoryFor({});
-      setPassword("");
       setStep({ kind: "review", check });
     } catch (caught) {
       if (caught instanceof PdfPasswordError) {
@@ -72,6 +74,7 @@ export default function StatementScreen() {
 
   const choose = async () => {
     setError(null);
+    setPassword("");
     const result = await DocumentPicker.getDocumentAsync({ type: "application/pdf", copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
@@ -209,13 +212,20 @@ export default function StatementScreen() {
               onChangeText={setPassword}
               secureTextEntry
               autoFocus
+              autoComplete="off"
+              textContentType="none"
+              importantForAutofill="no"
               autoCapitalize="none"
               autoCorrect={false}
               error={step.wrong ? "That password didn't open it. Check it and try again." : null}
               onSubmitEditing={() => password && analyse(step.name, step.base64, password)}
             />
             <Button label="Open statement" disabled={!password} onPress={() => analyse(step.name, step.base64, password)} />
-            <Button label="Choose a different file" variant="ghost" onPress={() => setStep({ kind: "start" })} />
+            <Button label="Choose a different file" variant="ghost" onPress={() => {
+                setPassword("");
+                setStep({ kind: "start" });
+              }}
+            />
           </Card>
         ) : null}
 
