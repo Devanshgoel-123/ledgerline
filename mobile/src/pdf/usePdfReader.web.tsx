@@ -8,8 +8,10 @@ export { PdfPasswordError };
 type Pending = { resolve: (pages: PdfTextItem[][]) => void; reject: (error: Error) => void };
 
 // The page talks to a React Native WebView; in a browser this shim forwards
-// its messages to the parent window instead. Same page, same pdf.js.
-const SHIM = "<script>window.ReactNativeWebView={postMessage:function(m){parent.postMessage({ledgerlineReader:m},'*')}}</script>";
+// its messages to the parent window instead. Same page, same pdf.js. A srcdoc
+// frame shares this page's origin, so messages in both directions are
+// addressed to that origin only, never "*" (they carry the PDF and password).
+const SHIM = "<script>window.ReactNativeWebView={postMessage:function(m){parent.postMessage({ledgerlineReader:m},self.origin)}}</script>";
 
 /** The web build's reader: the same page as the phone, in a hidden iframe. */
 export function usePdfReader() {
@@ -27,7 +29,7 @@ export function usePdfReader() {
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== frame.current?.contentWindow || typeof event.data?.ledgerlineReader !== "string") return;
+      if (event.origin !== window.location.origin || event.source !== frame.current?.contentWindow || typeof event.data?.ledgerlineReader !== "string") return;
       const message = JSON.parse(event.data.ledgerlineReader) as {
         type?: string;
         id?: string;
@@ -57,7 +59,7 @@ export function usePdfReader() {
     const id = Math.random().toString(36).slice(2);
     return new Promise((resolve, reject) => {
       pending.current.set(id, { resolve, reject });
-      frame.current?.contentWindow?.postMessage(JSON.stringify({ type: "read", id, base64, password }), "*");
+      frame.current?.contentWindow?.postMessage(JSON.stringify({ type: "read", id, base64, password }), window.location.origin);
     });
   };
 
