@@ -1,4 +1,5 @@
 import { useColorScheme } from "react-native";
+import { TAXONOMY } from "@/core/taxonomy";
 
 // Ledgerline's phone theme, "calm ledger".
 //
@@ -99,39 +100,44 @@ const dark: Palette = {
   shadow: "rgba(0, 0, 0, 0.5)",
 };
 
-// Twelve roots, twelve muted hues: distinct enough to tell apart on a chart,
-// quiet enough to sit together. Light fills carry white initials at 5:1 or
-// better; dark fills carry #0b1219 initials at 8.5:1 or better. Sub-categories
-// take a shade of their parent's hue.
-const categoryLight: Record<string, string> = {
-  food: "#a9552f",
-  shopping: "#a3456b",
-  travel: "#2e6590", petrol: "#285a7e", "scooty-rental": "#2a6e7c", stays: "#36508a", rides: "#2a6e7c",
-  healthcare: "#ab3f3b", pharmacy: "#99394f",
-  family: "#874a8c", "from-home": "#77427f",
-  outing: "#5d4f9c", dinner: "#53468a", "fun-activity": "#684a96", sports: "#4a4884",
-  investments: "#22775a", "self-transfer": "#5a6574",
-  vices: "#8c5d18", booze: "#7a5016", cigarettes: "#6a4a20",
-  banks: "#55657a",
-  household: "#3a61a3", rent: "#2f5596", brokerage: "#36508a", grocery: "#52752b", "passed-on": "#636e7b",
-  personal: "#2a716c", salon: "#9c4569", salary: "#2d7543", "random-expense": "#6a625a",
-  other: "#646f7d",
+// One muted hue per top-level category; sub-categories wear their parent's,
+// so a list never turns into confetti. Light hues pass 4.5:1 as icon/text on
+// their own 12% tint and as white text on a solid fill; dark hues do the same
+// on the dark surface.
+const ROOT_HUES: Record<string, [light: string, dark: string]> = {
+  food: ["#b0522a", "#eba27c"],
+  grocery: ["#4b7428", "#a9d17f"],
+  shopping: ["#a3456b", "#e8a0c0"],
+  transport: ["#22707e", "#86c9d2"],
+  travel: ["#2e6590", "#94bce0"],
+  bills: ["#8a6510", "#e3c272"],
+  household: ["#3a5ea3", "#9db8e6"],
+  subscriptions: ["#7a4ea3", "#c9abea"],
+  outing: ["#5d4f9c", "#b8adea"],
+  healthcare: ["#b03b3b", "#f0a099"],
+  personal: ["#287069", "#84cbc3"],
+  education: ["#1d6a86", "#84c6de"],
+  family: ["#874a8c", "#d6a9da"],
+  gifts: ["#ad3f6c", "#efa3c3"],
+  vices: ["#8c5d18", "#e2c07f"],
+  emi: ["#6d5a28", "#d6c38e"],
+  insurance: ["#36694f", "#97d1b5"],
+  fees: ["#59616e", "#b0b8c3"],
+  investments: ["#21734f", "#86d0ab"],
+  transfers: ["#4f6178", "#aab8c9"],
+  income: ["#1b7a4e", "#6fd09f"],
+  other: ["#5f6a78", "#aab3be"],
 };
 
-const categoryDark: Record<string, string> = {
-  food: "#e3a17d",
-  shopping: "#e09cbb",
-  travel: "#8fb8dc", petrol: "#a8c7e3", "scooty-rental": "#86c4cd", stays: "#a7b6e4", rides: "#86c4cd",
-  healthcare: "#ea9c95", pharmacy: "#e3a1b2",
-  family: "#d1a4d5", "from-home": "#dbb6de",
-  outing: "#b4a9e4", dinner: "#c4bcea", "fun-activity": "#c3aae4", sports: "#aaaddd",
-  investments: "#82cda9", "self-transfer": "#a8b1bc",
-  vices: "#e0be7d", booze: "#e9cc92", cigarettes: "#e4d2aa",
-  banks: "#a9b6c5",
-  household: "#95b4e4", rent: "#aac2ea", brokerage: "#b1bde4", grocery: "#b6d38d", "passed-on": "#c2c9d1",
-  personal: "#84c9c2", salon: "#e6a9c4", salary: "#91d2a1", "random-expense": "#d0c9c1",
-  other: "#a8b1bc",
-};
+const categoryLight: Record<string, string> = {};
+const categoryDark: Record<string, string> = {};
+for (const root of TAXONOMY) {
+  const [light, dark] = ROOT_HUES[root.slug] ?? ROOT_HUES.other!;
+  for (const slug of [root.slug, ...(root.children ?? []).map((child) => child.slug)]) {
+    categoryLight[slug] = light;
+    categoryDark[slug] = dark;
+  }
+}
 
 /** Colours for categories you add, picked by name so each keeps its colour. */
 const EXTRA_LIGHT = ["#2e5b8c", "#1f7a6e", "#8b5a2b", "#7b4e8f", "#a14d5d", "#4f6a2e"];

@@ -49,34 +49,59 @@ export function Screen({
   );
 }
 
-/** Small uppercase label above a title, as on the web ("OVERVIEW"). */
+/** A label above a field or group, the same as a Field's own label. */
 export function Eyebrow({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   const { c } = useTheme();
-  return <Text style={[styles.eyebrow, { color: c.muted }, style]}>{children}</Text>;
+  return <Text style={[styles.label, { color: c.foreground }, style]}>{children}</Text>;
 }
 
-export function PageHeader({
-  eyebrow,
-  title,
-  sub,
-  right,
-}: {
-  eyebrow: string;
-  title: string;
-  sub?: string;
-  right?: ReactNode;
-}) {
+/** A tab's title, with an optional line under it and a control on the right. */
+export function PageHeader({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
   const { c } = useTheme();
   return (
     <View style={styles.pageHeader}>
       <View style={{ flex: 1, gap: 2 }}>
-        <Eyebrow>{eyebrow}</Eyebrow>
         <Text style={[styles.pageTitle, { color: c.foreground }]} accessibilityRole="header">
           {title}
         </Text>
         {sub ? <Text style={[styles.body, { color: c.muted }]}>{sub}</Text> : null}
       </View>
       {right}
+    </View>
+  );
+}
+
+/** A titled group: the label sits on the page, the content in a card below it. */
+export function Section({
+  title,
+  action,
+  onAction,
+  right,
+  children,
+}: {
+  title: string;
+  action?: string;
+  onAction?: () => void;
+  /** A control beside the title, such as a month switcher. */
+  right?: ReactNode;
+  children: ReactNode;
+}) {
+  const { c } = useTheme();
+  return (
+    <View style={{ gap: space[2] }}>
+      <View style={styles.sectionHead}>
+        <Text style={[styles.sectionTitle, { color: c.foreground }]} accessibilityRole="header">
+          {title}
+        </Text>
+        {action && onAction ? (
+          <Pressable onPress={onAction} accessibilityRole="button" hitSlop={10} style={{ minHeight: 32, justifyContent: "center" }}>
+            <Text style={[styles.link, { color: c.primary }]}>{action}</Text>
+          </Pressable>
+        ) : (
+          right
+        )}
+      </View>
+      {children}
     </View>
   );
 }
@@ -418,9 +443,11 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
 }
 
 export const styles = StyleSheet.create({
-  eyebrow: { fontFamily: fonts.sansSemi, fontSize: 11, letterSpacing: 1.1, textTransform: "uppercase" },
   pageHeader: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
-  pageTitle: { fontFamily: fonts.displayBold, fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
+  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
+  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, minHeight: 32 },
+  sectionTitle: { fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
+  link: { fontFamily: fonts.sansMedium, fontSize: 15 },
   card: {
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,

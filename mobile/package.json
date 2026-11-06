@@ -58,6 +58,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
     "test": "vitest run",
     "catalog": "node scripts/export-catalog.mjs",
+    "brand-logos": "node scripts/fetch-brand-logos.mjs",
     "pdf-reader": "node scripts/build-pdf-reader.mjs",
     "postinstall": "node scripts/build-pdf-reader.mjs"
   },

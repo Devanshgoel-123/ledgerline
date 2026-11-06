@@ -21,7 +21,7 @@ void SplashScreen.preventAutoHideAsync();
 configureNotifications();
 
 export default function RootLayout() {
-  const { c, dark } = useTheme();
+  const { c } = useTheme();
   const [loaded, error] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -41,7 +41,7 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName="ledgerline.db" onInit={migrate as never}>
       <LedgerProvider>
-        <StatusBar style={dark ? "light" : "dark"} />
+        <StatusBar style="auto" />
         <Stack
           screenOptions={{
             headerShown: false,

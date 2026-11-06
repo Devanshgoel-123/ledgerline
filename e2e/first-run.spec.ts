@@ -66,7 +66,9 @@ test("when the API stops answering, the message says how to start it", async ({ 
 
   await context.setOffline(true);
   await page.getByRole("button", { name: "Remove sample data" }).click();
-  await expect(page.getByText(/Make sure Ledgerline is running/)).toBeVisible();
+  // The click's own error, in its status line. A background refresh can fail
+  // offline too and repeat the advice in the page header, so search the status only.
+  await expect(page.getByRole("status").getByText(/Make sure Ledgerline is running/)).toBeVisible();
   await context.setOffline(false);
 });
 

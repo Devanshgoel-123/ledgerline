@@ -5,6 +5,7 @@ import { categoryLabel, categoryTree, slugForLabel } from "@/core/catalog";
 import { addCustomCategory, deleteCustomCategory } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, CardTitle, Chip, Divider, Empty, Field, Row, T } from "@/ui/components";
+import { CategoryIcon } from "@/ui/CategoryVisual";
 import { Icon } from "@/ui/Icon";
 import { fonts, space, useTheme } from "@/ui/theme";
 import { closeModal } from "@/features/navigation";
@@ -89,7 +90,7 @@ export default function CategoriesScreen() {
               <View key={category.slug}>
                 {index ? <Divider /> : null}
                 <Row
-                  leading={<View style={[s.dot, { backgroundColor: categoryColor(category.slug) }]} />}
+                  leading={<CategoryIcon slug={category.slug} size={36} />}
                   title={category.label}
                   sub={category.parent ? `Under ${categoryLabel(category.parent, categories)}` : "On its own"}
                   right={<Button label="Delete" variant="ghost" onPress={() => remove(category.slug)} />}

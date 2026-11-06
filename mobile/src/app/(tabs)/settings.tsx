@@ -85,7 +85,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <PageHeader eyebrow="Settings" title="Limits and your data" sub="Everything here stays on this phone." />
+      <PageHeader title="Settings" />
 
       <Card>
         <CardTitle

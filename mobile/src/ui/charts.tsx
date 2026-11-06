@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatDayLabel, formatInr, formatInrCompact, formatMonthShort } from "@/core/format";
 import { monthRange } from "@/core/dates";
-import { fonts, space, useTheme } from "./theme";
+import { CategoryIcon } from "./CategoryVisual";
+import { fonts, space, tabular, useTheme } from "./theme";
 
 const CHART_HEIGHT = 140;
 
@@ -132,27 +133,32 @@ export function MonthBars({ months }: { months: { month: string; total: number }
 
 /** One category line: name, a track showing its share, amount and percent. */
 export function CategoryBar({
+  slug,
   label,
   total,
   share,
+  percent,
   color,
 }: {
+  slug: string;
   label: string;
   total: number;
   /** 0 to 1, of the biggest category. */
   share: number;
+  /** Of all spending, shown next to the amount. */
+  percent?: number;
   color: string;
 }) {
   const { c } = useTheme();
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space[3] }}>
+      <CategoryIcon slug={slug} size={36} />
+      <View style={{ flex: 1, gap: 6 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: space[2] }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-          <Text style={[s.label, { color: c.foreground }]} numberOfLines={1}>
-            {label}
-          </Text>
-        </View>
+        <Text style={[s.label, { color: c.foreground, flex: 1 }]} numberOfLines={1}>
+          {label}
+        </Text>
+        {percent != null ? <Text style={[s.percent, { color: c.muted }]}>{`${Math.round(percent * 100)}%`}</Text> : null}
         <Text style={[s.amount, { color: c.foreground }]}>{formatInr(total)}</Text>
       </View>
       <View style={[s.track, { backgroundColor: c.bgMuted }]}>
@@ -164,6 +170,7 @@ export function CategoryBar({
             backgroundColor: color,
           }}
         />
+      </View>
       </View>
     </View>
   );
@@ -193,6 +200,7 @@ const s = StyleSheet.create({
   tick: { fontFamily: fonts.mono, fontSize: 11 },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: space[3] },
   label: { fontFamily: fonts.sansMedium, fontSize: 15 },
-  amount: { fontFamily: fonts.monoMedium, fontSize: 15 },
-  track: { height: 6, borderRadius: 3, overflow: "hidden" },
+  amount: { fontFamily: fonts.sansSemi, fontSize: 15, ...tabular },
+  percent: { fontFamily: fonts.sans, fontSize: 13, ...tabular },
+  track: { height: 4, borderRadius: 2, overflow: "hidden" },
 });

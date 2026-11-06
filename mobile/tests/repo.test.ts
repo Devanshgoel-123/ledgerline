@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { entriesCsv } from "@/core/csv";
-import { BUILT_IN_CATEGORIES, categoryTree, slugForLabel } from "@/core/catalog";
+import { BUILT_IN_CATEGORIES, categoryTree, PROVIDERS, slugForLabel } from "@/core/catalog";
+import { CATEGORY_SLUGS } from "@shared/enums/category.js";
 import { classify, ruleFor } from "@/core/classify";
 import { evenShares, friendBalances } from "@/core/people";
 import { sampleEntries } from "@/core/sample";
@@ -114,12 +115,17 @@ describe("friends and split bills", () => {
 describe("categories and rules", () => {
   it("shows built-in categories as a tree", () => {
     const tree = categoryTree(BUILT_IN_CATEGORIES);
-    const travel = tree.find((node) => node.parent.slug === "travel");
-    expect(travel?.children.map((child) => child.slug)).toEqual(
-      expect.arrayContaining(["rides", "stays", "petrol", "scooty-rental"]),
+    const transport = tree.find((node) => node.parent.slug === "transport");
+    expect(transport?.children.map((child) => child.slug)).toEqual(
+      expect.arrayContaining(["rides", "petrol", "scooty-rental"]),
     );
     expect(tree.some((node) => node.parent.slug === "rides")).toBe(false);
-    expect(BUILT_IN_CATEGORIES).toHaveLength(31);
+    // Every category the backend knows is still here, so saved entries and the parser keep working.
+    const slugs = new Set(BUILT_IN_CATEGORIES.map((category) => category.slug));
+    expect(CATEGORY_SLUGS.filter((slug) => !slugs.has(slug))).toEqual([]);
+    expect(slugs.size).toBe(BUILT_IN_CATEGORIES.length);
+    // Every brand points at a category that exists.
+    expect(PROVIDERS.filter((provider) => provider.categorySlug && !slugs.has(provider.categorySlug))).toEqual([]);
   });
 
   it("moves entries to Other when you delete a category you made", async () => {
@@ -198,6 +204,6 @@ describe("your data", () => {
     expect(header).toMatch(/^Date,Type,Amount,Your share/);
     expect(row).toContain("1800.00,600.00");
     expect(row).toContain(`"'=HYPERLINK(1)"`);
-    expect(row).toContain("Dinner");
+    expect(row).toContain("Restaurants");
   });
 });

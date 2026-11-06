@@ -2,6 +2,13 @@ import { PROVIDERS, rootCategory, toCategoryRows, type Category } from "./catalo
 import { monthRange, shiftMonth } from "./dates";
 import { toTransactionRow, type Entry } from "./model";
 import { buildAnalyticsFromRows, type ParseResult } from "./shared";
+import { NOT_SPENDING } from "./taxonomy";
+
+/** Cash withdrawals and other transfers are moves of your own money, like a self-transfer. */
+function forTotals(entry: Entry) {
+  const row = toTransactionRow(entry);
+  return row.categorySlug && NOT_SPENDING.has(row.categorySlug) ? { ...row, categorySlug: "self-transfer" } : row;
+}
 
 const TREND_MONTHS = 6;
 
@@ -22,10 +29,10 @@ export function monthAnalytics(input: {
   const trendFrom = monthRange(shiftMonth(input.month, -TREND_MONTHS + 1)).from;
   const categoryRows = toCategoryRows(input.categories);
   const wide = input.entries.filter((entry) => entry.date >= trendFrom && entry.date <= to);
-  const rows = wide.filter((entry) => entry.date >= from).map(toTransactionRow);
+  const rows = wide.filter((entry) => entry.date >= from).map(forTotals);
   const options = { dailySpendLimit: input.dailyLimit };
   const result = buildAnalyticsFromRows(rows, PROVIDERS, input.people, categoryRows, options);
-  const trend = buildAnalyticsFromRows(wide.map(toTransactionRow), PROVIDERS, input.people, categoryRows, options);
+  const trend = buildAnalyticsFromRows(wide.map(forTotals), PROVIDERS, input.people, categoryRows, options);
   const byMonth = new Map((trend.monthlySpend ?? []).map((row) => [row.month, row.total]));
   result.monthlySpend = Array.from({ length: TREND_MONTHS }, (_, i) => {
     const month = shiftMonth(input.month, i - TREND_MONTHS + 1);

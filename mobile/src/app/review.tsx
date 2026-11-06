@@ -7,6 +7,7 @@ import { dismissCaptured, markReviewed } from "@/db/repo";
 import { closeModal } from "@/features/navigation";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, CardTitle, Divider, Empty, T } from "@/ui/components";
+import { MerchantAvatar } from "@/ui/CategoryVisual";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
@@ -16,7 +17,7 @@ import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
  * remove a message that wasn't really your spending.
  */
 export default function ReviewScreen() {
-  const { c, categoryColor, onCategory } = useTheme();
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const { db, entries, categories, refresh } = useLedger();
   const pending = entries.filter((entry) => entry.needsReview);
@@ -65,9 +66,7 @@ export default function ReviewScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`${entry.description}, ${formatInr(entry.amount)}, ${categoryLabel(entry.categorySlug, categories)}. Edit`}
                   style={s.row}>
-                  <View style={[s.mark, { backgroundColor: categoryColor(entry.categorySlug) }]}>
-                    <Text style={[s.markText, { color: onCategory }]}>{entry.description.slice(0, 1).toUpperCase()}</Text>
-                  </View>
+                  <MerchantAvatar providerId={entry.providerId} merchant={entry.merchant} categorySlug={entry.categorySlug} />
                   <View style={{ flex: 1, gap: 2 }}>
                     <T variant="strong" numberOfLines={1}>
                       {entry.description}

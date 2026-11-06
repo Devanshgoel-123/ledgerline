@@ -23,8 +23,9 @@ phone. No account, no server, no bank login.
   app yet; tick the ones to add. Payments you already added are matched by
   amount and date (a day either way). Cash entries are never matched, because
   cash isn't in a statement.
-- **See where it went.** Overview, Lifestyle (categories, trend, apps and
-  shops), Transactions, People, the same as the web app.
+- **See where it went.** Overview, Insights (categories, daily spend, trend,
+  top shops), Transactions, People. Payments show the shop's logo when
+  Ledgerline knows it, and the category's icon otherwise.
 - **Split bills.** Split an expense with friends; only your share counts as
   your spending, and People shows who owes you until they pay you back.
 - **Your data.** Export CSV, back up to a file and restore it on another phone,
@@ -48,7 +49,8 @@ path in `tsconfig.json` point at it.
 | Bank SMS capture | `src/core/sms.ts` (parser), `src/core/capture.ts` (dedupe, categorise, save), `src/capture/inbox.ts` (App Group inbox), `plugins/withBankMessageIntent.js` + `plugins/native/LogBankMessageIntent.swift` (the iOS action) |
 | Widget | `src/widget`: the `expo-widgets` layout (`QuickAddWidget.tsx`) and `sync.ts`, which pushes totals after every load and write |
 | Theme | `src/ui/theme.ts`; the tokens, contrast ratios and screen specs are in `docs/MOBILE_DESIGN_HANDOFF.md` |
-| Built-in categories and shops | `src/core/catalog.generated.json`, made from the backend migrations by `npm run catalog` |
+| Built-in categories and shops | `src/core/taxonomy.ts` (the phone's category tree: every backend slug, plus bills, subscriptions, education, EMIs, insurance, income), `src/core/brands.ts` (about 270 shops, apps and billers, with their categories), on top of `src/core/catalog.generated.json`, made from the backend migrations by `npm run catalog` |
+| Logos and category icons | `assets/brands/` and `src/ui/brandLogos.generated.ts`, bundled with the app by `npm run brand-logos` (never fetched on the phone); SF Symbols / Material icons per category in `src/ui/CategoryVisual.tsx` |
 
 ## Run it on your phone (development)
 

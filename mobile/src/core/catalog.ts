@@ -1,5 +1,7 @@
+import { BRAND_OVERRIDES, EXTRA_BRANDS } from "./brands";
 import catalog from "./catalog.generated.json";
 import type { CategoryRow, ProviderRow } from "./shared";
+import { TAXONOMY, type CategoryKind } from "./taxonomy";
 
 /** A category as the app shows it. Built-in ones come from the backend migrations. */
 export interface Category {
@@ -12,24 +14,64 @@ export interface Category {
   custom: boolean;
 }
 
-export const BUILT_IN_CATEGORIES: Category[] = catalog.categories.map((category) => ({
-  ...category,
-  custom: false,
-}));
+export const BUILT_IN_CATEGORIES: Category[] = TAXONOMY.flatMap((root, index) => [
+  { slug: root.slug, label: root.label, blurb: root.blurb, parent: null, sortOrder: (index + 1) * 100, custom: false },
+  ...(root.children ?? []).map((child, childIndex) => ({
+    slug: child.slug,
+    label: child.label,
+    blurb: child.blurb,
+    parent: root.slug,
+    sortOrder: (index + 1) * 100 + childIndex + 1,
+    custom: false,
+  })),
+]);
+
+const KIND_OF_ROOT = new Map(TAXONOMY.map((root) => [root.slug, root.kind]));
+
+/** Money out, money in, or a move between your own accounts. Custom categories take their parent's. */
+export function categoryKind(slug: string | null | undefined, categories: Category[]): CategoryKind {
+  if (!slug) return "expense";
+  return KIND_OF_ROOT.get(rootCategory(slug, categories)) ?? "expense";
+}
+
+/** Whether a category fits a debit or a credit. Transfers fit both. */
+export function fitsType(slug: string, type: "debit" | "credit", categories: Category[]): boolean {
+  const kind = categoryKind(slug, categories);
+  if (kind === "transfer" || slug === "other") return true;
+  return type === "credit" ? kind === "income" || rootCategory(slug, categories) === "family" : kind !== "income";
+}
 
 /** Shops and apps Ledgerline recognises in a statement narration or UPI id. */
-export const PROVIDERS: ProviderRow[] = catalog.providers.map((provider) => ({
-  id: provider.id,
-  userId: null,
-  canonicalName: provider.canonicalName,
-  aliases: provider.aliases,
-  upiHandles: provider.upiHandles,
-  senderDomains: [],
-  websiteDomain: null,
-  logoUrl: null,
-  categorySlug: provider.categorySlug,
-  isGlobal: true,
-}));
+export const PROVIDERS: ProviderRow[] = [
+  ...catalog.providers.map((provider) => {
+    const override = BRAND_OVERRIDES[provider.canonicalName];
+    return {
+      id: provider.id,
+      userId: null,
+      canonicalName: provider.canonicalName,
+      aliases: [...provider.aliases, ...(override?.aliases ?? [])],
+      upiHandles: [...provider.upiHandles, ...(override?.upi ?? [])],
+      senderDomains: [],
+      websiteDomain: override?.domain ?? null,
+      // Logos are bundled with the app (src/ui/brandLogos.generated.ts), never fetched.
+      logoUrl: null,
+      categorySlug: override?.category ?? provider.categorySlug,
+      isGlobal: true,
+    };
+  }),
+  ...EXTRA_BRANDS.map((brand) => ({
+    id: `catalog:${brand.name.toLowerCase()}`,
+    userId: null,
+    canonicalName: brand.name,
+    aliases: brand.aliases ?? [],
+    upiHandles: brand.upi ?? [],
+    senderDomains: [],
+    websiteDomain: brand.domain,
+    logoUrl: null,
+    categorySlug: brand.category,
+    isGlobal: true,
+  })),
+];
 
 /** Categories in the shape the shared backend code expects. */
 export function toCategoryRows(categories: Category[]): CategoryRow[] {

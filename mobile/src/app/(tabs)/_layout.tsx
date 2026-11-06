@@ -22,7 +22,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="lifestyle">
         <NativeTabs.Trigger.Icon sf={iconFor("lifestyle").ios} md={iconFor("lifestyle").android} />
-        <NativeTabs.Trigger.Label>Lifestyle</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Insights</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="transactions">
         <NativeTabs.Trigger.Icon sf={iconFor("list").ios} md={iconFor("list").android} />

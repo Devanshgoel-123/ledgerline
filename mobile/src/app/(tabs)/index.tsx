@@ -8,8 +8,8 @@ import { currentMonth, daysSince, today } from "@/core/dates";
 import { formatInr, formatMonthTitle, formatShortDate } from "@/core/format";
 import { EntryRow, MonthSwitcher, SampleNotice, useMonthAnalytics } from "@/features/common";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, CardTitle, Divider, Empty, Eyebrow, Notice, Screen, T } from "@/ui/components";
-import { CategoryBar, DailyBars } from "@/ui/charts";
+import { Button, Card, Empty, Screen, Section, T } from "@/ui/components";
+import { CategoryBar } from "@/ui/charts";
 import { Icon, type IconName } from "@/ui/Icon";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
@@ -31,7 +31,7 @@ export default function OverviewScreen() {
   const isThisMonth = month === currentMonth();
   const todaySpent = isThisMonth ? (result.daily.find((day) => day.date === today())?.amount ?? 0) : 0;
   const monthEntries = entries.filter((entry) => entry.date.startsWith(month));
-  const groups = groupCategorySpend(result.categorySpend ?? [], categories).slice(0, 4);
+  const groups = groupCategorySpend(result.categorySpend ?? [], categories).slice(0, 5);
   const biggest = Math.max(...groups.map((group) => group.total), 1);
 
   const daysSinceCheck = lastCheck ? daysSince(lastCheck.checkedAt) : null;
@@ -41,59 +41,45 @@ export default function OverviewScreen() {
 
   return (
     <Screen>
-      <View style={{ gap: 2 }}>
-        <Eyebrow>{greeting()}</Eyebrow>
-        <Text style={[s.pageTitle, { color: c.foreground }]} accessibilityRole="header">
-          Your money
-        </Text>
+      <View style={s.header}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[s.greeting, { color: c.muted }]}>{greeting()}</Text>
+          <Text style={[s.pageTitle, { color: c.foreground }]} accessibilityRole="header">
+            Overview
+          </Text>
+        </View>
+        <MonthSwitcher />
       </View>
-      <MonthSwitcher />
       <SampleNotice />
 
       <Hero
         total={summary.totalSpent}
         today={todaySpent}
         avg={summary.avgDailySpend}
+        received={summary.totalReceived}
         limit={isThisMonth ? dailyLimit : null}
         showToday={isThisMonth}
         month={month}
       />
 
       <View style={s.actions}>
-        <ActionTile
-          icon="add"
-          title="Add expense"
-          sub="Takes two seconds"
-          primary
-          onPress={() => router.push("/quick")}
-        />
-        <ActionTile
-          icon="statement"
-          title="Upload statement"
-          sub="Find what you missed"
-          onPress={() => router.push("/statement")}
-        />
+        <Button label="Add expense" icon="add" onPress={() => router.push("/quick")} style={{ flex: 1 }} />
+        <Button label="Statement" icon="statement" variant="secondary" onPress={() => router.push("/statement")} style={{ flex: 1 }} />
       </View>
 
       {toReview ? (
-        <Notice
-          tone="info"
-          title={`${toReview} new ${toReview === 1 ? "payment" : "payments"} from your bank messages.`}
-          body="Already counted. Take a quick look at the categories."
-          action={<Button label="Review" icon="check" variant="secondary" onPress={() => router.push("/review")} />}
+        <Prompt
+          icon="bell"
+          title={`${toReview} new from bank messages`}
+          body="Already counted. Check the categories."
+          onPress={() => router.push("/review")}
         />
-      ) : null}
-
-      {nudgeStatement ? (
-        <Notice
-          tone="info"
-          title={daysSinceCheck === null ? "Check your first statement." : "Time for this month's statement."}
-          body={
-            daysSinceCheck === null
-              ? "Upload a bank statement PDF and Ledgerline lists the payments you haven't added. It's read on this phone."
-              : `Your last check was ${daysSinceCheck} days ago. Upload the latest one to catch anything you missed.`
-          }
-          action={<Button label="Upload statement" icon="statement" variant="secondary" onPress={() => router.push("/statement")} />}
+      ) : nudgeStatement ? (
+        <Prompt
+          icon="statement"
+          title={daysSinceCheck === null ? "Check your first statement" : "Time for this month's statement"}
+          body={daysSinceCheck === null ? "Find payments you haven't added." : `Last checked ${daysSinceCheck} days ago.`}
+          onPress={() => router.push("/statement")}
         />
       ) : null}
 
@@ -101,95 +87,48 @@ export default function OverviewScreen() {
         <Card>
           <Empty
             title="Start with today"
-            body="Add what you spend as it happens. Once a month, upload your bank statement and add anything you missed."
+            body="Add what you spend as it happens. Once a month, upload your bank statement to catch anything you missed."
           />
         </Card>
       ) : null}
-
-      <View style={s.pair}>
-        <Card style={s.half}>
-          <Eyebrow>Money in</Eyebrow>
-          <Text style={[s.stat, tabular, { color: c.credit }]} adjustsFontSizeToFit numberOfLines={1}>
-            {formatInr(summary.totalReceived)}
-          </Text>
-          <T variant="small" tone="muted">salary and other credits</T>
-        </Card>
-        <Card style={s.half}>
-          <Eyebrow>Daily limit</Eyebrow>
-          {dailyLimit ? (
-            <>
-              <Text style={[s.stat, tabular, { color: c.foreground }]} adjustsFontSizeToFit numberOfLines={1}>
-                {formatInr(dailyLimit)}
-              </Text>
-              <T variant="small" tone={result.dailyInsights.daysOverLimit.length ? "danger" : "muted"}>
-                {result.dailyInsights.daysOverLimit.length
-                  ? `Over on ${result.dailyInsights.daysOverLimit.length} ${result.dailyInsights.daysOverLimit.length === 1 ? "day" : "days"}`
-                  : result.dailyInsights.totalDaysWithSpend
-                    ? "Under it every day"
-                    : "Nothing spent yet"}
-              </T>
-            </>
-          ) : (
-            <Pressable onPress={() => router.push("/settings")} accessibilityRole="button" style={{ gap: 2 }}>
-              <Text style={[s.stat, { color: c.primary }]}>Set one</Text>
-              <T variant="small" tone="muted">See days you went over</T>
-            </Pressable>
-          )}
-        </Card>
-      </View>
 
       {groups.length ? (
-        <Card>
-          <CardTitle
-            title="Where it went"
-            right={
-              <Pressable onPress={() => router.push("/lifestyle")} accessibilityRole="button" hitSlop={8} style={s.link}>
-                <Text style={[s.linkText, { color: c.primary }]}>All categories</Text>
-              </Pressable>
-            }
-          />
-          {groups.map((group) => (
-            <CategoryBar
-              key={group.slug}
-              label={categoryLabel(group.slug, categories)}
-              total={group.total}
-              share={group.total / biggest}
-              color={categoryColor(group.slug)}
-            />
-          ))}
-        </Card>
+        <Section title="Where it went" action="All categories" onAction={() => router.push("/lifestyle")}>
+          <Card style={{ gap: space[4] }}>
+            {groups.map((group) => (
+              <CategoryBar
+                key={group.slug}
+                slug={group.slug}
+                label={categoryLabel(group.slug, categories)}
+                total={group.total}
+                share={group.total / biggest}
+                percent={summary.totalSpent > 0 ? group.total / summary.totalSpent : undefined}
+                color={categoryColor(group.slug)}
+              />
+            ))}
+          </Card>
+        </Section>
       ) : null}
 
-      <Card>
-        <CardTitle title="Daily spend" sub="Rent left out. Tap a bar for the day." />
-        <DailyBars month={month} daily={result.daily} limit={dailyLimit} />
-      </Card>
-
-      <Card>
-        <CardTitle
+      {monthEntries.length ? (
+        <Section
           title="Recent"
-          sub={monthEntries.length ? `${monthEntries.length} this month` : undefined}
-          right={
-            monthEntries.length > 5 ? (
-              <Pressable onPress={() => router.push("/transactions")} accessibilityRole="button" hitSlop={8} style={s.link}>
-                <Text style={[s.linkText, { color: c.primary }]}>See all</Text>
-              </Pressable>
-            ) : undefined
-          }
-        />
-        {monthEntries.length ? (
-          <View>
-            {monthEntries.slice(0, 5).map((entry, index) => (
+          action={monthEntries.length > 6 ? "See all" : undefined}
+          onAction={() => router.push("/transactions")}>
+          <Card style={{ gap: 0, paddingVertical: space[2] }}>
+            {monthEntries.slice(0, 6).map((entry, index) => (
               <View key={entry.id}>
-                {index ? <Divider /> : null}
+                {index ? <View style={[s.inset, { backgroundColor: c.border }]} /> : null}
                 <EntryRow entry={entry} />
               </View>
             ))}
-          </View>
-        ) : (
-          <Empty title="Nothing added this month" body="Tap Add expense as you spend, or upload a statement to fill the gaps." />
-        )}
-      </Card>
+          </Card>
+        </Section>
+      ) : ready && entries.length ? (
+        <Card>
+          <Empty title={`Nothing in ${formatMonthTitle(month)}`} body="Add an expense, or upload that month's statement." />
+        </Card>
+      ) : null}
 
       {lastCheck ? (
         <T variant="small" tone="muted" style={{ textAlign: "center" }}>
@@ -200,10 +139,32 @@ export default function OverviewScreen() {
   );
 }
 
+/** One quiet, tappable line that asks for something: review messages, check a statement. */
+function Prompt({ icon, title, body, onPress }: { icon: IconName; title: string; body: string; onPress: () => void }) {
+  const { c } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${body}`}
+      style={({ pressed }) => [s.prompt, { backgroundColor: c.primarySoft, opacity: pressed ? 0.7 : 1 }]}>
+      <View style={[s.promptIcon, { backgroundColor: c.surface }]}>
+        <Icon name={icon} size={18} color={c.primary} />
+      </View>
+      <View style={{ flex: 1, gap: 1 }}>
+        <Text style={[s.promptTitle, { color: c.foreground }]}>{title}</Text>
+        <Text style={[s.promptBody, { color: c.muted }]}>{body}</Text>
+      </View>
+      <Icon name="chevron" size={14} color={c.muted} />
+    </Pressable>
+  );
+}
+
 function Hero({
   total,
   today: todaySpent,
   avg,
+  received,
   limit,
   showToday,
   month,
@@ -211,6 +172,7 @@ function Hero({
   total: number;
   today: number;
   avg: number;
+  received: number;
   limit: number | null;
   showToday: boolean;
   month: string;
@@ -262,9 +224,10 @@ function Hero({
         accessibilityLabel={`Spent ${formatInr(total)}`}>
         {formatInr(total)}
       </Text>
-      <View style={s.heroStats}>
+      <View style={[s.heroStats, { borderTopColor: c.heroTrack }]}>
         {showToday ? <HeroStat label="Today" value={formatInr(todaySpent)} /> : null}
-        <HeroStat label="Daily average" value={formatInr(avg)} />
+        <HeroStat label="Daily avg" value={formatInr(avg)} />
+        <HeroStat label="Money in" value={formatInr(received)} />
       </View>
       {limit && showToday ? (
         <View style={{ gap: 6 }}>
@@ -285,7 +248,7 @@ function Hero({
 function HeroStat({ label, value }: { label: string; value: string }) {
   const { c } = useTheme();
   return (
-    <View style={[s.heroStat, { backgroundColor: c.heroChip }]}>
+    <View style={s.heroStat}>
       <Text style={[s.heroSmall, { color: c.onHeroMuted }]}>{label}</Text>
       <Text style={[s.heroStatValue, tabular, { color: c.onHero }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
@@ -294,67 +257,24 @@ function HeroStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ActionTile({
-  icon,
-  title,
-  sub,
-  primary,
-  onPress,
-}: {
-  icon: IconName;
-  title: string;
-  sub: string;
-  primary?: boolean;
-  onPress: () => void;
-}) {
-  const { c } = useTheme();
-  const fg = primary ? c.primaryForeground : c.foreground;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      accessibilityHint={sub}
-      style={({ pressed }) => [
-        s.tile,
-        {
-          backgroundColor: primary ? c.primary : c.surface,
-          borderColor: primary ? c.primary : c.border,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
-          opacity: pressed ? 0.9 : 1,
-        },
-      ]}>
-      <View style={[s.tileIcon, { backgroundColor: primary ? c.onPrimarySoft : c.primarySoft }]}>
-        <Icon name={icon} size={20} color={primary ? c.primaryForeground : c.primary} />
-      </View>
-      <View style={{ gap: 1 }}>
-        <Text style={[s.tileTitle, { color: fg }]}>{title}</Text>
-        <Text style={[s.tileSub, { color: primary ? c.primaryForeground : c.muted, opacity: primary ? 0.85 : 1 }]}>{sub}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
 const s = StyleSheet.create({
+  header: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
+  greeting: { fontFamily: fonts.sansMedium, fontSize: 14, lineHeight: 18 },
   pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
-  hero: { borderRadius: radius.xl, padding: 20, gap: space[2], overflow: "hidden" },
-  heroStats: { flexDirection: "row", gap: space[2], marginTop: space[1] },
-  heroStat: { flex: 1, borderRadius: radius.md, paddingHorizontal: space[3], paddingVertical: 10, gap: 2 },
-  heroStatValue: { fontFamily: fonts.sansSemi, fontSize: 16 },
+  hero: { borderRadius: radius.xl, padding: 20, gap: space[1], overflow: "hidden" },
+  heroStats: { flexDirection: "row", marginTop: space[3], paddingTop: space[3], borderTopWidth: StyleSheet.hairlineWidth },
+  heroStat: { flex: 1, gap: 2 },
+  heroStatValue: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20 },
   heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   heroLabel: { fontFamily: fonts.sansMedium, fontSize: 14 },
-  heroAmount: { fontFamily: fonts.displayBold, fontSize: 42, lineHeight: 50, letterSpacing: -1.2 },
+  heroAmount: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 48, letterSpacing: -1.2 },
   heroSmall: { fontFamily: fonts.sansMedium, fontSize: 12.5 },
-  track: { height: 6, borderRadius: 3, overflow: "hidden", marginTop: space[2] },
-  fill: { height: "100%", borderRadius: 3 },
+  track: { height: 4, borderRadius: 2, overflow: "hidden", marginTop: space[3] },
+  fill: { height: "100%", borderRadius: 2 },
   actions: { flexDirection: "row", gap: space[3] },
-  tile: { flex: 1, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: space[4], gap: space[3], minHeight: 112 },
-  tileIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  tileTitle: { fontFamily: fonts.sansSemi, fontSize: 16 },
-  tileSub: { fontFamily: fonts.sans, fontSize: 13 },
-  stat: { fontFamily: fonts.displayBold, fontSize: 22, lineHeight: 28, letterSpacing: -0.4 },
-  pair: { flexDirection: "row", gap: space[3] },
-  half: { flex: 1 },
-  link: { minHeight: 32, justifyContent: "center" },
-  linkText: { fontFamily: fonts.sansSemi, fontSize: 14 },
+  inset: { height: StyleSheet.hairlineWidth, marginLeft: 52 },
+  prompt: { flexDirection: "row", alignItems: "center", gap: space[3], borderRadius: radius.lg, padding: space[3], minHeight: 64 },
+  promptIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  promptTitle: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20 },
+  promptBody: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 17 },
 });
