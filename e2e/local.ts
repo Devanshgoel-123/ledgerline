@@ -12,5 +12,7 @@ export async function startFresh(page: Page): Promise<void> {
   const res = await page.request.delete(`${API_URL}/api/me`, { headers: CLIENT_HEADERS });
   expect(res.ok()).toBe(true);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible();
+  // The dev frontend builds a page on its first visit; on a slow CI runner that
+  // can take longer than the usual 15 seconds.
+  await expect(page.getByRole("heading", { name: "Welcome to Ledgerline" })).toBeVisible({ timeout: 45_000 });
 }
