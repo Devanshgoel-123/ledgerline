@@ -24,6 +24,7 @@ const ICONS = {
   search: { ios: "magnifyingglass", android: "search", web: "search" },
   info: { ios: "info.circle", android: "info", web: "info" },
   calendar: { ios: "calendar", android: "calendar_today", web: "calendar_today" },
+  share: { ios: "square.and.arrow.up", android: "share", web: "share" },
 } as const satisfies Record<string, Name>;
 
 export type IconName = keyof typeof ICONS;

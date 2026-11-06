@@ -63,6 +63,7 @@ export default function RootLayout() {
           <Stack.Screen name="entry/[id]" options={{ presentation: "modal" }} />
           <Stack.Screen name="statement" options={{ presentation: "modal" }} />
           <Stack.Screen name="categories" options={{ presentation: "modal" }} />
+          <Stack.Screen name="share-month" options={{ presentation: "modal" }} />
           <Stack.Screen name="capture" options={{ presentation: "modal" }} />
           <Stack.Screen name="review" options={{ presentation: "modal" }} />
           <Stack.Screen name="auto-capture" options={{ presentation: "modal" }} />

@@ -5,7 +5,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { groupCategorySpend } from "@/core/analytics";
 import { categoryLabel } from "@/core/catalog";
 import { currentMonth, daysSince, today } from "@/core/dates";
-import { formatInr, formatMonthTitle, formatShortDate } from "@/core/format";
+import { formatInr, formatMonthShort, formatMonthTitle, formatShortDate } from "@/core/format";
 import { EntryRow, MonthSwitcher, SampleNotice, useMonthAnalytics } from "@/features/common";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, Empty, Screen, Section, T } from "@/ui/components";
@@ -106,6 +106,7 @@ export default function OverviewScreen() {
                 color={categoryColor(group.slug)}
               />
             ))}
+            <Button label={`Share ${formatMonthShort(month)} on X`} icon="share" variant="secondary" onPress={() => router.push("/share-month")} />
           </Card>
         </Section>
       ) : null}

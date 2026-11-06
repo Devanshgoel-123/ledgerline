@@ -9,11 +9,14 @@
 // Source: the icon each site declares for home screens (apple-touch-icon or
 // its web manifest), else Google's favicon service. Square icons of 96px or
 // more only, resized to 144px; brands without one show their category icon.
+// Each new logo is then trimmed and centred (scripts/normalize-logo.mjs) so
+// every brand sits the same way in its tile.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { normalizeLogo } from "./normalize-logo.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -44,6 +47,7 @@ const UA =
 const TARGET = 144; // 48pt at 3x
 
 function imageSize(bytes) {
+  if (bytes.length < 24) return null;
   if (bytes[0] === 0x89 && bytes[1] === 0x50) {
     const view = new DataView(bytes.buffer, bytes.byteOffset);
     return { width: view.getUint32(16), height: view.getUint32(20), type: "png" };
@@ -133,10 +137,10 @@ const squash = (text) =>
  */
 // Logos checked by eye and rejected: a placeholder, someone else's mark, or too blurry.
 // These brands show their category icon instead.
-const SKIP = new Set(["BluSmart", "FASTag", "GiveIndia", "Subway", "Spencer's", "Tata Power", "Theobroma"]);
+const SKIP = new Set(["BluSmart", "FASTag", "GiveIndia", "Subway", "Spencer's", "Tata Power", "Theobroma", "Naturals Salon"]);
 
 // App Store searches that returned someone else's app (checked by eye).
-const NOT_ON_APP_STORE = new Set(["Crossword", "Google Play", "Scaler", "Urban Ladder", "Reliance Trends", "W for Woman", "Metro Shoes", "Mumbai Metro"]);
+const NOT_ON_APP_STORE = new Set(["Crossword", "Google Play", "Scaler", "Urban Ladder", "Reliance Trends", "W for Woman", "Metro Shoes", "Mumbai Metro", "Mainland China", "ICICI Prudential MF", "Lemon Tree", "Burger Singh", "Sangeetha Mobiles", "Zudio"]);
 
 async function appStoreIcon(name) {
   if (NOT_ON_APP_STORE.has(name)) return null;
@@ -182,6 +186,7 @@ for (const [name, domain] of [...domains].sort((a, b) => a[0].localeCompare(b[0]
         // Same size and format for every logo: sips ships with macOS.
         execFileSync("sips", ["-s", "format", "png", "-Z", String(TARGET), raw, "--out", file], { stdio: "ignore" });
         unlinkSync(raw);
+        normalizeLogo(file, TARGET);
         ok = true;
         console.log(`${name.padEnd(24)} ${domain.padEnd(28)} ${logo.dims.width}px ${logo.source ?? "site"}`);
       }
