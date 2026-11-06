@@ -190,7 +190,7 @@ export function EntryForm({
               keyboardType="decimal-pad"
               autoFocus={!editing && !initial?.amount}
               accessibilityLabel="Amount in rupees"
-              style={[s.amountInput, { color: c.accent }]}
+              style={[s.amountInput, { color: c.foreground }]}
             />
           </View>
           {errors.amount ? <T variant="small" tone="danger">{errors.amount}</T> : null}

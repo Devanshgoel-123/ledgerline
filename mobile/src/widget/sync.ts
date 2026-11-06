@@ -6,7 +6,7 @@ import { formatInr } from "@/core/format";
 import type { Entry } from "@/core/model";
 import { widgetShortcuts } from "@/core/quick";
 import { myShare } from "@/core/shared";
-import { categoryColorLight } from "@/ui/theme";
+import { categoryColorOnDark } from "@/ui/theme";
 import type { QuickAddWidgetProps } from "./QuickAddWidget";
 
 /** What you spent on a day or in a month: your share of splits, no investments or transfers. */
@@ -32,7 +32,7 @@ export function widgetProps(entries: Entry[], categories: Category[], now = new 
     shortcuts: widgetShortcuts(real, categories, day).map((slug) => ({
       slug,
       label: categoryLabel(slug, categories).slice(0, 12),
-      color: categoryColorLight(slug),
+      color: categoryColorOnDark(slug),
     })),
   };
 }

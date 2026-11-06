@@ -80,7 +80,7 @@ export default function OverviewScreen() {
           tone="info"
           title={`${toReview} new ${toReview === 1 ? "payment" : "payments"} from your bank messages.`}
           body="Already counted. Take a quick look at the categories."
-          action={<Button label="Review" icon="check" onPress={() => router.push("/review")} />}
+          action={<Button label="Review" icon="check" variant="secondary" onPress={() => router.push("/review")} />}
         />
       ) : null}
 
@@ -262,13 +262,14 @@ function Hero({
         accessibilityLabel={`Spent ${formatInr(total)}`}>
         {formatInr(total)}
       </Text>
-      <Text style={[s.heroSub, { color: c.onHeroMuted }]}>
-        {showToday ? `${formatInr(todaySpent)} today · ${formatInr(avg)}/day average` : `${formatInr(avg)}/day average`}
-      </Text>
+      <View style={s.heroStats}>
+        {showToday ? <HeroStat label="Today" value={formatInr(todaySpent)} /> : null}
+        <HeroStat label="Daily average" value={formatInr(avg)} />
+      </View>
       {limit && showToday ? (
         <View style={{ gap: 6 }}>
-          <View style={s.track}>
-            <View style={[s.fill, { width: `${Math.max(3, progress * 100)}%`, backgroundColor: over ? "#fecaca" : c.onHero }]} />
+          <View style={[s.track, { backgroundColor: c.heroTrack }]}>
+            <View style={[s.fill, { width: `${Math.max(3, progress * 100)}%`, backgroundColor: over ? c.heroWarn : c.onHero }]} />
           </View>
           <Text style={[s.heroSmall, { color: c.onHeroMuted }]}>
             {over
@@ -277,6 +278,18 @@ function Hero({
           </Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+function HeroStat({ label, value }: { label: string; value: string }) {
+  const { c } = useTheme();
+  return (
+    <View style={[s.heroStat, { backgroundColor: c.heroChip }]}>
+      <Text style={[s.heroSmall, { color: c.onHeroMuted }]}>{label}</Text>
+      <Text style={[s.heroStatValue, tabular, { color: c.onHero }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -311,7 +324,7 @@ function ActionTile({
           opacity: pressed ? 0.9 : 1,
         },
       ]}>
-      <View style={[s.tileIcon, { backgroundColor: primary ? "rgba(255,255,255,0.18)" : c.primarySoft }]}>
+      <View style={[s.tileIcon, { backgroundColor: primary ? c.onPrimarySoft : c.primarySoft }]}>
         <Icon name={icon} size={20} color={primary ? c.primaryForeground : c.primary} />
       </View>
       <View style={{ gap: 1 }}>
@@ -323,21 +336,23 @@ function ActionTile({
 }
 
 const s = StyleSheet.create({
-  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 35, letterSpacing: -0.6 },
+  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
   hero: { borderRadius: radius.xl, padding: 20, gap: space[2], overflow: "hidden" },
+  heroStats: { flexDirection: "row", gap: space[2], marginTop: space[1] },
+  heroStat: { flex: 1, borderRadius: radius.md, paddingHorizontal: space[3], paddingVertical: 10, gap: 2 },
+  heroStatValue: { fontFamily: fonts.sansSemi, fontSize: 16 },
   heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  heroLabel: { fontFamily: fonts.sansSemi, fontSize: 14 },
-  heroAmount: { fontFamily: fonts.displayBold, fontSize: 46, lineHeight: 54, letterSpacing: -1 },
-  heroSub: { fontFamily: fonts.sansMedium, fontSize: 14 },
+  heroLabel: { fontFamily: fonts.sansMedium, fontSize: 14 },
+  heroAmount: { fontFamily: fonts.displayBold, fontSize: 42, lineHeight: 50, letterSpacing: -1.2 },
   heroSmall: { fontFamily: fonts.sansMedium, fontSize: 12.5 },
-  track: { height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden", marginTop: space[2] },
-  fill: { height: "100%", borderRadius: 4 },
+  track: { height: 6, borderRadius: 3, overflow: "hidden", marginTop: space[2] },
+  fill: { height: "100%", borderRadius: 3 },
   actions: { flexDirection: "row", gap: space[3] },
   tile: { flex: 1, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: space[4], gap: space[3], minHeight: 112 },
   tileIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   tileTitle: { fontFamily: fonts.sansSemi, fontSize: 16 },
   tileSub: { fontFamily: fonts.sans, fontSize: 13 },
-  stat: { fontFamily: fonts.displayBold, fontSize: 24, lineHeight: 30 },
+  stat: { fontFamily: fonts.displayBold, fontSize: 22, lineHeight: 28, letterSpacing: -0.4 },
   pair: { flexDirection: "row", gap: space[3] },
   half: { flex: 1 },
   link: { minHeight: 32, justifyContent: "center" },

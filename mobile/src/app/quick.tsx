@@ -122,7 +122,7 @@ export default function QuickAddScreen() {
             {
               fontSize: amountSize,
               lineHeight: amountSize + 8,
-              color: !amount ? c.muted2 : type === "credit" ? c.credit : value ? c.accent : c.foreground,
+              color: !amount ? c.muted2 : type === "credit" ? c.credit : c.foreground,
             },
           ]}>
           {amount || "0"}

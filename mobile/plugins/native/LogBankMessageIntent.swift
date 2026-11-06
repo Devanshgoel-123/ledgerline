@@ -13,7 +13,7 @@ import Foundation
 struct LogBankMessageIntent: AppIntent {
   static let title: LocalizedStringResource = "Log bank message"
   static let description = IntentDescription(
-    "Adds the payment in a bank SMS to Ledgerline. The message is read on this iPhone and never sent anywhere."
+    "Adds the payment in a bank SMS to Ledgerline. The message is read on your device and never sent anywhere."
   )
   static let openAppWhenRun: Bool = false
 

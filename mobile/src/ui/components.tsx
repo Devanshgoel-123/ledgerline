@@ -418,19 +418,19 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
 }
 
 export const styles = StyleSheet.create({
-  eyebrow: { fontFamily: fonts.sansMedium, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase" },
+  eyebrow: { fontFamily: fonts.sansSemi, fontSize: 11, letterSpacing: 1.1, textTransform: "uppercase" },
   pageHeader: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
-  pageTitle: { fontFamily: fonts.display, fontSize: 28, lineHeight: 33, letterSpacing: -0.4 },
+  pageTitle: { fontFamily: fonts.displayBold, fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
   card: {
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     padding: space[4],
     gap: space[3],
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 10,
     elevation: 1,
   },
-  cardTitle: { fontFamily: fonts.display, fontSize: 18, lineHeight: 23 },
+  cardTitle: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
   body: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 21 },
   small: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 18 },
   strong: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20 },

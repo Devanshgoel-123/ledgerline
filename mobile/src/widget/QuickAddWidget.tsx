@@ -23,17 +23,17 @@ const QuickAddWidget = (props: QuickAddWidgetProps, environment: WidgetEnvironme
   const medium = environment.widgetFamily === "systemMedium";
   const summary = (
     <VStack alignment="leading" spacing={2}>
-      <Text modifiers={[font({ size: 12, weight: "semibold" }), foregroundStyle("#E0DEFF")]}>Today</Text>
-      <Text modifiers={[font({ size: 28, weight: "bold", design: "rounded" }), monospacedDigit(), foregroundStyle("#FFFFFF"), lineLimit(1)]}>
+      <Text modifiers={[font({ size: 12, weight: "semibold" }), foregroundStyle("#C6D6E3")]}>Today</Text>
+      <Text modifiers={[font({ size: 28, weight: "bold" }), monospacedDigit(), foregroundStyle("#FFFFFF"), lineLimit(1)]}>
         {props.today}
       </Text>
-      <Text modifiers={[font({ size: 12, weight: "medium" }), foregroundStyle("#E0DEFF"), lineLimit(1)]}>
+      <Text modifiers={[font({ size: 12, weight: "medium" }), foregroundStyle("#C6D6E3"), lineLimit(1)]}>
         {props.empty ? "Tap to add your first" : `${props.month} this month`}
       </Text>
       <Spacer />
       <Link destination="ledgerline://quick">
         <HStack spacing={4} modifiers={[padding({ horizontal: 12, vertical: 7 }), background("#FFFFFF"), clipShape("capsule")]}>
-          <Text modifiers={[font({ size: 14, weight: "bold" }), foregroundStyle("#4F46E5")]}>+ Add</Text>
+          <Text modifiers={[font({ size: 14, weight: "bold" }), foregroundStyle("#102A43")]}>+ Add</Text>
         </HStack>
       </Link>
     </VStack>
@@ -44,7 +44,7 @@ const QuickAddWidget = (props: QuickAddWidgetProps, environment: WidgetEnvironme
       spacing={12}
       modifiers={[
         containerBackground(
-          { type: "linearGradient", colors: ["#4F46E5", "#7C3AED"], startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+          { type: "linearGradient", colors: ["#102A43", "#1D5A73"], startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
           "widget",
         ),
         widgetURL("ledgerline://quick"),
@@ -60,7 +60,7 @@ const QuickAddWidget = (props: QuickAddWidgetProps, environment: WidgetEnvironme
                 modifiers={[
                   padding({ horizontal: 10, vertical: 6 }),
                   frame({ maxWidth: 150, alignment: "leading" }),
-                  background("#FFFFFF2E"),
+                  background("#FFFFFF24"),
                   clipShape("roundedRectangle", 10),
                 ]}>
                 <Circle modifiers={[foregroundStyle(shortcut.color), frame({ width: 10, height: 10 })]} />

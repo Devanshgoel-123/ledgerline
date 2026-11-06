@@ -6,66 +6,84 @@ Source of truth for `mobile/src`. Inputs: `docs/MOBILE_LAUNCH_STRATEGY.md` (why)
 
 A mainstream Indian UPI user does two things on the phone: **captures a payment in about 2 seconds**, several times a day, and **uploads a bank statement** once a month. Every design decision below serves one of those, or helps them see where the money went at a glance.
 
-Visual direction: **"confident and calm."** One vivid indigo-violet brand colour for actions and the hero, a warm orange for spend, green for money in, and a distinct hue per category. Surfaces are neutral and cool so the colour means something. It's professional because the colour is rationed, not because it's grey.
+Visual direction: **"calm ledger"** (revised 6 Nov 2026). Deep navy and steel blue for brand and actions, ink for amounts, green only for money in, and a muted hue per category. Surfaces are cool and neutral, so colour means something. It feels professional because colour is rationed, not because everything is grey.
 
 ## Design tokens
 
+### Principles ("calm ledger", 6 Nov 2026)
+
+The first theme was vivid indigo and orange. For a money app that read as loud, and orange spend amounts made ordinary spending look like a warning. The redesign works from five rules:
+
+1. **Money is the content.** Amounts are set in ink, large and tabular. Colour is never decoration.
+2. **Colour means something.** Brand blue is for things you can tap. Green is only for money in. Red is only for a problem: over a limit, an error, a delete. Spending is not a problem, so it isn't red or orange.
+3. **Calm.** Cool, low-saturation neutrals. There is one gradient in the app (the Overview summary), navy to ocean, with the two stops close in value so it reads as depth.
+4. **Quiet depth.** Hairline borders and a faint shadow (2 px offset, 10 px blur).
+5. **One primary action per screen.** Secondary actions, such as Review on a notice, use the outlined button.
+
 ### Colour: light / dark
 
-All text pairs below were checked with `contrast-check.py`. Every one is 4.5:1 or better on `bg` and `surface`.
+Every text pair is 4.5:1 or better on `bg` and `surface`.
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `bg` | `#F6F6FB` | `#0B0B14` | App background |
-| `bgMuted` | `#EEEEF6` | `#1C1C29` | Segmented track, muted pills, keypad keys |
-| `surface` | `#FFFFFF` | `#15151F` | Cards, sheets |
-| `foreground` | `#12121F` (17.2:1) | `#F2F2F8` (17.6:1) | Primary text |
-| `muted` | `#5B5C70` (6.1:1) | `#A3A4B8` (8.0:1) | Secondary text |
-| `muted2` | `#6E6F84` (4.6:1) | `#8B8CA3` (5.5:1) | Placeholders, tertiary meta |
-| `primary` | `#4F46E5` (white on it 6.3:1) | `#8B85FF` (ink on it 6.4:1) | Primary buttons, selected chips, active tab, links |
-| `primaryForeground` | `#FFFFFF` | `#0B0B14` | Text on primary |
-| `primarySoft` | `rgba(79,70,229,0.10)` | `rgba(139,133,255,0.16)` | Selected tint, icon wells |
-| `accent` (spend) | `#C2410C` (5.2:1) | `#FF8A4C` (8.4:1) | Spend amounts and spend highlights. Was `copper` |
-| `accentSoft` | `rgba(234,88,12,0.10)` | `rgba(255,138,76,0.14)` | Spend pill backgrounds |
-| `credit` / `success` | `#047857` (5.5:1) | `#34D399` (10.2:1) | Money in, success |
-| `danger` / `debit` | `#B91C1C` | `#F87171` | Errors, destructive, over limit |
-| `heroFrom` → `heroTo` | `#4F46E5` → `#7C3AED` | `#3730A3` → `#6D28D9` | Overview hero gradient (white text 5.7:1 or better) |
-| `border` / `borderStrong` | `rgba(18,18,31,0.08)` / `0.14` | `rgba(255,255,255,0.08)` / `0.14` | Hairlines, inputs |
+| `bg` | `#F3F5F8` | `#0B1219` | App background |
+| `bgMuted` | `#E8ECF1` | `#17212C` | Segmented track, muted pills |
+| `surface` | `#FFFFFF` | `#111A23` | Cards, sheets, keypad keys |
+| `foreground` | `#0F1B2A` (15.9:1) | `#E6EDF3` (15.9:1) | Primary text, **all spend amounts** |
+| `muted` | `#526070` (6.4:1) | `#9AA8B6` (7.2:1) | Secondary text |
+| `muted2` | `#677485` (4.8:1) | `#8494A4` (5.7:1) | Placeholders, tertiary meta |
+| `primary` | `#1D5C96` (white on it 7.0:1) | `#82B4E3` (ink on it 8.6:1) | Primary buttons, selected chips, active tab, links |
+| `primaryForeground` | `#FFFFFF` | `#0B1219` | Text on primary |
+| `primarySoft` | `rgba(29,92,150,0.09)` | `rgba(130,180,227,0.14)` | Selected tint, icon wells, info notices |
+| `onPrimarySoft` | `rgba(255,255,255,0.16)` | `rgba(11,18,25,0.12)` | Icon well on a primary fill |
+| `accent` | `#A24F2B` (5.7:1) | `#E39A72` (7.6:1) | Rare highlights only; no longer used for spend amounts |
+| `credit` / `success` | `#1B7A4E` (5.3:1) | `#5DC795` (8.4:1) | Money in, success |
+| `danger` / `debit` | `#B42318` (6.6:1) | `#F08A7E` (7.2:1) | Errors, destructive, over limit |
+| `heroFrom` → `heroTo` | `#102A43` → `#1D5A73` | `#0F2236` → `#1A4A63` | Overview summary gradient. White text 7.6:1 or better; `onHeroMuted` `#C6D6E3` 5.1:1 or better |
+| `heroChip` / `heroTrack` / `heroWarn` | white 14% / 18% / `#F6B8AB` | white 12% / 16% / `#F6B8AB` | Stat tiles, limit track and over-limit fill inside the summary |
+| `border` / `borderStrong` | `rgba(15,27,42,0.08)` / `0.14` | `rgba(230,237,243,0.08)` / `0.14` | Hairlines, inputs |
+| Chart bars | calm `#C3D2E1`, watch `#DCB57A`, hot `#DC8A7D`, peak = primary | `#2C4054`, `#C79B57`, `#D47A6D`, primary | Daily spend chart |
 
 ### Colour: categories
 
-There are twelve top-level categories, each with its own hue. Light fills carry white initials at **4.5:1 or better**; dark fills carry `#0B0B14` initials at **7:1 or better**. Sub-categories take a shade of their parent's hue. Grocery and Salary get their own greens because they're so frequent.
+There are twelve top-level categories, each with a muted hue. They are distinct enough to tell apart on a chart and quiet enough to sit together. Light fills carry white initials at **5:1 or better**; dark fills carry `#0B1219` initials at **8.5:1 or better**. Sub-categories take a shade of their parent's hue. The widget uses the dark set, because its background is navy.
 
 | Root | Light | Dark |
 |---|---|---|
-| food | `#C2410C` | `#FB923C` |
-| shopping | `#DB2777` | `#F472B6` |
-| travel | `#0369A1` | `#38BDF8` |
-| healthcare | `#DC2626` | `#F87171` |
-| family | `#C026D3` | `#E879F9` |
-| outing | `#7C3AED` | `#A78BFA` |
-| investments | `#047857` | `#34D399` |
-| vices | `#B45309` | `#FBBF24` |
-| banks | `#475569` | `#94A3B8` |
-| household | `#2563EB` | `#60A5FA` |
-| personal | `#0F766E` | `#2DD4BF` |
-| other | `#6B7280` | `#9CA3AF` |
+| food | `#A9552F` | `#E3A17D` |
+| shopping | `#A3456B` | `#E09CBB` |
+| travel | `#2E6590` | `#8FB8DC` |
+| healthcare | `#AB3F3B` | `#EA9C95` |
+| family | `#874A8C` | `#D1A4D5` |
+| outing | `#5D4F9C` | `#B4A9E4` |
+| investments | `#22775A` | `#82CDA9` |
+| vices | `#8C5D18` | `#E0BE7D` |
+| banks | `#55657A` | `#A9B6C5` |
+| household | `#3A61A3` | `#95B4E4` |
+| personal | `#2A716C` | `#84C9C2` |
+| other | `#646F7D` | `#A8B1BC` |
 
 ### Type
 
+One typeface, Inter. Its heavier weights do the display work: a characterful display face (Bricolage Grotesque) read as playful.
+
 | Token | Font | Size / line | Usage |
 |---|---|---|---|
-| `display-hero` | Bricolage Grotesque 700 | 44/50, tracking −1 | Hero amount, Quick add amount (56/62) |
-| `display-title` | Bricolage Grotesque 600 | 28/33 | Page titles |
-| `display-card` | Bricolage Grotesque 600 | 18/23 | Card titles |
+| `display-hero` | Inter 700, tabular | 42/50, tracking −1.2 | Summary amount; Quick add amount (56/62) |
+| `display-title` | Inter 700 | 28–30/34–36, tracking −0.7 | Page titles |
+| `display-card` | Inter 600 | 17/22, tracking −0.2 | Card titles |
 | `body` | Inter 400 | 15/21 | Body |
 | `small` | Inter 400 | 13/18 | Meta |
 | `strong` | Inter 600 | 15/20 | Row titles, button labels |
-| `amount` | Inter 600, **tabular-nums** | 15–22 | All money in lists and stats (replaces JetBrains Mono; mono read as code to consumers) |
+| `amount` | Inter 600, **tabular-nums** | 15–22 | All money in lists and stats |
 
 ### Spacing and radius
 
-`space` 4 / 8 / 12 / 16 / 24 / 32 (unchanged). Radius: `sm` 10, `md` 14, `lg` 20 (was 18), `xl` 28 (sheets, hero), `pill` 999.
+`space` 4 / 8 / 12 / 16 / 24 / 32. Radius: `sm` 10, `md` 12, `lg` 16 (cards), `xl` 22 (sheets, summary), `pill` 999. These are tighter than v1.0, which reads more precise.
+
+### App icon
+
+The same L and ledger line, now a white L with a sky line (`#8FC7EA`) on the navy-to-ocean gradient. The source is a small SVG. The PNGs in `mobile/assets/images` were rendered from it with headless Chrome.
 
 ## Screens and components
 
