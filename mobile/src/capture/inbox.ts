@@ -75,3 +75,55 @@ export async function readInbox(): Promise<{ messages: IncomingMessage[]; done: 
     },
   };
 }
+
+// Two small files the action and the app share next to the inbox; their
+// names match plugins/native/LogBankMessageIntent.swift.
+const EMPTY_MARKER = "CaptureEmptyMessage.json";
+const SETTINGS = "CaptureSettings.json";
+
+function groupFile(name: string): File | null {
+  if (Platform.OS !== "ios") return null;
+  try {
+    const group = Paths.appleSharedContainers?.[APP_GROUP];
+    return group ? new File(group, name) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * When the automation last ran without handing over the message (Message
+ * not set to Shortcut Input), or null if every run has had one since.
+ */
+export async function emptyMessageSince(): Promise<string | null> {
+  const file = groupFile(EMPTY_MARKER);
+  if (!file?.exists) return null;
+  try {
+    const data = JSON.parse(await file.text()) as { at?: unknown };
+    return typeof data.at === "string" ? data.at : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether the action notifies you about each payment it logs. On unless turned off. */
+export async function captureNotificationsOn(): Promise<boolean> {
+  const file = groupFile(SETTINGS);
+  if (!file?.exists) return true;
+  try {
+    return (JSON.parse(await file.text()) as { notify?: unknown }).notify !== false;
+  } catch {
+    return true;
+  }
+}
+
+export function setCaptureNotifications(on: boolean): void {
+  const file = groupFile(SETTINGS);
+  if (!file) return;
+  try {
+    if (!file.exists) file.create();
+    file.write(JSON.stringify({ notify: on }));
+  } catch {
+    // The action falls back to notifying.
+  }
+}

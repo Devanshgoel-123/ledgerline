@@ -8,8 +8,8 @@ const fs = require("fs");
 const path = require("path");
 const { IOSConfig, withDangerousMod, withEntitlementsPlist, withXcodeProject } = require("expo/config-plugins");
 
-const SOURCE = path.join(__dirname, "native", "LogBankMessageIntent.swift");
-const FILE = "LogBankMessageIntent.swift";
+// The action, and the small reader it uses to notify you about a payment.
+const FILES = ["LogBankMessageIntent.swift", "BankMessagePreview.swift"];
 const APP_GROUP = "group.app.ledgerline.mobile";
 
 module.exports = function withBankMessageIntent(config) {
@@ -25,8 +25,9 @@ module.exports = function withBankMessageIntent(config) {
     "ios",
     (cfg) => {
       const projectName = IOSConfig.XcodeUtils.getProjectName(cfg.modRequest.projectRoot);
-      const target = path.join(cfg.modRequest.platformProjectRoot, projectName, FILE);
-      fs.copyFileSync(SOURCE, target);
+      for (const file of FILES) {
+        fs.copyFileSync(path.join(__dirname, "native", file), path.join(cfg.modRequest.platformProjectRoot, projectName, file));
+      }
       return cfg;
     },
   ]);
@@ -34,10 +35,12 @@ module.exports = function withBankMessageIntent(config) {
   return withXcodeProject(config, (cfg) => {
     const project = cfg.modResults;
     const projectName = IOSConfig.XcodeUtils.getProjectName(cfg.modRequest.projectRoot);
-    const filepath = `${projectName}/${FILE}`;
-    if (!project.hasFile(filepath)) {
-      const app = IOSConfig.XcodeUtils.getApplicationNativeTarget({ project, projectName });
-      IOSConfig.XcodeUtils.addBuildSourceFileToGroup({ filepath, groupName: projectName, project, targetUuid: app.uuid });
+    const app = IOSConfig.XcodeUtils.getApplicationNativeTarget({ project, projectName });
+    for (const file of FILES) {
+      const filepath = `${projectName}/${file}`;
+      if (!project.hasFile(filepath)) {
+        IOSConfig.XcodeUtils.addBuildSourceFileToGroup({ filepath, groupName: projectName, project, targetUuid: app.uuid });
+      }
     }
     return cfg;
   });
