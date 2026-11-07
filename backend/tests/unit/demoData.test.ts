@@ -55,7 +55,9 @@ describe("sample data from the welcome screen", () => {
     const first = await call("POST", "/api/demo/load");
     assert.equal(first.status, 200);
     const created = first.json.created as number;
-    assert.ok(created > 10);
+    // The sample stops at today, so early in a month it holds only a few payments.
+    assert.equal(created, buildDemoTransactions().rows.length);
+    assert.ok(created > 0);
 
     const again = await call("POST", "/api/demo/load");
     assert.equal(again.json.created, 0, "loading twice must not duplicate samples");
