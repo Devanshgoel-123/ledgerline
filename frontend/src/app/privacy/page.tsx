@@ -5,13 +5,29 @@ import { SiteNav } from "@/components/SiteNav";
 export const metadata: Metadata = {
   title: "Privacy",
   description:
-    "Ledgerline runs on your own computer. What it stores there, what it reads, the one feature that sends data out, and how to take or erase your data.",
+    "Ledgerline runs on your own computer or phone. What it stores there, what it reads, the one feature that sends data out, and how to take or erase your data.",
 };
 
 const SECTIONS: { title: string; body: React.ReactNode }[] = [
   {
     title: "The short version",
-    body: "Ledgerline runs on your computer. There is no Ledgerline server, no account and no tracking. Your transactions never reach us, because there is nowhere for them to go.",
+    body: "Ledgerline runs on your own computer or phone. There is no Ledgerline server, no account and no tracking. Your transactions never reach us, because there is nowhere for them to go.",
+  },
+  {
+    title: "The phone app (iPhone and Android)",
+    body: "Everything stays in a database inside the app on your phone. The app has no account, no analytics and no ads, and it makes no network requests: shop logos are built in. Bank statements you open are read on the phone and not kept. Statement passwords are used once and never saved.",
+  },
+  {
+    title: "Bank SMS on Android (optional)",
+    body: "Only if you turn it on. Ledgerline then reads text messages from bank and business senders (names like VM-HDFCBK), starting from the first day of the month you turn it on, to add payments. Messages from people’s phone numbers are never read. Messages are read on the phone and only the payment details (date, amount, payee, bank, last digits of the account) are kept. Turn it off in the app, or remove the SMS permission in Android settings, at any time.",
+  },
+  {
+    title: "Bank messages on iPhone (optional)",
+    body: "iPhone apps cannot read your messages. If you set up the Shortcuts automation, iOS passes Ledgerline only the bank messages your automation picks, and Ledgerline keeps only the payment details.",
+  },
+  {
+    title: "App lock, backups and sharing",
+    body: "App lock asks your phone for Face ID, a fingerprint or your passcode; Ledgerline never sees them. A backup is a file saved wherever you choose. Your phone’s own backup (iCloud or Google) may include the app’s data, under your account. Sharing a month on X sends only the text you see, and only when you tap Post. Settings › Erase everything, or deleting the app, removes all of it.",
   },
   {
     title: "Where your data lives",
@@ -55,7 +71,7 @@ const SECTIONS: { title: string; body: React.ReactNode }[] = [
       <>
         Ledgerline is open source, so you can check all of this in the code. Ask questions or
         report a problem on <a href="https://github.com/Devanshgoel-123/ledgerline/issues">GitHub</a>.
-        Last updated 25 October 2026.
+        Last updated 7 November 2026.
       </>
     ),
   },
@@ -74,7 +90,7 @@ export default function PrivacyPage() {
         <header className="site-doc-head">
           <h1 className="site-display site-display-sm">Privacy</h1>
           <p className="site-lede">
-            What Ledgerline keeps on your computer, what it reads, the one optional feature that
+            What Ledgerline keeps on your computer or phone, what it reads, the one optional feature that
             sends data out, and how to take your data with you or erase it.
           </p>
         </header>
