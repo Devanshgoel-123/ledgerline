@@ -5,8 +5,10 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, V
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryLabel } from "@/core/catalog";
 import { formatInrExact, formatShortDate } from "@/core/format";
-import { checkStatement, readStatement, statementText, type MissingLine, type StatementCheck } from "@/core/statement";
+import { linesFromTable, readCsvStatement, type ColumnMap, type CsvTable } from "@/core/csvStatement";
+import { checkStatement, readStatement, statementText, type MissingLine, type ReadStatement, type StatementCheck } from "@/core/statement";
 import { CategoryPicker } from "@/features/CategoryPicker";
+import { ColumnPicker } from "@/features/ColumnPicker";
 import { addEntries, clearIgnoredLines, ignoreLines, recordStatementCheck, listIgnoredLines } from "@/db/repo";
 import { PdfPasswordError, usePdfReader } from "@/pdf/usePdfReader";
 import { useLedger } from "@/state/ledger";
@@ -20,6 +22,7 @@ type Step =
   | { kind: "start" }
   | { kind: "reading"; name: string }
   | { kind: "password"; name: string; base64: string; wrong: boolean }
+  | { kind: "columns"; name: string; table: CsvTable; map: ColumnMap | null }
   | { kind: "review"; check: StatementCheck }
   | { kind: "done"; added: number; left: number };
 
@@ -44,31 +47,83 @@ export default function StatementScreen() {
     setStep({ kind: "reading", name });
     try {
       const pages = await read(base64, pdfPassword);
-      const statement = readStatement(statementText(pages));
-      const check = checkStatement({
-        statement,
-        entries,
-        ignored: await listIgnoredLines(db),
-        rules,
-        categories,
-      });
-      await recordStatementCheck(db, {
-        bank: check.bank,
-        dateFrom: check.from,
-        dateTo: check.to,
-        lineCount: check.lineCount,
-        missingCount: check.missing.length,
-      });
-      await refresh();
-      setSelected(new Set(check.missing.map((line) => line.key)));
-      setCategoryFor({});
-      setStep({ kind: "review", check });
+      await review(readStatement(statementText(pages)));
     } catch (caught) {
       if (caught instanceof PdfPasswordError) {
         setStep({ kind: "password", name, base64, wrong: caught.wrong });
         return;
       }
       setError(caught instanceof Error ? caught.message : "Ledgerline couldn't read this PDF.");
+      setStep({ kind: "start" });
+    }
+  };
+
+  /** PDF or CSV: the same check against what's on the phone. */
+  const review = async (statement: ReadStatement) => {
+    const check = checkStatement({
+      statement,
+      entries,
+      ignored: await listIgnoredLines(db),
+      rules,
+      categories,
+    });
+    await recordStatementCheck(db, {
+      bank: check.bank,
+      dateFrom: check.from,
+      dateTo: check.to,
+      lineCount: check.lineCount,
+      missingCount: check.missing.length,
+    });
+    await refresh();
+    setSelected(new Set(check.missing.map((line) => line.key)));
+    setCategoryFor({});
+    setStep({ kind: "review", check });
+  };
+
+  const chooseCsv = async () => {
+    setError(null);
+    const result = await DocumentPicker.getDocumentAsync({
+      type: [
+        "text/csv",
+        "text/comma-separated-values",
+        "text/tab-separated-values",
+        "text/plain",
+        "application/csv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ],
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    try {
+      let text: string;
+      if (Platform.OS === "web") {
+        text = asset.file ? await asset.file.text() : "";
+      } else {
+        const file = new File(asset.uri);
+        try {
+          text = await file.text();
+        } finally {
+          try {
+            file.delete();
+          } catch {
+            // Already gone.
+          }
+        }
+      }
+      const { table, map } = readCsvStatement(text);
+      if (map) {
+        try {
+          await review(linesFromTable(table, map, asset.name).statement);
+          return;
+        } catch {
+          // Recognised headers but the rows didn't read: let the person pick.
+        }
+      }
+      setStep({ kind: "columns", name: asset.name, table, map });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Ledgerline couldn't read this file.");
       setStep({ kind: "start" });
     }
   };
@@ -153,7 +208,7 @@ export default function StatementScreen() {
         <View style={s.close} />
       </View>
       <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + space[6] }]} keyboardShouldPersistTaps="handled">
-        {error ? <Notice tone="danger" title="Couldn't read that PDF." body={error} /> : null}
+        {error ? <Notice tone="danger" title="Couldn't read that file." body={error} /> : null}
 
         {step.kind === "start" ? (
           <>
@@ -165,17 +220,20 @@ export default function StatementScreen() {
                 title="Upload your bank statement"
                 sub="Ledgerline lists every payment in it that isn't in the app yet, and you add the ones you want in a tap."
               />
-              <View style={{ flexDirection: "row", gap: space[2] }}>
-                <Pill tone="primary">HDFC</Pill>
-                <Pill tone="primary">ICICI</Pill>
-                <Pill>More banks soon</Pill>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space[2] }}>
+                <Pill tone="primary">PDF: HDFC, ICICI</Pill>
+                <Pill tone="primary">CSV: any bank</Pill>
               </View>
               <View style={{ gap: space[2] }}>
                 <Bullet icon="lock" text="Read on this phone. The file isn't uploaded or kept." />
-                <Bullet icon="statement" text="The PDF from your net banking. Password-protected files are fine." />
+                <Bullet icon="statement" text="The PDF or CSV from your net banking. Password-protected PDFs are fine." />
                 <Bullet icon="check" text="Payments you already added are matched by amount and date, a day either way." />
               </View>
               <Button label="Choose statement PDF" icon="statement" onPress={choose} />
+              <Button label="Choose a CSV export" variant="secondary" onPress={chooseCsv} />
+              <T variant="small" tone="muted">
+                {"SBI, Axis, Kotak or any other bank: download the statement as CSV (or XLS saved as CSV) from net banking."}
+              </T>
             </Card>
             <IgnoredReset />
           </>
@@ -228,6 +286,24 @@ export default function StatementScreen() {
               }}
             />
           </Card>
+        ) : null}
+
+        {step.kind === "columns" ? (
+          <ColumnPicker
+            table={step.table}
+            initial={step.map}
+            fileName={step.name}
+            onCancel={() => setStep({ kind: "start" })}
+            onDone={(map) => {
+              void (async () => {
+                try {
+                  await review(linesFromTable(step.table, map, step.name).statement);
+                } catch (caught) {
+                  setError(caught instanceof Error ? caught.message : "Couldn't read those columns.");
+                }
+              })();
+            }}
+          />
         ) : null}
 
         {step.kind === "review" ? (

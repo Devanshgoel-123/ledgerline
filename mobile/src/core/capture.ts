@@ -1,6 +1,6 @@
 import { addEntry, linkMessage, messageSeen } from "@/db/repo";
 import type { Db } from "@/db/schema";
-import type { Category } from "./catalog";
+import { PROVIDERS, type Category } from "./catalog";
 import { classify } from "./classify";
 import { fromIsoDate, isoDate } from "./dates";
 import type { Entry, Rule } from "./model";
@@ -29,6 +29,12 @@ export interface IncomingMessage {
   sender?: string | null;
   /** When the phone received it; defaults to now. */
   receivedAt?: Date;
+}
+
+const BRAND_NAMES = new Map(PROVIDERS.map((provider) => [provider.id, provider.canonicalName]));
+
+function brandName(providerId: string | null | undefined): string | null {
+  return providerId ? (BRAND_NAMES.get(providerId) ?? null) : null;
 }
 
 /** FNV-1a: a short, stable fingerprint for a message with no bank reference. */
@@ -105,7 +111,8 @@ export async function captureMessage(
     amount: parsed.amount,
     type: parsed.type,
     description,
-    merchant: suggestion.merchant ?? parsed.party,
+    // A shop Ledgerline knows goes by its own name ("Netflix", not "netflix@hdfcbank" or "NETFLIX").
+    merchant: brandName(suggestion.providerId) ?? suggestion.merchant ?? parsed.party,
     payee: suggestion.payee,
     upiId: parsed.upiId,
     providerId: suggestion.providerId,

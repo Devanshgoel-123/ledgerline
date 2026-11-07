@@ -35,6 +35,21 @@ struct LogBankMessageIntent: AppIntent {
   }
 }
 
+// Lists "Log bank message" under Ledgerline in the Shortcuts app as soon as
+// the app is installed, so it's easy to find when setting up the automation
+// (and Siri can run it: "Log a bank message in Ledgerline").
+@available(iOS 16.0, *)
+struct LedgerlineAppShortcuts: AppShortcutsProvider {
+  static var appShortcuts: [AppShortcut] {
+    AppShortcut(
+      intent: LogBankMessageIntent(),
+      phrases: ["Log a bank message in \(.applicationName)"],
+      shortTitle: "Log bank message",
+      systemImageName: "message.badge"
+    )
+  }
+}
+
 enum LedgerlineMessageInbox {
   static let appGroup = "group.app.ledgerline.mobile"
   static let folderName = "MessageInbox"

@@ -3,9 +3,10 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { groupCategorySpend } from "@/core/analytics";
+import { backupAge, backupStatus } from "@/core/backupStatus";
 import { categoryLabel } from "@/core/catalog";
 import { currentMonth, daysSince, today } from "@/core/dates";
-import { formatInr, formatMonthTitle, formatShortDate } from "@/core/format";
+import { formatInr, formatMonthShort, formatMonthTitle, formatShortDate } from "@/core/format";
 import { EntryRow, MonthSwitcher, SampleNotice, useMonthAnalytics } from "@/features/common";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, Empty, Screen, Section, T } from "@/ui/components";
@@ -25,7 +26,8 @@ function greeting(now = new Date()): string {
 
 export default function OverviewScreen() {
   const { c, categoryColor } = useTheme();
-  const { entries, month, dailyLimit, lastCheck, ready, categories } = useLedger();
+  const { entries, month, dailyLimit, lastCheck, ready, categories, lastBackupAt } = useLedger();
+  const backup = backupStatus(lastBackupAt, entries.length);
   const result = useMonthAnalytics();
   const { summary } = result;
   const isThisMonth = month === currentMonth();
@@ -81,6 +83,13 @@ export default function OverviewScreen() {
           body={daysSinceCheck === null ? "Find payments you haven't added." : `Last checked ${daysSinceCheck} days ago.`}
           onPress={() => router.push("/statement")}
         />
+      ) : ready && backup.due ? (
+        <Prompt
+          icon="lock"
+          title="Back up your payments"
+          body={`They live only on this phone. Last backup: ${backupAge(backup.daysSince)}.`}
+          onPress={() => router.push("/settings")}
+        />
       ) : null}
 
       {ready && entries.length === 0 ? (
@@ -106,6 +115,7 @@ export default function OverviewScreen() {
                 color={categoryColor(group.slug)}
               />
             ))}
+            <Button label={`Share ${formatMonthShort(month)} on X`} icon="share" variant="secondary" onPress={() => router.push("/share-month")} />
           </Card>
         </Section>
       ) : null}

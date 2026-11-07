@@ -9,6 +9,7 @@ import { CategoryIcon } from "@/ui/CategoryVisual";
 import { Icon } from "@/ui/Icon";
 import { fonts, space, useTheme } from "@/ui/theme";
 import { closeModal } from "@/features/navigation";
+import { BrandWall } from "@/features/BrandWall";
 
 export default function CategoriesScreen() {
   const { c, categoryColor } = useTheme();
@@ -101,6 +102,8 @@ export default function CategoriesScreen() {
             <Empty title="None yet" body="Categories you add show up in every category picker." />
           )}
         </Card>
+
+        <BrandWall categories={categories} />
       </ScrollView>
     </View>
   );

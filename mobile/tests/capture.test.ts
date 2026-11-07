@@ -32,6 +32,16 @@ describe("capturing bank messages", () => {
     });
   });
 
+  it("names a known shop by its own name, even when the SMS only has a UPI id", async () => {
+    const { db, ctx } = await setup();
+    const netflix = "Sent Rs.649.00 from Kotak Bank AC X1234 to netflix@hdfcbank on 07-11-26.UPI Ref 630777777777. Not you, https://kotak.com/KBANKT/Fraud";
+    await captureMessage(db, { text: netflix, sender: "AD-KOTAKB", receivedAt: RECEIVED }, await ctx());
+    await captureMessage(db, { text: SWIGGY, receivedAt: RECEIVED }, await ctx());
+    const names = (await listEntries(db)).map((entry) => [entry.merchant, entry.categorySlug, entry.note]);
+    expect(names).toContainEqual(["Netflix", "subscriptions", "From Kotak SMS · 1234"]);
+    expect(names.map((row) => row[0])).toContain("Swiggy");
+  });
+
   it("never adds the same message twice", async () => {
     const { db, ctx } = await setup();
     await captureMessage(db, { text: SWIGGY, receivedAt: RECEIVED }, await ctx());

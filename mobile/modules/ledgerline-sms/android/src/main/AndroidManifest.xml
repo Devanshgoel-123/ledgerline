@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Read bank SMS on the phone to add payments. Asked for only when the
+       person turns on automatic capture; messages never leave the phone. -->
+  <uses-permission android:name="android.permission.READ_SMS" />
+</manifest>
