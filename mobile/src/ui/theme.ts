@@ -42,8 +42,18 @@ const light = {
   dangerSoft: "rgba(180, 35, 24, 0.08)",
   credit: "#1b7a4e",
   debit: "#b42318",
-  heroFrom: "#102a43",
-  heroTo: "#1d5a73",
+  heroFrom: "#0e2742",
+  heroMid: "#1d5c96",
+  heroTo: "#14606a",
+  /** Glass: a frosted fill, a bright top edge and a hairline. */
+  glassFill: "rgba(255, 255, 255, 0.58)",
+  glassFillSolid: "rgba(255, 255, 255, 0.86)",
+  glassEdge: "rgba(255, 255, 255, 0.95)",
+  glassBorder: "rgba(15, 27, 42, 0.07)",
+  /** The backdrop's soft light: ocean, lagoon and a little dusk. */
+  aura1: "#4f8fd0",
+  aura2: "#35b3a3",
+  aura3: "#e2a36c",
   onHero: "#ffffff",
   onHeroMuted: "#c6d6e3",
   heroTrack: "rgba(255, 255, 255, 0.18)",
@@ -83,8 +93,16 @@ const dark: Palette = {
   dangerSoft: "rgba(240, 138, 126, 0.13)",
   credit: "#5dc795",
   debit: "#f08a7e",
-  heroFrom: "#0f2236",
-  heroTo: "#1a4a63",
+  heroFrom: "#0c1f35",
+  heroMid: "#1b4f80",
+  heroTo: "#125a5c",
+  glassFill: "rgba(24, 36, 50, 0.52)",
+  glassFillSolid: "rgba(20, 31, 43, 0.9)",
+  glassEdge: "rgba(255, 255, 255, 0.12)",
+  glassBorder: "rgba(230, 237, 243, 0.08)",
+  aura1: "#1d5c96",
+  aura2: "#127a70",
+  aura3: "#5d4f9c",
   onHero: "#ffffff",
   onHeroMuted: "#c6d6e3",
   heroTrack: "rgba(255, 255, 255, 0.16)",
@@ -193,6 +211,16 @@ export const fonts = {
 
 /** Lines digits up in columns of amounts. */
 export const tabular = { fontVariant: ["tabular-nums" as const] };
+
+/** One easing and three durations for every movement in the app. */
+export const motion = {
+  fast: 160,
+  base: 260,
+  enter: 460,
+  /** Between items that enter together, at most six of them. */
+  stagger: 50,
+  bezier: [0.22, 1, 0.36, 1] as const,
+};
 
 export const radius = { sm: 10, md: 12, lg: 16, xl: 22, pill: 999 };
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 24, 6: 32 };

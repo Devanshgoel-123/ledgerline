@@ -1,7 +1,7 @@
 import { PROVIDERS, rootCategory, toCategoryRows, type Category } from "./catalog";
 import { monthRange, shiftMonth } from "./dates";
 import { toTransactionRow, type Entry } from "./model";
-import { buildAnalyticsFromRows, type ParseResult } from "./shared";
+import { buildAnalyticsFromRows, CategorySlug, type ParseResult } from "./shared";
 import { NOT_SPENDING } from "./taxonomy";
 
 /** Cash withdrawals and other transfers are moves of your own money, like a self-transfer. */
@@ -39,6 +39,51 @@ export function monthAnalytics(input: {
     return { month, total: byMonth.get(month) ?? 0 };
   });
   return result;
+}
+
+export interface DaySpend {
+  date: string;
+  total: number;
+  /** Top-level categories that day, biggest first. Adds up to `total`. */
+  parts: { slug: string; total: number }[];
+}
+
+/**
+ * Each day of the month split by top-level category, worked out with the same
+ * totals rules as monthAnalytics, plus last month's daily spend for pacing.
+ */
+export function monthDetail(input: {
+  entries: Entry[];
+  month: string;
+  categories: Category[];
+  people: string[];
+}): { days: DaySpend[]; previous: { date: string; amount: number }[] } {
+  const categoryRows = toCategoryRows(input.categories);
+  const inMonth = (month: string) => {
+    const { from, to } = monthRange(month);
+    return input.entries.filter((entry) => entry.date >= from && entry.date <= to).map(forTotals);
+  };
+  const byDate = new Map<string, ReturnType<typeof forTotals>[]>();
+  for (const row of inMonth(input.month)) byDate.set(row.date, [...(byDate.get(row.date) ?? []), row]);
+  const days: DaySpend[] = [];
+  for (const [date, rows] of byDate) {
+    const result = buildAnalyticsFromRows(rows, PROVIDERS, input.people, categoryRows, {});
+    // The daily figure leaves rent out (one payment would dwarf every other
+    // day) and nets refunds; the parts follow it.
+    const total = result.daily[0]?.amount ?? 0;
+    if (total <= 0) continue;
+    const spend = (result.categorySpend ?? []).filter((row) => row.slug !== CategorySlug.Rent);
+    const groups = groupCategorySpend(spend, input.categories).filter((group) => group.total > 0);
+    const sum = groups.reduce((acc, group) => acc + group.total, 0);
+    const parts = groups.map((group) => ({ slug: group.slug, total: sum > 0 ? (group.total / sum) * total : 0 }));
+    days.push({ date, total, parts });
+  }
+  days.sort((a, b) => a.date.localeCompare(b.date));
+  const previousRows = inMonth(shiftMonth(input.month, -1));
+  const previous = previousRows.length
+    ? buildAnalyticsFromRows(previousRows, PROVIDERS, input.people, categoryRows, {}).daily
+    : [];
+  return { days, previous };
 }
 
 export interface CategoryGroup {

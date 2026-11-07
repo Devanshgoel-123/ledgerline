@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-import { monthAnalytics } from "@/core/analytics";
+import { monthAnalytics, monthDetail } from "@/core/analytics";
 import { categoryLabel } from "@/core/catalog";
 import { currentMonth, shiftMonth } from "@/core/dates";
 import { formatInr, formatMonthShort, formatMonthTitle, formatShortDate } from "@/core/format";
@@ -21,6 +21,15 @@ export function useMonthAnalytics() {
     const people = [...new Set(entries.map((entry) => entry.payee).filter((name): name is string => Boolean(name)))];
     return monthAnalytics({ entries, month, categories, dailyLimit, people });
   }, [entries, month, categories, dailyLimit]);
+}
+
+/** The month day by day, split by category, plus last month's days for pacing. */
+export function useMonthDetail() {
+  const { entries, month, categories } = useLedger();
+  return useMemo(() => {
+    const people = [...new Set(entries.map((entry) => entry.payee).filter((name): name is string => Boolean(name)))];
+    return monthDetail({ entries, month, categories, people });
+  }, [entries, month, categories]);
 }
 
 /** ‹ October 2026 › — the web's month picker. */
