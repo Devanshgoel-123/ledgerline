@@ -36,7 +36,6 @@ export function DailyBars({
     if (value <= 0) return c.chartGrid;
     if (value === tallest) return c.barPeak;
     if (limit && value > limit) return c.barHot;
-    if (value > avg * 1.5) return c.barWatch;
     return c.barCalm;
   };
 
@@ -54,7 +53,7 @@ export function DailyBars({
       </Text>
       <View style={[s.plot, { height: CHART_HEIGHT, borderColor: c.chartGrid }]}>
         {avg > 0 ? (
-          <View style={[s.avgLine, { bottom: (avg / max) * CHART_HEIGHT, borderColor: c.parchmentInk }]} />
+          <View style={[s.avgLine, { bottom: (avg / max) * CHART_HEIGHT, borderColor: c.muted2 }]} />
         ) : null}
         {limit ? (
           <View style={[s.avgLine, { bottom: Math.min(limit / max, 1) * CHART_HEIGHT, borderColor: c.danger, borderStyle: "dotted" }]} />
@@ -85,10 +84,10 @@ export function DailyBars({
         ))}
       </View>
       <View style={s.legend}>
-        <Legend color={c.barCalm} label="Typical" />
-        <Legend color={c.barWatch} label="Above average" />
+        <Legend color={c.barCalm} label="A day" />
+        <Legend color={c.barPeak} label="Highest day" />
         {limit ? <Legend color={c.barHot} label="Over limit" /> : null}
-        <Legend color={c.barPeak} label="Tallest" />
+        {avg > 0 ? <Legend color={c.muted2} label="Average" line /> : null}
       </View>
     </View>
   );
@@ -176,11 +175,15 @@ export function CategoryBar({
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function Legend({ color, label, line }: { color: string; label: string; line?: boolean }) {
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: color }} />
+      {line ? (
+        <View style={{ width: 12, borderTopWidth: 1, borderStyle: "dashed", borderColor: color }} />
+      ) : (
+        <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: color }} />
+      )}
       <Text style={[s.tick, { color: c.muted, fontSize: 12 }]}>{label}</Text>
     </View>
   );

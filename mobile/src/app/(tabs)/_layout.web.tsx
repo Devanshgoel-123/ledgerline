@@ -11,7 +11,7 @@ import { fonts, useTheme } from "@/ui/theme";
 
 const TABS: { name: string; href: "/" | "/lifestyle" | "/transactions" | "/people" | "/settings"; label: string; icon: IconName }[] = [
   { name: "index", href: "/", label: "Overview", icon: "overview" },
-  { name: "lifestyle", href: "/lifestyle", label: "Lifestyle", icon: "lifestyle" },
+  { name: "lifestyle", href: "/lifestyle", label: "Insights", icon: "lifestyle" },
   { name: "transactions", href: "/transactions", label: "Transactions", icon: "list" },
   { name: "people", href: "/people", label: "People", icon: "people" },
   { name: "settings", href: "/settings", label: "Settings", icon: "settings" },

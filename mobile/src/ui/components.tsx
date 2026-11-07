@@ -419,8 +419,10 @@ export function Toggle(props: SwitchProps) {
   return (
     <Switch
       trackColor={{ true: c.primary, false: c.borderStrong }}
-      thumbColor={Platform.OS === "android" ? "#ffffff" : undefined}
+      thumbColor={Platform.OS === "ios" ? undefined : "#ffffff"}
       ios_backgroundColor={c.borderStrong}
+      // react-native-web draws the "on" thumb in its own teal unless told otherwise.
+      {...(Platform.OS === "web" ? ({ activeThumbColor: "#ffffff" } as object) : null)}
       {...props}
     />
   );
@@ -434,17 +436,17 @@ export function Divider() {
 export function Empty({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   const { c } = useTheme();
   return (
-    <View style={{ alignItems: "flex-start", gap: space[2], paddingVertical: space[2] }}>
+    <View style={{ alignItems: "flex-start", gap: space[1], paddingVertical: space[2] }}>
       <Text style={[styles.strong, { color: c.foreground }]}>{title}</Text>
-      <Text style={[styles.body, { color: c.muted }]}>{body}</Text>
-      {action}
+      <Text style={[styles.small, { color: c.muted }]}>{body}</Text>
+      {action ? <View style={{ marginTop: space[2] }}>{action}</View> : null}
     </View>
   );
 }
 
 export const styles = StyleSheet.create({
   pageHeader: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
-  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
+  pageTitle: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, letterSpacing: -0.6 },
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, minHeight: 32 },
   sectionTitle: { fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
   link: { fontFamily: fonts.sansMedium, fontSize: 15 },

@@ -75,7 +75,7 @@ export default function TransactionsScreen() {
       renderSectionHeader={({ section }) => (
         <View style={s.dayHeader}>
           <Text style={[s.day, { color: c.muted }]}>{formatDayLabel(section.title)}</Text>
-          <Text style={[s.dayTotal, { color: c.muted }]}>{section.spent ? formatInr(section.spent) : ""}</Text>
+          <Text style={[s.dayTotal, { color: c.muted }]}>{section.spent && section.data.length > 1 ? formatInr(section.spent) : ""}</Text>
         </View>
       )}
       renderItem={({ item, index, section }) => {

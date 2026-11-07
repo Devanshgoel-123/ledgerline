@@ -155,7 +155,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingHorizontal: 16,
     minHeight: 44,
   },

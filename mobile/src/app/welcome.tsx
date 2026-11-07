@@ -59,7 +59,7 @@ export default function WelcomeScreen() {
       <View style={{ gap: space[2] }}>
         <Eyebrow>Ledgerline</Eyebrow>
         <Text style={[s.title, { color: c.foreground }]} accessibilityRole="header">
-          Where your money actually went.
+          Where your money actually went
         </Text>
         <T tone="muted">Free, private, and only on this phone. No account, no bank login.</T>
       </View>
@@ -102,7 +102,7 @@ export default function WelcomeScreen() {
 }
 
 const s = StyleSheet.create({
-  title: { fontFamily: fonts.displayBold, fontSize: 34, lineHeight: 40, letterSpacing: -0.6 },
+  title: { fontFamily: fonts.display, fontSize: 34, lineHeight: 40, letterSpacing: -0.6 },
   step: { flexDirection: "row", gap: space[3], alignItems: "flex-start" },
   num: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   numText: { fontFamily: fonts.monoMedium, fontSize: 15 },

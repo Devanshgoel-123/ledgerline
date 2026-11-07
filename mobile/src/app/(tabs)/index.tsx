@@ -17,13 +17,6 @@ import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 /** A statement check older than this many days earns a reminder on Overview. */
 const STATEMENT_NUDGE_DAYS = 25;
 
-function greeting(now = new Date()): string {
-  const hour = now.getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function OverviewScreen() {
   const { c, categoryColor } = useTheme();
   const { entries, month, dailyLimit, lastCheck, ready, categories, lastBackupAt } = useLedger();
@@ -44,12 +37,9 @@ export default function OverviewScreen() {
   return (
     <Screen>
       <View style={s.header}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[s.greeting, { color: c.muted }]}>{greeting()}</Text>
-          <Text style={[s.pageTitle, { color: c.foreground }]} accessibilityRole="header">
-            Overview
-          </Text>
-        </View>
+        <Text style={[s.pageTitle, { color: c.foreground, flex: 1 }]} accessibilityRole="header">
+          Overview
+        </Text>
         <MonthSwitcher />
       </View>
       <SampleNotice />
@@ -268,16 +258,15 @@ function HeroStat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
-  greeting: { fontFamily: fonts.sansMedium, fontSize: 14, lineHeight: 18 },
-  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
+  header: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  pageTitle: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, letterSpacing: -0.6 },
   hero: { borderRadius: radius.xl, padding: 20, gap: space[1], overflow: "hidden" },
   heroStats: { flexDirection: "row", marginTop: space[3], paddingTop: space[3], borderTopWidth: StyleSheet.hairlineWidth },
   heroStat: { flex: 1, gap: 2 },
   heroStatValue: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20 },
   heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   heroLabel: { fontFamily: fonts.sansMedium, fontSize: 14 },
-  heroAmount: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 48, letterSpacing: -1.2 },
+  heroAmount: { fontFamily: fonts.display, fontSize: 40, lineHeight: 48, letterSpacing: -0.8 },
   heroSmall: { fontFamily: fonts.sansMedium, fontSize: 12.5 },
   track: { height: 4, borderRadius: 2, overflow: "hidden", marginTop: space[3] },
   fill: { height: "100%", borderRadius: 2 },

@@ -51,7 +51,6 @@ const light = {
   heroWarn: "#f6b8ab",
   chartGrid: "rgba(15, 27, 42, 0.07)",
   barCalm: "#c3d2e1",
-  barWatch: "#dcb57a",
   barHot: "#dc8a7d",
   barPeak: "#1d5c96",
   overlay: "rgba(15, 27, 42, 0.45)",
@@ -93,7 +92,6 @@ const dark: Palette = {
   heroWarn: "#f6b8ab",
   chartGrid: "rgba(230, 237, 243, 0.07)",
   barCalm: "#2c4054",
-  barWatch: "#c79b57",
   barHot: "#d47a6d",
   barPeak: "#82b4e3",
   overlay: "rgba(0, 0, 0, 0.6)",
@@ -187,7 +185,6 @@ export const fonts = {
   // One typeface throughout: Inter's heavier weights do the display work. A
   // characterful display face read as playful; money wants plain and steady.
   display: "Inter_600SemiBold",
-  displayBold: "Inter_700Bold",
   // Amounts use Inter with tabular figures. The names stay so existing
   // styles keep working.
   mono: "Inter_500Medium",
