@@ -9,13 +9,14 @@ import {
   turnOffSmsCapture,
   turnOnSmsCapture,
 } from "@/capture/androidSms";
-import { inboxAvailable } from "@/capture/inbox";
+import { captureNotificationsOn, emptyMessageSince, inboxAvailable, setCaptureNotifications } from "@/capture/inbox";
 import { isoDate } from "@/core/dates";
 import { formatShortDate } from "@/core/format";
 import { getSetting } from "@/db/repo";
 import { closeModal } from "@/features/navigation";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, CardTitle, Notice, Pill, T } from "@/ui/components";
+import { askForNotifications, notificationPermission } from "@/reminders/schedule";
+import { Button, Card, CardTitle, Notice, Pill, T, Toggle } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { fonts, radius, space, useTheme } from "@/ui/theme";
 
@@ -27,7 +28,10 @@ const STEPS: { title: string; body: string }[] = [
   { title: "Choose Message", body: "Leave Sender and Message Contains empty, so every bank works. Ledgerline ignores anything that isn't a payment." },
   { title: "Choose Run Immediately", body: "Then turn off Notify When Run, and tap Next." },
   { title: "Add the Ledgerline action", body: "Tap New Blank Automation, then search for “Log bank message” (it’s also listed under Ledgerline) and add it." },
-  { title: "Give it the message", body: "Tap Message in the action and choose Shortcut Input. Optionally, tap Sender and choose Sender. Tap Done." },
+  {
+    title: "Give it the message (don't skip this)",
+    body: "In the action, tap the blue word Message and choose Shortcut Input. Without it nothing gets logged. Optionally tap Sender and choose Sender. Tap Done.",
+  },
 ];
 
 export default function AutoCaptureScreen() {
@@ -82,7 +86,10 @@ export default function AutoCaptureScreen() {
           </View>
         </Card>
 
+        {Platform.OS === "ios" ? <EmptyMessageWarning /> : null}
+
         {Platform.OS === "ios" ? (
+          <>
           <Card>
             <CardTitle title="Set it up (about a minute)" sub="Apple asks you to create this yourself; apps can't read messages on their own." />
             {STEPS.map((step, index) => (
@@ -98,11 +105,22 @@ export default function AutoCaptureScreen() {
                 </View>
               </View>
             ))}
-            <Button label="Open Shortcuts" icon="chevron" onPress={() => void Linking.openURL("shortcuts://")} />
+            <Button
+              label="Open Shortcuts"
+              icon="chevron"
+              onPress={async () => {
+                // Ask now, while it makes sense, so the first payment can tell you it arrived.
+                if (await captureNotificationsOn()) await askForNotifications();
+                void Linking.openURL("shortcuts://");
+              }}
+            />
             <T variant="small" tone="muted">
-              Next time your bank texts you, open Ledgerline: the payment will be waiting under “From your bank messages”.
+              Next time your bank texts you, Ledgerline adds the payment and tells you with a quiet notification. Tap it to check
+              the category.
             </T>
           </Card>
+          <CaptureNotifications />
+          </>
         ) : (
           <AndroidCapture db={db} captureNow={captureNow} />
         )}
@@ -212,6 +230,65 @@ function AndroidCapture({ db, captureNow }: { db: ReturnType<typeof useLedger>["
         <Button label="Allow and turn on" icon="bell" busy={state === "loading"} onPress={() => void turnOn()} />
       )}
       {result ? <T variant="small" tone="muted">{result}</T> : null}
+    </Card>
+  );
+}
+
+/** The automation ran but handed over no message: say how to fix it. */
+function EmptyMessageWarning() {
+  const { entries } = useLedger();
+  const [since, setSince] = useState<string | null>(null);
+  useEffect(() => {
+    void emptyMessageSince().then(setSince);
+  }, [entries]);
+  if (!since) return null;
+  return (
+    <Notice
+      tone="danger"
+      title="Your automation isn't passing the message."
+      body={`It ran on ${formatShortDate(isoDate(new Date(since)))} without one, so nothing was logged. In Shortcuts, open the automation, tap Message in “Log bank message” and choose Shortcut Input.`}
+      action={<Button label="Open Shortcuts" variant="secondary" onPress={() => void Linking.openURL("shortcuts://")} />}
+    />
+  );
+}
+
+/** "₹640 spent. Tap to check it": on by default, needs notification permission. */
+function CaptureNotifications() {
+  const [on, setOn] = useState(true);
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    void Promise.all([captureNotificationsOn(), notificationPermission()]).then(([wanted, permission]) => {
+      setOn(wanted && permission === "granted");
+      setBlocked(wanted && permission === "denied");
+    });
+  }, []);
+  const change = async (next: boolean) => {
+    if (!next) {
+      setCaptureNotifications(false);
+      setOn(false);
+      return;
+    }
+    const permission = await askForNotifications();
+    setCaptureNotifications(true);
+    setOn(permission === "granted");
+    setBlocked(permission === "denied");
+  };
+  return (
+    <Card>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space[3] }}>
+        <View style={{ flex: 1 }}>
+          <CardTitle title="Tell me when a payment is logged" sub="A quiet notification with the amount. Tap it to check the category." />
+        </View>
+        <Toggle value={on} onValueChange={(next) => void change(next)} accessibilityLabel="Tell me when a payment is logged" />
+      </View>
+      {blocked ? (
+        <>
+          <T variant="small" tone="danger">
+            {"Notifications are off for Ledgerline. Turn them on in your iPhone’s settings."}
+          </T>
+          <Button label="Open iPhone settings" variant="secondary" onPress={() => void Linking.openSettings()} />
+        </>
+      ) : null}
     </Card>
   );
 }

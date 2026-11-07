@@ -106,11 +106,13 @@ export async function applyReminders(settings: ReminderSettings): Promise<void> 
   }
 }
 
-/** The screen a tapped reminder asks for, if it is one of ours. */
+/** The screen a tapped notification asks for, if it is one of ours. */
 export function routeFromResponse(response: Notifications.NotificationResponse | null): string | null {
   if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return null;
   const url = response.notification.request.content.data?.url;
-  return url === REMINDER_ROUTES.daily || url === REMINDER_ROUTES.monthly || url === REMINDER_ROUTES.backup ? url : null;
+  // "/review" and "/auto-capture" come from the iOS "Log bank message" action.
+  const known: unknown[] = [...Object.values(REMINDER_ROUTES), "/review", "/auto-capture"];
+  return typeof url === "string" && known.includes(url) ? url : null;
 }
 
 /** A tapped reminder opens Add expense (daily) or the statement check (monthly). */
