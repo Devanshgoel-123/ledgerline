@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -16,10 +16,15 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Backdrop, Glass } from "./Glass";
+import { Enter } from "./motion";
 import { Icon, type IconName } from "./Icon";
 import { fonts, radius, space, tabular, useTheme } from "./theme";
 
-/** A scrolling page on the app background. */
+/**
+ * A scrolling page over the backdrop's soft light. Its blocks rise in one
+ * after another on first show, a few dozen milliseconds apart.
+ */
 export function Screen({
   children,
   scroll = true,
@@ -29,7 +34,6 @@ export function Screen({
   scroll?: boolean;
   padTop?: boolean;
 }) {
-  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const style = {
     paddingTop: padTop ? insets.top + space[3] : space[3],
@@ -37,15 +41,26 @@ export function Screen({
     paddingHorizontal: space[4],
     gap: space[4],
   };
-  if (!scroll) return <View style={[{ flex: 1, backgroundColor: c.bg }, style]}>{children}</View>;
+  const blocks = Children.toArray(children).map((child, index) => (
+    <Enter key={(child as { key?: string }).key ?? index} index={index}>
+      {child}
+    </Enter>
+  ));
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      contentContainerStyle={style}
-      keyboardShouldPersistTaps="handled"
-      contentInsetAdjustmentBehavior="never">
-      {children}
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <Backdrop />
+      {scroll ? (
+        <ScrollView
+          style={{ flex: 1, backgroundColor: "transparent" }}
+          contentContainerStyle={style}
+          keyboardShouldPersistTaps="handled"
+          contentInsetAdjustmentBehavior="never">
+          {blocks}
+        </ScrollView>
+      ) : (
+        <View style={[{ flex: 1 }, style]}>{blocks}</View>
+      )}
+    </View>
   );
 }
 
@@ -107,22 +122,7 @@ export function Section({
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  const { c, dark } = useTheme();
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: c.surface,
-          borderColor: c.border,
-          shadowColor: c.shadow,
-          shadowOpacity: dark ? 0.4 : 1,
-        },
-        style,
-      ]}>
-      {children}
-    </View>
-  );
+  return <Glass style={[styles.card, style]}>{children}</Glass>;
 }
 
 export function CardTitle({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
@@ -419,8 +419,10 @@ export function Toggle(props: SwitchProps) {
   return (
     <Switch
       trackColor={{ true: c.primary, false: c.borderStrong }}
-      thumbColor={Platform.OS === "android" ? "#ffffff" : undefined}
+      thumbColor={Platform.OS === "ios" ? undefined : "#ffffff"}
       ios_backgroundColor={c.borderStrong}
+      // react-native-web draws the "on" thumb in its own teal unless told otherwise.
+      {...(Platform.OS === "web" ? ({ activeThumbColor: "#ffffff" } as object) : null)}
       {...props}
     />
   );
@@ -434,29 +436,21 @@ export function Divider() {
 export function Empty({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   const { c } = useTheme();
   return (
-    <View style={{ alignItems: "flex-start", gap: space[2], paddingVertical: space[2] }}>
+    <View style={{ alignItems: "flex-start", gap: space[1], paddingVertical: space[2] }}>
       <Text style={[styles.strong, { color: c.foreground }]}>{title}</Text>
-      <Text style={[styles.body, { color: c.muted }]}>{body}</Text>
-      {action}
+      <Text style={[styles.small, { color: c.muted }]}>{body}</Text>
+      {action ? <View style={{ marginTop: space[2] }}>{action}</View> : null}
     </View>
   );
 }
 
 export const styles = StyleSheet.create({
   pageHeader: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
-  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
+  pageTitle: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, letterSpacing: -0.6 },
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, minHeight: 32 },
   sectionTitle: { fontFamily: fonts.sansSemi, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
   link: { fontFamily: fonts.sansMedium, fontSize: 15 },
-  card: {
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: space[4],
-    gap: space[3],
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 10,
-    elevation: 1,
-  },
+  card: { padding: space[4], gap: space[3] },
   cardTitle: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
   body: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 21 },
   small: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 18 },

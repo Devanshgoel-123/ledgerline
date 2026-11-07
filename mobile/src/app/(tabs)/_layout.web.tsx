@@ -1,3 +1,4 @@
+import { BlurView } from "expo-blur";
 import { Redirect } from "expo-router";
 import { TabList, Tabs, TabSlot, TabTrigger } from "expo-router/ui";
 import type { ComponentProps } from "react";
@@ -11,20 +12,22 @@ import { fonts, useTheme } from "@/ui/theme";
 
 const TABS: { name: string; href: "/" | "/lifestyle" | "/transactions" | "/people" | "/settings"; label: string; icon: IconName }[] = [
   { name: "index", href: "/", label: "Overview", icon: "overview" },
-  { name: "lifestyle", href: "/lifestyle", label: "Lifestyle", icon: "lifestyle" },
+  { name: "lifestyle", href: "/lifestyle", label: "Insights", icon: "lifestyle" },
   { name: "transactions", href: "/transactions", label: "Transactions", icon: "list" },
   { name: "people", href: "/people", label: "People", icon: "people" },
   { name: "settings", href: "/settings", label: "Settings", icon: "settings" },
 ];
 
 export default function WebTabsLayout() {
-  const { c } = useTheme();
+  const { c, dark } = useTheme();
   const { ready, welcomed } = useLedger();
   if (ready && !welcomed) return <Redirect href="/welcome" />;
   return (
     <Tabs>
       <TabSlot />
-      <TabList style={[s.bar, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <TabList style={[s.bar, { borderColor: c.glassBorder }]}>
+        <BlurView intensity={60} tint={dark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: c.glassFill }]} />
         {TABS.map((tab) => (
           <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
             <TabButton label={tab.label} icon={tab.icon} />
@@ -59,6 +62,7 @@ const s = StyleSheet.create({
     bottom: 0,
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
     paddingTop: 6,
     paddingBottom: 10,
   },

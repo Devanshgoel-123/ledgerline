@@ -186,7 +186,7 @@ export default function QuickAddScreen() {
               accessibilityHint={key === "back" ? "Long press to clear" : undefined}
               style={({ pressed }) => [s.key, { backgroundColor: pressed ? c.bgMuted : "transparent" }]}>
               {key === "back" ? (
-                <Icon name="back" size={22} color={c.foreground} />
+                <Icon name="erase" size={22} color={c.foreground} />
               ) : (
                 <Text style={[s.keyText, { color: c.foreground }]}>{key}</Text>
               )}
@@ -221,8 +221,8 @@ const s = StyleSheet.create({
   more: { minHeight: 44, justifyContent: "center", paddingHorizontal: space[2] },
   moreText: { fontFamily: fonts.sansSemi, fontSize: 15 },
   amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], paddingHorizontal: space[4], minHeight: 60, marginVertical: space[1] },
-  rupee: { fontFamily: fonts.displayBold, fontSize: 32 },
-  amount: { fontFamily: fonts.displayBold, letterSpacing: -1, flexShrink: 1 },
+  rupee: { fontFamily: fonts.display, fontSize: 32 },
+  amount: { fontFamily: fonts.display, letterSpacing: -1, flexShrink: 1 },
   categories: { flexDirection: "row", flexWrap: "wrap", rowGap: space[1], paddingHorizontal: space[3] },
   allTile: { width: "25%", alignItems: "center", gap: 6, paddingVertical: 4 },
   allWell: { width: 52, height: 52, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },

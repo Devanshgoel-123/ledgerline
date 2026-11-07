@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupCategorySpend, monthAnalytics } from "@/core/analytics";
+import { groupCategorySpend, monthAnalytics, monthDetail } from "@/core/analytics";
 import { BUILT_IN_CATEGORIES } from "@/core/catalog";
 import { classify } from "@/core/classify";
 import { sampleEntries } from "@/core/sample";
@@ -125,5 +125,25 @@ describe("the phone's category tree", () => {
     expect(tx("BBPS BESCOM ELECTRICITY BILL 1234567").categorySlug).toBe("electricity");
     expect(tx("POS INDIAN OIL PETROL PUMP KORAMANGALA").categorySlug).toBe("petrol");
     expect(tx("NACH LIC OF INDIA PREMIUM").categorySlug).toBe("insurance");
+  });
+});
+
+describe("day by day detail", () => {
+  it("splits each day by category and adds up to the month's daily spend", async () => {
+    const { db, month } = await sampleMonth();
+    const entries = await listEntries(db);
+    const input = { entries, month, categories: BUILT_IN_CATEGORIES, people: [] };
+    const result = monthAnalytics({ ...input, dailyLimit: null });
+    const detail = monthDetail(input);
+    const daily = new Map(result.daily.filter((day) => day.amount > 0).map((day) => [day.date, day.amount]));
+    expect(detail.days.length).toBeGreaterThan(0);
+    for (const day of detail.days) {
+      expect(day.total).toBeCloseTo(daily.get(day.date) ?? 0, 2);
+      expect(day.parts.reduce((sum, part) => sum + part.total, 0)).toBeCloseTo(day.total, 2);
+      for (const part of day.parts) expect(BUILT_IN_CATEGORIES.find((c) => c.slug === part.slug)?.parent ?? null).toBeNull();
+    }
+    // Rent stays off the day chart, the same as the month's daily figures.
+    expect(detail.days.reduce((sum, day) => sum + day.total, 0)).toBeCloseTo([...daily.values()].reduce((a, b) => a + b, 0), 2);
+    expect(detail.days.some((day) => day.parts.some((part) => part.slug === "home" && part.total >= 18000))).toBe(false);
   });
 });

@@ -1,34 +1,31 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from "react-native-svg";
+import type { DaySpend } from "@/core/analytics";
 import { groupCategorySpend } from "@/core/analytics";
 import { backupAge, backupStatus } from "@/core/backupStatus";
 import { categoryLabel } from "@/core/catalog";
 import { currentMonth, daysSince, today } from "@/core/dates";
 import { formatInr, formatMonthShort, formatMonthTitle, formatShortDate } from "@/core/format";
-import { EntryRow, MonthSwitcher, SampleNotice, useMonthAnalytics } from "@/features/common";
+import { EntryRow, MonthSwitcher, SampleNotice, useMonthAnalytics, useMonthDetail } from "@/features/common";
 import { useLedger } from "@/state/ledger";
 import { Button, Card, Empty, Screen, Section, T } from "@/ui/components";
-import { CategoryBar } from "@/ui/charts";
+import { CategoryBar, Sparkline } from "@/ui/charts";
+import { useCountUp } from "@/ui/motion";
+import { Glass } from "@/ui/Glass";
 import { Icon, type IconName } from "@/ui/Icon";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
 /** A statement check older than this many days earns a reminder on Overview. */
 const STATEMENT_NUDGE_DAYS = 25;
 
-function greeting(now = new Date()): string {
-  const hour = now.getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function OverviewScreen() {
   const { c, categoryColor } = useTheme();
   const { entries, month, dailyLimit, lastCheck, ready, categories, lastBackupAt } = useLedger();
   const backup = backupStatus(lastBackupAt, entries.length);
   const result = useMonthAnalytics();
+  const detail = useMonthDetail();
   const { summary } = result;
   const isThisMonth = month === currentMonth();
   const todaySpent = isThisMonth ? (result.daily.find((day) => day.date === today())?.amount ?? 0) : 0;
@@ -44,12 +41,9 @@ export default function OverviewScreen() {
   return (
     <Screen>
       <View style={s.header}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[s.greeting, { color: c.muted }]}>{greeting()}</Text>
-          <Text style={[s.pageTitle, { color: c.foreground }]} accessibilityRole="header">
-            Overview
-          </Text>
-        </View>
+        <Text style={[s.pageTitle, { color: c.foreground, flex: 1 }]} accessibilityRole="header">
+          Overview
+        </Text>
         <MonthSwitcher />
       </View>
       <SampleNotice />
@@ -62,6 +56,7 @@ export default function OverviewScreen() {
         limit={isThisMonth ? dailyLimit : null}
         showToday={isThisMonth}
         month={month}
+        days={detail.days}
       />
 
       <View style={s.actions}>
@@ -104,7 +99,7 @@ export default function OverviewScreen() {
       {groups.length ? (
         <Section title="Where it went" action="All categories" onAction={() => router.push("/lifestyle")}>
           <Card style={{ gap: space[4] }}>
-            {groups.map((group) => (
+            {groups.map((group, index) => (
               <CategoryBar
                 key={group.slug}
                 slug={group.slug}
@@ -113,6 +108,7 @@ export default function OverviewScreen() {
                 share={group.total / biggest}
                 percent={summary.totalSpent > 0 ? group.total / summary.totalSpent : undefined}
                 color={categoryColor(group.slug)}
+                index={index}
               />
             ))}
             <Button label={`Share ${formatMonthShort(month)} on X`} icon="share" variant="secondary" onPress={() => router.push("/share-month")} />
@@ -157,15 +153,17 @@ function Prompt({ icon, title, body, onPress }: { icon: IconName; title: string;
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${body}`}
-      style={({ pressed }) => [s.prompt, { backgroundColor: c.primarySoft, opacity: pressed ? 0.7 : 1 }]}>
-      <View style={[s.promptIcon, { backgroundColor: c.surface }]}>
-        <Icon name={icon} size={18} color={c.primary} />
-      </View>
-      <View style={{ flex: 1, gap: 1 }}>
-        <Text style={[s.promptTitle, { color: c.foreground }]}>{title}</Text>
-        <Text style={[s.promptBody, { color: c.muted }]}>{body}</Text>
-      </View>
-      <Icon name="chevron" size={14} color={c.muted} />
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      <Glass style={s.prompt}>
+        <View style={[s.promptIcon, { backgroundColor: c.primarySoft }]}>
+          <Icon name={icon} size={18} color={c.primary} />
+        </View>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={[s.promptTitle, { color: c.foreground }]}>{title}</Text>
+          <Text style={[s.promptBody, { color: c.muted }]}>{body}</Text>
+        </View>
+        <Icon name="chevron" size={14} color={c.muted} />
+      </Glass>
     </Pressable>
   );
 }
@@ -178,6 +176,7 @@ function Hero({
   limit,
   showToday,
   month,
+  days,
 }: {
   total: number;
   today: number;
@@ -186,10 +185,12 @@ function Hero({
   limit: number | null;
   showToday: boolean;
   month: string;
+  days: DaySpend[];
 }) {
   const { c } = useTheme();
   const progress = limit ? Math.min(1, todaySpent / limit) : 0;
   const over = Boolean(limit && todaySpent > limit);
+  const shown = useCountUp(total);
   // The gradient is drawn at the card's measured size; SVG percentages don't
   // track a flex parent reliably.
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -205,10 +206,17 @@ function Hero({
         <Defs>
           <LinearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor={c.heroFrom} />
+            <Stop offset="0.55" stopColor={c.heroMid} />
             <Stop offset="1" stopColor={c.heroTo} />
           </LinearGradient>
+          {/* A soft light from the top right, like a lamp on glass. */}
+          <RadialGradient id="heroGloss" cx="85%" cy="0%" rx="70%" ry="80%" fx="85%" fy="0%">
+            <Stop offset="0" stopColor="#ffffff" stopOpacity={0.22} />
+            <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
+          </RadialGradient>
         </Defs>
         <Rect x={0} y={0} width={size.width} height={size.height} fill="url(#hero)" />
+        <Rect x={0} y={0} width={size.width} height={size.height} fill="url(#heroGloss)" />
       </Svg>
       <View style={s.heroTop}>
         <Text style={[s.heroLabel, { color: c.onHeroMuted }]}>
@@ -232,8 +240,9 @@ function Hero({
         adjustsFontSizeToFit
         numberOfLines={1}
         accessibilityLabel={`Spent ${formatInr(total)}`}>
-        {formatInr(total)}
+        {formatInr(shown)}
       </Text>
+      <Sparkline days={days} month={month} color={c.onHero} height={44} />
       <View style={[s.heroStats, { borderTopColor: c.heroTrack }]}>
         {showToday ? <HeroStat label="Today" value={formatInr(todaySpent)} /> : null}
         <HeroStat label="Daily avg" value={formatInr(avg)} />
@@ -268,16 +277,22 @@ function HeroStat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "flex-end", gap: space[3] },
-  greeting: { fontFamily: fonts.sansMedium, fontSize: 14, lineHeight: 18 },
-  pageTitle: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
-  hero: { borderRadius: radius.xl, padding: 20, gap: space[1], overflow: "hidden" },
+  header: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  pageTitle: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, letterSpacing: -0.6 },
+  hero: {
+    borderRadius: radius.xl,
+    padding: 20,
+    gap: space[1],
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.18)",
+  },
   heroStats: { flexDirection: "row", marginTop: space[3], paddingTop: space[3], borderTopWidth: StyleSheet.hairlineWidth },
   heroStat: { flex: 1, gap: 2 },
   heroStatValue: { fontFamily: fonts.sansSemi, fontSize: 15, lineHeight: 20 },
   heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   heroLabel: { fontFamily: fonts.sansMedium, fontSize: 14 },
-  heroAmount: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 48, letterSpacing: -1.2 },
+  heroAmount: { fontFamily: fonts.display, fontSize: 40, lineHeight: 48, letterSpacing: -0.8 },
   heroSmall: { fontFamily: fonts.sansMedium, fontSize: 12.5 },
   track: { height: 4, borderRadius: 2, overflow: "hidden", marginTop: space[3] },
   fill: { height: "100%", borderRadius: 2 },

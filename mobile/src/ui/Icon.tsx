@@ -18,6 +18,7 @@ const ICONS = {
   bell: { ios: "bell", android: "notifications", web: "notifications" },
   chevron: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   back: { ios: "chevron.left", android: "chevron_left", web: "chevron_left" },
+  erase: { ios: "delete.left", android: "backspace", web: "backspace" },
   trash: { ios: "trash", android: "delete", web: "delete" },
   split: { ios: "arrow.triangle.branch", android: "call_split", web: "call_split" },
   lock: { ios: "lock", android: "lock", web: "lock" },

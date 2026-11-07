@@ -8,6 +8,7 @@ import type { Entry } from "@/core/model";
 import { EntryRow, MonthSwitcher, SampleNotice } from "@/features/common";
 import { useLedger } from "@/state/ledger";
 import { Chip, Empty, PageHeader, Segmented } from "@/ui/components";
+import { Backdrop } from "@/ui/Glass";
 import { fonts, radius, space, tabular, useTheme } from "@/ui/theme";
 
 type Kind = "all" | "debit" | "credit";
@@ -29,8 +30,10 @@ export default function TransactionsScreen() {
   const searching = query.trim().length > 0;
 
   return (
+    <View style={{ flex: 1 }}>
+    <Backdrop />
     <SectionList
-      style={{ backgroundColor: c.bg }}
+      style={{ backgroundColor: "transparent" }}
       contentContainerStyle={{ paddingTop: insets.top + space[3], paddingBottom: insets.bottom + 96, paddingHorizontal: space[4] }}
       sections={sections}
       keyExtractor={(entry) => entry.id}
@@ -75,7 +78,7 @@ export default function TransactionsScreen() {
       renderSectionHeader={({ section }) => (
         <View style={s.dayHeader}>
           <Text style={[s.day, { color: c.muted }]}>{formatDayLabel(section.title)}</Text>
-          <Text style={[s.dayTotal, { color: c.muted }]}>{section.spent ? formatInr(section.spent) : ""}</Text>
+          <Text style={[s.dayTotal, { color: c.muted }]}>{section.spent && section.data.length > 1 ? formatInr(section.spent) : ""}</Text>
         </View>
       )}
       renderItem={({ item, index, section }) => {
@@ -86,8 +89,8 @@ export default function TransactionsScreen() {
             style={[
               s.item,
               {
-                backgroundColor: c.surface,
-                borderColor: c.border,
+                backgroundColor: c.glassFillSolid,
+                borderColor: c.glassBorder,
                 borderTopWidth: first ? StyleSheet.hairlineWidth : 0,
                 borderBottomWidth: last ? StyleSheet.hairlineWidth : 0,
                 borderTopLeftRadius: first ? radius.lg : 0,
@@ -110,6 +113,7 @@ export default function TransactionsScreen() {
         />
       }
     />
+    </View>
   );
 }
 

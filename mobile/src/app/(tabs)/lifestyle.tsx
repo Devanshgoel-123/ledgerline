@@ -4,11 +4,11 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { groupCategorySpend } from "@/core/analytics";
 import { categoryLabel } from "@/core/catalog";
 import { formatInr } from "@/core/format";
-import { MonthSwitcher, SampleNotice, useMonthAnalytics } from "@/features/common";
+import { MonthSwitcher, SampleNotice, useMonthAnalytics, useMonthDetail } from "@/features/common";
 import { useLedger } from "@/state/ledger";
 import { Card, Empty, PageHeader, Screen, Section, T } from "@/ui/components";
 import { CategoryIcon, MerchantAvatar } from "@/ui/CategoryVisual";
-import { CategoryBar, DailyBars, MonthBars } from "@/ui/charts";
+import { CategoryBar, CategoryRing, MonthBars, PaceChart, SpendChart } from "@/ui/charts";
 import { Icon } from "@/ui/Icon";
 import { fonts, space, tabular, useTheme } from "@/ui/theme";
 
@@ -16,6 +16,8 @@ export default function LifestyleScreen() {
   const { c, categoryColor } = useTheme();
   const { categories, month, dailyLimit } = useLedger();
   const result = useMonthAnalytics();
+  const detail = useMonthDetail();
+  const labelOf = (slug: string) => categoryLabel(slug, categories);
   const groups = groupCategorySpend(result.categorySpend ?? [], categories);
   const biggest = Math.max(...groups.map((group) => group.total), 1);
   const total = result.summary.totalSpent;
@@ -33,8 +35,17 @@ export default function LifestyleScreen() {
       <PageHeader title="Insights" right={<MonthSwitcher />} />
       <SampleNotice />
 
+      <Section title="This month so far">
+        <Card>
+          <PaceChart month={month} days={detail.days} previous={detail.previous} />
+        </Card>
+      </Section>
+
       {groups.length ? (
         <Section title="Categories">
+          <Card>
+            <CategoryRing groups={groups} total={total} month={month} labelOf={labelOf} categoryColor={categoryColor} />
+          </Card>
           <Card style={{ gap: 0, paddingVertical: space[2] }}>
             {groups.map((group, index) => {
               const expanded = open === group.slug;
@@ -55,6 +66,7 @@ export default function LifestyleScreen() {
                       share={group.total / biggest}
                       percent={total > 0 ? group.total / total : undefined}
                       color={categoryColor(group.slug)}
+                      index={index}
                     />
                   </Pressable>
                   {expanded ? (
@@ -94,7 +106,7 @@ export default function LifestyleScreen() {
 
       <Section title="Daily spend">
         <Card>
-          <DailyBars month={month} daily={result.daily} limit={dailyLimit} />
+          <SpendChart month={month} days={detail.days} limit={dailyLimit} labelOf={labelOf} categoryColor={categoryColor} />
         </Card>
       </Section>
 
@@ -105,7 +117,7 @@ export default function LifestyleScreen() {
               {`${Math.abs(change * 100).toFixed(0)}% ${change >= 0 ? "more" : "less"} than last month`}
             </T>
           ) : null}
-          <MonthBars months={trend} />
+          <MonthBars months={trend} current={month} />
         </Card>
       </Section>
 
