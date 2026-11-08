@@ -67,7 +67,7 @@ export default function AutoCaptureScreen() {
           </View>
           <CardTitle
             title="Add payments from your bank's SMS"
-            sub="Set it up once. After that, every payment your bank texts you about is added to Ledgerline by itself, ready for a quick look."
+            sub="Set it up once. After that, every payment your bank texts you about pops up with its amount: tap a category and it's saved."
           />
           <View style={{ gap: space[2] }}>
             <Line
@@ -115,8 +115,7 @@ export default function AutoCaptureScreen() {
               }}
             />
             <T variant="small" tone="muted">
-              Next time your bank texts you, Ledgerline adds the payment and tells you with a quiet notification. Tap it to check
-              the category.
+              {"Next time your bank texts you, a small Ledgerline popup shows the amount and asks what it was for. Tap a category and it's saved, without opening the app. If the amount can't be read, the popup asks for it."}
             </T>
           </Card>
           <CaptureNotifications />
@@ -277,9 +276,9 @@ function CaptureNotifications() {
     <Card>
       <View style={{ flexDirection: "row", alignItems: "center", gap: space[3] }}>
         <View style={{ flex: 1 }}>
-          <CardTitle title="Tell me when a payment is logged" sub="A quiet notification with the amount. Tap it to check the category." />
+          <CardTitle title="Remind me about payments I skip" sub="If you close the popup, a quiet notification stays until you pick a category." />
         </View>
-        <Toggle value={on} onValueChange={(next) => void change(next)} accessibilityLabel="Tell me when a payment is logged" />
+        <Toggle value={on} onValueChange={(next) => void change(next)} accessibilityLabel="Remind me about payments I skip" />
       </View>
       {blocked ? (
         <>

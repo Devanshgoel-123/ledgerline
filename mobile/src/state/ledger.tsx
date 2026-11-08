@@ -2,11 +2,13 @@ import { useSQLiteContext } from "expo-sqlite";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { readNewSms } from "@/capture/androidSms";
-import { readInbox } from "@/capture/inbox";
+import { readInbox, writeCaptureCategories } from "@/capture/inbox";
 import type { IncomingMessage } from "@/core/capture";
 import { captureMessages } from "@/core/capture";
 import { BUILT_IN_CATEGORIES, type Category } from "@/core/catalog";
-import { currentMonth } from "@/core/dates";
+import { currentMonth, today } from "@/core/dates";
+import { popupCategories } from "@/core/quick";
+import { todayStats } from "@/core/today";
 import type { Entry, Rule } from "@/core/model";
 import {
   getSetting,
@@ -20,6 +22,7 @@ import {
 import type { Db } from "@/db/schema";
 import { DEFAULT_REMINDERS, type ReminderSettings } from "@/reminders/settings";
 import { syncWidget } from "@/widget/sync";
+import { syncTodayActivity } from "@/widget/today";
 
 export interface Ledger {
   db: Db;
@@ -35,6 +38,8 @@ export interface Ledger {
   lastBackupAt: string | null;
   /** Ask for Face ID, fingerprint or the passcode when Ledgerline opens. */
   appLock: boolean;
+  /** Show "Today" (spend, payments, what's left to sort) on the Lock Screen. On unless turned off. */
+  todayActivity: boolean;
   /** The month the insight tabs show, YYYY-MM. */
   month: string;
   setMonth(month: string): void;
@@ -46,13 +51,13 @@ export interface Ledger {
 
 const LedgerContext = createContext<Ledger | null>(null);
 
-type Snapshot = Pick<Ledger, "entries" | "rules" | "dailyLimit" | "reminders" | "welcomed" | "lastCheck" | "lastBackupAt" | "appLock"> & {
+type Snapshot = Pick<Ledger, "entries" | "rules" | "dailyLimit" | "reminders" | "welcomed" | "lastCheck" | "lastBackupAt" | "appLock" | "todayActivity"> & {
   custom: Category[];
 };
 
 /** Everything the screens read, in one pass over the database. */
 async function loadSnapshot(db: Db): Promise<Snapshot> {
-  const [entries, custom, rules, dailyLimit, reminders, welcomed, lastCheck, lastBackupAt, appLock] = await Promise.all([
+  const [entries, custom, rules, dailyLimit, reminders, welcomed, lastCheck, lastBackupAt, appLock, todayActivity] = await Promise.all([
     listEntries(db),
     listCustomCategories(db),
     listRules(db),
@@ -62,6 +67,7 @@ async function loadSnapshot(db: Db): Promise<Snapshot> {
     lastStatementCheck(db),
     getSetting<string | null>(db, "lastBackupAt", null),
     getSetting<boolean>(db, "appLock", false),
+    getSetting<boolean>(db, "todayActivity", true),
   ]);
   return {
     entries,
@@ -73,6 +79,7 @@ async function loadSnapshot(db: Db): Promise<Snapshot> {
     lastCheck,
     lastBackupAt,
     appLock,
+    todayActivity,
   };
 }
 
@@ -147,7 +154,12 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 
   // Keep the home-screen widget's totals current after every load and write.
   useEffect(() => {
-    if (snapshot) syncWidget(snapshot.entries, categories);
+    if (!snapshot) return;
+    syncWidget(snapshot.entries, categories);
+    // The iOS payment popup's category buttons, most used first.
+    writeCaptureCategories(popupCategories(snapshot.entries, categories, today()));
+    // "Today" on the Lock Screen and in the Dynamic Island.
+    void syncTodayActivity(todayStats(snapshot.entries, today(), snapshot.dailyLimit), snapshot.todayActivity);
   }, [snapshot, categories]);
 
   const value = useMemo<Ledger>(
@@ -163,6 +175,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       lastCheck: snapshot?.lastCheck ?? null,
       lastBackupAt: snapshot?.lastBackupAt ?? null,
       appLock: snapshot?.appLock ?? false,
+      todayActivity: snapshot?.todayActivity ?? true,
       month,
       setMonth,
       refresh,

@@ -1,18 +1,25 @@
 import AppIntents
 import Foundation
 import UserNotifications
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
-// "Log bank message": the action a Shortcuts automation runs for every bank
-// SMS. It runs in the background without opening Ledgerline:
+// "Log bank message": the action a Shortcuts automation runs for every SMS.
+// It runs without opening Ledgerline:
 //
-// 1. It writes the message to the App Group folder the app shares with its
-//    widget. The app reads, parses and saves it (src/capture/inbox.ts) when it
-//    next opens, with the full parser, duplicate checks and categories.
-// 2. If the message is a payment, it says so right away with a quiet
-//    notification ("₹640 spent. Tap to check it"), using a small reader
-//    (BankMessagePreview.swift) that agrees with the app's own. Tapping it
-//    opens the review screen, where the payment is waiting.
+// 1. For a payment, it asks right there, in a small popup over whatever you
+//    are doing: "₹640 spent. What was it for?" with your categories as
+//    buttons. When the amount can't be read (or the automation handed over no
+//    text at all), it asks for the amount first.
+// 2. It writes the message and your answer to the App Group folder the app
+//    shares with its widget. The app adds the entry when it next opens
+//    (src/capture/inbox.ts, src/core/capture.ts), with your amount and
+//    category, its full parser, and duplicate checks.
+// 3. If you dismiss the popup, or iOS can't show it (a locked phone), the
+//    payment is still saved and a notification stays behind to check it later.
 //
+// Chats, OTPs and offers are saved for the app to ignore, with no popup.
 // The message never leaves the phone. Copied into the iOS project by
 // plugins/withBankMessageIntent.js.
 
@@ -20,36 +27,167 @@ import UserNotifications
 struct LogBankMessageIntent: AppIntent {
   static let title: LocalizedStringResource = "Log bank message"
   static let description = IntentDescription(
-    "Adds the payment in a bank SMS to Ledgerline. The message is read on your device and never sent anywhere."
+    "Adds the payment in a bank SMS to Ledgerline, asking for its category. The message is read on your device and never sent anywhere."
   )
   static let openAppWhenRun: Bool = false
 
-  // Optional, so an automation that isn't handing the message over doesn't
-  // stop and ask for one each time; the app explains the fix instead.
+  // Optional, so an automation that isn't handing the message over still
+  // runs: the popup asks for the amount instead.
   @Parameter(title: "Message", description: "The text of the bank SMS. Choose Shortcut Input.")
   var message: String?
 
   @Parameter(title: "Sender", description: "Who sent it, for example AD-HDFCBK. Optional.")
   var sender: String?
 
+  // Asked for in the popup; leave them empty in Shortcuts.
+  @Parameter(title: "Amount", description: "Asked for when the message has no amount Ledgerline can read.")
+  var amount: Double?
+
+  @Parameter(title: "Category", description: "Asked for each time. Set it only to file every payment in one category.")
+  var category: CaptureCategory?
+
   static var parameterSummary: some ParameterSummary {
     Summary("Log \(\.$message) in Ledgerline") {
       \.$sender
+      \.$amount
+      \.$category
     }
   }
 
   func perform() async throws -> some IntentResult {
     let text = (message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !text.isEmpty else {
+    let preview = text.isEmpty ? nil : BankMessagePreview.parse(text, sender: sender)
+
+    if text.isEmpty {
       try? LedgerlineMessageInbox.markEmptyMessage()
-      await LedgerlineCaptureNotice.explainEmptyMessage()
+    } else if preview == nil && !BankMessagePreview.mightBePayment(text) {
+      // A chat, an OTP, an offer: nothing to ask. The app reads it anyway, in case.
+      try LedgerlineMessageInbox.write(text: text, sender: sender, answer: nil)
       return .result()
     }
-    try LedgerlineMessageInbox.write(text: text, sender: sender)
-    if let preview = BankMessagePreview.parse(text, sender: sender) {
-      await LedgerlineCaptureNotice.pending(preview, text: text)
+
+    let isCredit = preview?.isCredit ?? false
+    var paid: Double? = preview?.amount
+    var picked: CaptureCategory? = category
+
+    do {
+      if paid == nil {
+        if text.isEmpty {
+          // No text means this could be any message. Ask once, gently, and say how to fix it.
+          try await requestConfirmation(
+            result: .result(dialog: "Ledgerline didn't get this message's text. If it was a payment, add it now. (To fix it, set Message to Shortcut Input in your automation.)"),
+            confirmationActionName: .add,
+            showPrompt: false
+          )
+        }
+        let typed = try await $amount.requestValue(
+          text.isEmpty ? "How much did you pay?" : "Ledgerline couldn't read the amount in this message. How much was it?"
+        )
+        paid = typed > 0 ? (typed * 100).rounded() / 100 : nil
+      }
+      if let paid, picked == nil {
+        let what = "\(BankMessagePreview.format(paid)) \(isCredit ? "received" : "spent")"
+        let from = preview?.bank.map { " from your \($0) account" } ?? ""
+        picked = try await $category.requestDisambiguation(
+          among: CaptureCategory.choices(credit: isCredit),
+          dialog: IntentDialog(stringLiteral: "\(what)\(from). \(isCredit ? "What was it?" : "What was it for?")")
+        )
+      }
+    } catch {
+      // Dismissed, or iOS couldn't show the popup (the phone was locked).
+      // Whatever we have is kept; the notification below is the reminder.
+    }
+
+    guard !text.isEmpty || paid != nil else { return .result() }
+    let answer = LedgerlineMessageInbox.Answer(
+      amount: preview == nil ? paid : nil,
+      type: isCredit ? "credit" : "debit",
+      categorySlug: picked?.id
+    )
+    try LedgerlineMessageInbox.write(text: text, sender: sender, answer: answer)
+
+    // Keep "Today" on the Lock Screen current.
+    if let paid {
+      await LedgerlineToday.add(
+        amount: paid, isCredit: isCredit, sorted: picked != nil,
+        category: picked?.id, root: picked?.root, label: picked?.label ?? preview?.bank.map { "\($0) SMS" }
+      )
+    }
+
+    // Not sorted yet: leave a quiet notification to come back to.
+    if picked == nil, let paid {
+      await LedgerlineCaptureNotice.pending(amount: BankMessagePreview.format(paid), isCredit: isCredit, bank: preview?.bank, key: text.isEmpty ? UUID().uuidString : text)
     }
     return .result()
+  }
+}
+
+/// A category the popup offers. The list comes from the app
+/// (CaptureCategories.json, most used first, written by src/state/ledger.tsx);
+/// until the app has written it, a built-in list matching src/core/taxonomy.ts.
+@available(iOS 16.0, *)
+struct CaptureCategory: AppEntity {
+  static let typeDisplayRepresentation: TypeDisplayRepresentation = "Category"
+  static let defaultQuery = CaptureCategoryQuery()
+
+  let id: String
+  let label: String
+  let root: String
+
+  var displayRepresentation: DisplayRepresentation {
+    DisplayRepresentation(title: "\(label)", image: .init(systemName: Self.symbol(root)))
+  }
+
+  private static let symbols: [String: String] = [
+    "food": "fork.knife", "grocery": "cart", "shopping": "bag", "transport": "car",
+    "travel": "airplane", "bills": "bolt", "household": "house", "subscriptions": "play.rectangle",
+    "outing": "ticket", "healthcare": "cross.case", "personal": "scissors", "education": "book",
+    "family": "person.2", "gifts": "gift", "vices": "wineglass", "emi": "building.columns",
+    "insurance": "shield", "fees": "doc.text", "investments": "chart.line.uptrend.xyaxis",
+    "transfers": "arrow.left.arrow.right", "income": "indianrupeesign.circle", "other": "ellipsis.circle",
+  ]
+
+  static func symbol(_ root: String) -> String { symbols[root] ?? "tag" }
+
+  /// Used before the app has written its list. Slugs from src/core/taxonomy.ts
+  /// (tests/capturePopup.test.ts checks they exist).
+  static let fallback: [String: [CaptureCategory]] = [
+    "debit": [
+      ("food", "Food & dining", "food"), ("grocery", "Groceries", "grocery"), ("shopping", "Shopping", "shopping"),
+      ("transport", "Transport", "transport"), ("bills", "Bills & utilities", "bills"), ("household", "Home", "household"),
+      ("subscriptions", "Subscriptions", "subscriptions"), ("outing", "Entertainment", "outing"),
+      ("healthcare", "Health", "healthcare"), ("travel", "Travel", "travel"), ("personal", "Personal care", "personal"),
+      ("other", "Other", "other"),
+    ].map { CaptureCategory(id: $0.0, label: $0.1, root: $0.2) },
+    "credit": [
+      ("salary", "Salary", "income"), ("from-home", "From family", "income"), ("refunds", "Refunds & cashback", "income"),
+      ("interest", "Interest & dividends", "income"), ("other-income", "Other income", "income"),
+    ].map { CaptureCategory(id: $0.0, label: $0.1, root: $0.2) },
+  ]
+
+  static func choices(credit: Bool) -> [CaptureCategory] {
+    let key = credit ? "credit" : "debit"
+    if let url = try? LedgerlineMessageInbox.container().appendingPathComponent(LedgerlineMessageInbox.categoriesFile),
+       let data = try? Data(contentsOf: url),
+       let lists = try? JSONDecoder().decode([String: [Choice]].self, from: data),
+       let list = lists[key], !list.isEmpty {
+      return list.map { CaptureCategory(id: $0.slug, label: $0.label, root: $0.root) }
+    }
+    return fallback[key] ?? []
+  }
+
+  private struct Choice: Decodable { let slug: String; let label: String; let root: String }
+}
+
+@available(iOS 16.0, *)
+struct CaptureCategoryQuery: EntityQuery {
+  func entities(for identifiers: [String]) async throws -> [CaptureCategory] {
+    let all = CaptureCategory.choices(credit: false) + CaptureCategory.choices(credit: true)
+    return identifiers.compactMap { id in all.first { $0.id == id } }
+  }
+
+  func suggestedEntities() async throws -> [CaptureCategory] {
+    CaptureCategory.choices(credit: false)
   }
 }
 
@@ -75,6 +213,8 @@ enum LedgerlineMessageInbox {
   static let emptyMarker = "CaptureEmptyMessage.json"
   /// The app's switch for these notifications: {"notify": false} turns them off.
   static let settingsFile = "CaptureSettings.json"
+  /// The popup's categories, written by the app (src/capture/inbox.ts).
+  static let categoriesFile = "CaptureCategories.json"
 
   enum InboxError: Error, CustomLocalizedStringResourceConvertible {
     case noAppGroup
@@ -90,16 +230,30 @@ enum LedgerlineMessageInbox {
     return url
   }
 
-  static func write(text: String, sender: String?) throws {
+  /// What you told the popup; the app reads it in src/capture/inbox.ts.
+  struct Answer {
+    /// Only when the message had no amount Ledgerline could read.
+    var amount: Double?
+    var type: String
+    var categorySlug: String?
+  }
+
+  static func write(text: String, sender: String?, answer: Answer?) throws {
     let container = try container()
     let folder = container.appendingPathComponent(folderName, isDirectory: true)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
-    var payload: [String: String] = [
+    var payload: [String: Any] = [
       "text": text,
       "receivedAt": ISO8601DateFormatter().string(from: Date()),
     ]
     if let sender, !sender.isEmpty { payload["sender"] = sender }
+    if let answer {
+      var fields: [String: Any] = ["type": answer.type]
+      if let amount = answer.amount { fields["amount"] = amount }
+      if let slug = answer.categorySlug { fields["categorySlug"] = slug }
+      payload["answer"] = fields
+    }
     let data = try JSONSerialization.data(withJSONObject: payload)
 
     // One file per message, written atomically, so the app never reads half a file.
@@ -108,7 +262,7 @@ enum LedgerlineMessageInbox {
     try data.write(to: folder.appendingPathComponent(name), options: .atomic)
 
     // A message came through, so the automation is set up right.
-    try? FileManager.default.removeItem(at: container.appendingPathComponent(emptyMarker))
+    if !text.isEmpty { try? FileManager.default.removeItem(at: container.appendingPathComponent(emptyMarker)) }
   }
 
   static func markEmptyMessage() throws {
@@ -134,19 +288,20 @@ enum LedgerlineCaptureNotice {
     return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
   }
 
-  /// "₹640 spent": a quiet banner saying the payment is in and waiting for a look.
-  static func pending(_ preview: BankMessagePreview, text: String) async {
+  /// "₹640 spent": a quiet notification for a payment you haven't sorted yet.
+  /// It stays in Notification Center; tapping it opens the review screen.
+  static func pending(amount: String, isCredit: Bool, bank: String?, key: String) async {
     guard LedgerlineMessageInbox.notificationsWanted(), await allowed() else { return }
     let content = UNMutableNotificationContent()
-    content.title = "\(preview.formattedAmount) \(preview.isCredit ? "received" : "spent")"
-    content.body = preview.bank.map { "From your \($0) message. Tap to check it in Ledgerline." }
-      ?? "From a bank message. Tap to check it in Ledgerline."
+    content.title = "\(amount) \(isCredit ? "received" : "spent")"
+    content.body = bank.map { "From your \($0) message. Tap to pick its category." }
+      ?? "Saved in Ledgerline. Tap to pick its category."
     content.threadIdentifier = "captured"
     content.userInfo = ["url": reviewRoute]
     // The bank's SMS already made a sound.
     content.sound = nil
     // The same message twice replaces its notification instead of adding one.
-    let id = "captured-\(stableHash(text))"
+    let id = "captured-\(stableHash(key))"
     try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
   }
 
@@ -159,20 +314,50 @@ enum LedgerlineCaptureNotice {
     }
     return String(hash, radix: 36)
   }
+}
 
-  /// At most once a day: the automation is running but not handing over the message.
-  static func explainEmptyMessage() async {
-    let defaults = UserDefaults(suiteName: LedgerlineMessageInbox.appGroup)
-    let last = defaults?.double(forKey: "emptyMessageNoticeAt") ?? 0
-    let now = Date().timeIntervalSince1970
-    guard now - last > 86_400, await allowed() else { return }
-    defaults?.set(now, forKey: "emptyMessageNoticeAt")
-    let content = UNMutableNotificationContent()
-    content.title = "Ledgerline didn't get the message"
-    content.body = "In your Shortcuts automation, tap Message in “Log bank message” and choose Shortcut Input."
-    content.userInfo = ["url": "/auto-capture"]
-    try? await UNUserNotificationCenter.current().add(
-      UNNotificationRequest(identifier: "capture-empty-message", content: content, trigger: nil)
-    )
+/// The "Today" Live Activity the app starts (src/widget/today.ts): the popup
+/// adds each payment to TodayStats.json and redraws the activity.
+enum LedgerlineToday {
+  static let file = "TodayStats.json"
+  /// The name src/widget/TodayActivity.tsx registers with createLiveActivity.
+  static let activityName = "TodayStats"
+
+  static func add(amount: Double, isCredit: Bool, sorted: Bool, category: String?, root: String?, label: String?) async {
+    guard let url = try? LedgerlineMessageInbox.container().appendingPathComponent(file),
+          let data = try? Data(contentsOf: url),
+          var stats = try? JSONDecoder().decode(TodayStats.self, from: data),
+          stats.enabled != false else { return }
+    stats.add(amount: amount, isCredit: isCredit, sorted: sorted, category: category, root: root, label: label, on: TodayStats.day())
+    if let encoded = try? JSONEncoder().encode(stats) { try? encoded.write(to: url, options: .atomic) }
+    await redraw(stats)
+  }
+
+  private static func redraw(_ stats: TodayStats) async {
+    #if canImport(ActivityKit) && os(iOS)
+    guard #available(iOS 16.2, *), let props = stats.propsJSON else { return }
+    var midnight = Calendar.current.startOfDay(for: Date())
+    midnight = Calendar.current.date(byAdding: .day, value: 1, to: midnight) ?? midnight
+    for activity in Activity<LiveActivityAttributes>.activities where activity.content.state.name == activityName {
+      let state = LiveActivityAttributes.ContentState(name: activityName, props: props)
+      await activity.update(ActivityContent(state: state, staleDate: midnight))
+    }
+    #endif
   }
 }
+
+#if canImport(ActivityKit) && os(iOS)
+/// The same name and shape as expo-widgets' own attributes
+/// (node_modules/expo-widgets/ios/Widgets/WidgetLiveActivity.swift), which
+/// the widget extension draws. ActivityKit matches activities by this type's
+/// name, so the popup can update the activity the app started.
+@available(iOS 16.1, *)
+struct LiveActivityAttributes: ActivityAttributes {
+  var url: String?
+
+  public struct ContentState: Codable, Hashable {
+    var name: String
+    var props: String?
+  }
+}
+#endif

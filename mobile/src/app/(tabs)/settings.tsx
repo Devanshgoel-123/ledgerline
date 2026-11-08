@@ -23,7 +23,7 @@ import { space, useTheme } from "@/ui/theme";
 export default function SettingsScreen() {
   const ledger = useLedger();
   const { c } = useTheme();
-  const { db, refresh, entries, categories, rules, dailyLimit, reminders, lastBackupAt, appLock } = ledger;
+  const { db, refresh, entries, categories, rules, dailyLimit, reminders, lastBackupAt, appLock, todayActivity } = ledger;
   const backup = backupStatus(lastBackupAt, entries.length);
   const [lock, setLock] = useState<{ available: boolean; label: string } | null>(null);
   // What's typed, until saved; otherwise the saved limit.
@@ -247,6 +247,28 @@ export default function SettingsScreen() {
           </View>
         ) : null}
       </Card>
+
+      {Platform.OS === "ios" ? (
+        <Card>
+          <CardTitle
+            title="Today on your Lock Screen"
+            sub="Today's spend, your payments and what's left to sort, on the Lock Screen and in the Dynamic Island. It updates as payments come in."
+          />
+          <View style={s.switchRow}>
+            <View style={{ flex: 1 }}>
+              <T variant="strong">Show Today</T>
+            </View>
+            <Toggle
+              value={todayActivity}
+              onValueChange={async (on) => {
+                await setSetting(db, "todayActivity", on);
+                await refresh();
+              }}
+              accessibilityLabel="Show Today on the Lock Screen"
+            />
+          </View>
+        </Card>
+      ) : null}
 
       <Card>
         <CardTitle
