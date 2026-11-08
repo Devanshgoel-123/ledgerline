@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
-import type { IncomingMessage } from "@/core/capture";
+import type { CaptureAnswer, IncomingMessage } from "@/core/capture";
+import type { TodayStats } from "@/core/today";
 
 /**
  * The hand-off between the iOS "Log bank message" action and the app.
@@ -16,7 +17,19 @@ import type { IncomingMessage } from "@/core/capture";
 export const APP_GROUP = "group.app.ledgerline.mobile";
 const FOLDER = "MessageInbox";
 
-type InboxFile = { text?: unknown; sender?: unknown; receivedAt?: unknown };
+type InboxFile = { text?: unknown; sender?: unknown; receivedAt?: unknown; answer?: unknown };
+
+/** What you told the popup, written by the action next to the message. Anything malformed is ignored. */
+function readAnswer(raw: unknown): CaptureAnswer | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as { amount?: unknown; type?: unknown; categorySlug?: unknown };
+  const answer: CaptureAnswer = {
+    amount: typeof data.amount === "number" && Number.isFinite(data.amount) && data.amount > 0 ? data.amount : null,
+    type: data.type === "credit" || data.type === "debit" ? data.type : null,
+    categorySlug: typeof data.categorySlug === "string" && data.categorySlug ? data.categorySlug : null,
+  };
+  return answer.amount || answer.type || answer.categorySlug ? answer : null;
+}
 
 function inboxDirectory(): Directory | null {
   if (Platform.OS !== "ios") return null;
@@ -47,12 +60,16 @@ export async function readInbox(): Promise<{ messages: IncomingMessage[]; done: 
   for (const file of files) {
     try {
       const data = JSON.parse(await file.text()) as InboxFile;
-      if (typeof data.text === "string" && data.text.trim()) {
+      const text = typeof data.text === "string" ? data.text : "";
+      const answer = readAnswer(data.answer);
+      // A message, or a payment typed into the popup without one.
+      if (text.trim() || answer?.amount) {
         const received = typeof data.receivedAt === "string" ? new Date(data.receivedAt) : null;
         messages.push({
-          text: data.text,
+          text,
           sender: typeof data.sender === "string" ? data.sender : null,
           receivedAt: received && !Number.isNaN(received.getTime()) ? received : undefined,
+          answer,
         });
       }
       read.push(file);
@@ -80,6 +97,7 @@ export async function readInbox(): Promise<{ messages: IncomingMessage[]; done: 
 // names match plugins/native/LogBankMessageIntent.swift.
 const EMPTY_MARKER = "CaptureEmptyMessage.json";
 const SETTINGS = "CaptureSettings.json";
+const CATEGORIES = "CaptureCategories.json";
 
 function groupFile(name: string): File | null {
   if (Platform.OS !== "ios") return null;
@@ -125,5 +143,44 @@ export function setCaptureNotifications(on: boolean): void {
     file.write(JSON.stringify({ notify: on }));
   } catch {
     // The action falls back to notifying.
+  }
+}
+
+/**
+ * The categories the popup offers, most used first, so its buttons match
+ * yours (custom ones included). Rewritten whenever entries change; the action
+ * falls back to a built-in list until the app has written it once.
+ */
+export function writeCaptureCategories(choices: { debit: CaptureChoice[]; credit: CaptureChoice[] }): void {
+  const file = groupFile(CATEGORIES);
+  if (!file) return;
+  try {
+    const next = JSON.stringify(choices);
+    if (file.exists) {
+      if (file.textSync() === next) return;
+    } else file.create();
+    file.write(next);
+  } catch {
+    // The action uses its own list.
+  }
+}
+
+/** root is the top-level category, which picks the icon the popup shows. */
+export type CaptureChoice = { slug: string; label: string; root: string };
+
+const TODAY = "TodayStats.json";
+
+/**
+ * Today's numbers for the "Today" Live Activity, for the payment popup to add
+ * to between app opens (plugins/native/LogBankMessageIntent.swift).
+ */
+export function writeTodayStats(stats: TodayStats & { enabled: boolean }): void {
+  const file = groupFile(TODAY);
+  if (!file) return;
+  try {
+    if (!file.exists) file.create();
+    file.write(JSON.stringify(stats));
+  } catch {
+    // The popup then leaves the activity for the app to update.
   }
 }

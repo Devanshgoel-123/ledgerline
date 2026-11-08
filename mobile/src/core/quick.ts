@@ -1,4 +1,4 @@
-import { categoryTree, fitsType, rootCategory, type Category } from "./catalog";
+import { categoryLabel, categoryTree, fitsType, rootCategory, type Category } from "./catalog";
 import { fromIsoDate, isoDate } from "./dates";
 import type { Entry, TxType } from "./model";
 
@@ -44,6 +44,34 @@ export function quickCategories(
   roots.forEach(push);
   return options.limit ? order.slice(0, options.limit) : order;
 }
+
+/**
+ * What the iOS payment popup offers, money out and money in: your most used
+ * categories first, then the rest of the top-level ones, and Other last.
+ */
+export function popupCategories(
+  entries: Entry[],
+  categories: Category[],
+  today: string,
+): Record<TxType, { slug: string; label: string; root: string }[]> {
+  const list = (type: TxType) => {
+    const last = type === "credit" ? "other-income" : "other";
+    const known = new Set(categories.map((category) => category.slug));
+    let slugs = quickCategories(entries, categories, { type, today, limit: 14 });
+    if (type === "credit") {
+      // Money in is mostly sorted by its sub-categories (Salary, Refunds), so offer those, not "Income".
+      const usual = ["salary", "refunds", "from-home", "interest", "transfers", "investments"];
+      const used = slugs.filter((slug) => !TOP_LEVEL_FALLBACK.has(slug));
+      slugs = [...new Set([...used, ...usual])].filter((slug) => known.has(slug));
+    }
+    slugs = slugs.filter((slug) => slug !== last && slug !== "other");
+    return [...slugs, last].map((slug) => ({ slug, label: categoryLabel(slug, categories), root: rootCategory(slug, categories) }));
+  };
+  return { debit: list("debit"), credit: list("credit") };
+}
+
+// Top-level categories quickCategories adds after the used ones; for money in they're too broad to offer.
+const TOP_LEVEL_FALLBACK = new Set(["income", "family", "investments", "transfers", "other"]);
 
 /** The four categories a widget shows as shortcuts. */
 export function widgetShortcuts(entries: Entry[], categories: Category[], today: string): string[] {

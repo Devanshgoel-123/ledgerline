@@ -93,6 +93,18 @@ struct BankMessagePreview: Equatable {
     return BankMessagePreview(amount: (value * 100).rounded() / 100, isCredit: isCredit, bank: bank(text, sender: sender))
   }
 
+  private static let moneyWords = regex(#"(?:rs\.?|inr|₹)\s*\d|\b(?:debited|credited|a\/c|acct|upi|neft|imps|spent|withdrawn)\b"#)
+
+  /// A message parse() couldn't read but that still talks about money from a
+  /// bank (not an OTP, offer or due date), so the popup asks for the amount
+  /// rather than dropping it. Chats and everything else stay silent.
+  static func mightBePayment(_ raw: String) -> Bool {
+    let text = raw.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+    guard text.count >= 15, text.count <= 800 else { return false }
+    if notAPayment.contains(where: { matches($0, text) }) { return false }
+    return matches(moneyWords, text)
+  }
+
   private static func bank(_ text: String, sender: String?) -> String? {
     // The sender ID names the bank best ("AD-KOTAKB"). In the text, a UPI id
     // like netflix@hdfcbank names the payee's bank, not yours.
@@ -102,7 +114,9 @@ struct BankMessagePreview: Equatable {
   }
 
   /// "₹1,24,860" or "₹249.50", the way the app writes amounts.
-  var formattedAmount: String {
+  var formattedAmount: String { Self.format(amount) }
+
+  static func format(_ amount: Double) -> String {
     let formatter = NumberFormatter()
     formatter.locale = Locale(identifier: "en_IN")
     formatter.numberStyle = .decimal

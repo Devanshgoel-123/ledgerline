@@ -8,8 +8,9 @@ const fs = require("fs");
 const path = require("path");
 const { IOSConfig, withDangerousMod, withEntitlementsPlist, withXcodeProject } = require("expo/config-plugins");
 
-// The action, and the small reader it uses to notify you about a payment.
-const FILES = ["LogBankMessageIntent.swift", "BankMessagePreview.swift"];
+// The action, the small reader it uses for a payment's amount, and the
+// "Today" numbers it adds each payment to.
+const FILES = ["LogBankMessageIntent.swift", "BankMessagePreview.swift", "TodayStats.swift"];
 const APP_GROUP = "group.app.ledgerline.mobile";
 
 module.exports = function withBankMessageIntent(config) {

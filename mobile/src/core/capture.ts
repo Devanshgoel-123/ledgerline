@@ -1,9 +1,9 @@
 import { addEntry, linkMessage, messageSeen } from "@/db/repo";
 import type { Db } from "@/db/schema";
-import { PROVIDERS, type Category } from "./catalog";
+import { fitsType, PROVIDERS, type Category } from "./catalog";
 import { classify } from "./classify";
 import { fromIsoDate, isoDate } from "./dates";
-import type { Entry, Rule } from "./model";
+import type { Entry, Rule, TxType } from "./model";
 import { parseBankMessage, type ParsedMessage } from "./sms";
 
 /**
@@ -29,6 +29,18 @@ export interface IncomingMessage {
   sender?: string | null;
   /** When the phone received it; defaults to now. */
   receivedAt?: Date;
+  /**
+   * What you told the iOS popup when the message arrived: the amount (typed
+   * when the message had none Ledgerline could read, or corrected) and the
+   * category you picked. Your answer wins over what the message says.
+   */
+  answer?: CaptureAnswer | null;
+}
+
+export interface CaptureAnswer {
+  amount?: number | null;
+  type?: TxType | null;
+  categorySlug?: string | null;
 }
 
 const BRAND_NAMES = new Map(PROVIDERS.map((provider) => [provider.id, provider.canonicalName]));
@@ -81,10 +93,27 @@ export async function captureMessage(
   context: { entries: Entry[]; rules: Rule[]; categories: Category[] },
 ): Promise<CaptureOutcome> {
   const receivedOn = isoDate(message.receivedAt ?? new Date());
-  const parsed = parseBankMessage(message.text, { sender: message.sender, receivedOn });
+  const answer = message.answer ?? null;
+  const typed = answer?.amount && Number.isFinite(answer.amount) && answer.amount > 0 ? Math.round(answer.amount * 100) / 100 : null;
+  const read = message.text.trim() ? parseBankMessage(message.text, { sender: message.sender, receivedOn }) : null;
+  // No payment Ledgerline could read, but you typed the amount: that's the payment.
+  const parsed: ParsedMessage | null = read
+    ? { ...read, amount: typed ?? read.amount, type: answer?.type ?? read.type }
+    : typed
+      ? { amount: typed, type: answer?.type ?? "debit", date: receivedOn, party: null, upiId: null, reference: null, account: null, method: "other", bank: null }
+      : null;
   if (!parsed) return { status: "not-a-payment" };
+  const chosen =
+    answer?.categorySlug &&
+    context.categories.some((category) => category.slug === answer.categorySlug) &&
+    fitsType(answer.categorySlug, parsed.type, context.categories)
+      ? answer.categorySlug
+      : null;
 
-  const ref = messageRef(parsed, message.text);
+  // A popup answer with no message text has nothing to fingerprint; when it arrived is what makes it one payment.
+  const ref = message.text.trim()
+    ? messageRef(parsed, message.text)
+    : `pop:${(message.receivedAt ?? new Date()).getTime().toString(36)}`;
   if (await messageSeen(db, ref)) return { status: "duplicate", parsed };
 
   const existing = findSameManualPayment(context.entries, parsed);
@@ -116,13 +145,18 @@ export async function captureMessage(
     payee: suggestion.payee,
     upiId: parsed.upiId,
     providerId: suggestion.providerId,
-    categorySlug: suggestion.categorySlug,
-    classificationSource: suggestion.classificationSource,
+    categorySlug: chosen ?? suggestion.categorySlug,
+    classificationSource: chosen ? "user_override" : suggestion.classificationSource,
     method: parsed.method,
     origin: "manual",
-    note: parsed.bank ? `From ${parsed.bank} SMS${parsed.account ? ` · ${parsed.account}` : ""}` : "From a bank message",
+    note: parsed.bank
+      ? `From ${parsed.bank} SMS${parsed.account ? ` · ${parsed.account}` : ""}`
+      : read
+        ? "From a bank message"
+        : "Added from the payment popup",
     messageRef: ref,
-    needsReview: true,
+    // You already chose the category in the popup; nothing left to check.
+    needsReview: !chosen,
   });
   return { status: "added", entryId, parsed };
 }
