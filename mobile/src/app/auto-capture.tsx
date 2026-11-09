@@ -22,15 +22,22 @@ import { fonts, radius, space, useTheme } from "@/ui/theme";
 
 type LastInbox = { at: string; received: number; added: number } | null;
 
-/** iOS steps: a Shortcuts automation that hands every SMS to "Log bank message". */
+/** iOS steps: Shortcuts automations that hand payment SMS (debited, credited, autopay) to "Log bank message". */
 const STEPS: { title: string; body: string }[] = [
   { title: "Open Shortcuts, then the Automation tab", body: "Tap + (New Automation) at the top right." },
-  { title: "Choose Message", body: "Leave Sender and Message Contains empty, so every bank works. Ledgerline ignores anything that isn't a payment." },
+  {
+    title: "Choose Message",
+    body: "Tap Message Contains and type debited, so it runs only for payments, not for every chat and OTP. Leave Sender empty.",
+  },
   { title: "Choose Run Immediately", body: "Then turn off Notify When Run, and tap Next." },
   { title: "Add the Ledgerline action", body: "Tap New Blank Automation, then search for “Log bank message” (it’s also listed under Ledgerline) and add it." },
   {
     title: "Give it the message (don't skip this)",
-    body: "In the action, tap the blue word Message and choose Shortcut Input. Without it nothing gets logged. Optionally tap Sender and choose Sender. Tap Done.",
+    body: "In the action, tap the blue word Message and choose Shortcut Input. Without it Ledgerline can't read the amount and has to ask you. Optionally tap Sender and choose Sender. Tap Done.",
+  },
+  {
+    title: "Repeat for money in and autopays",
+    body: "iOS takes one word per automation, so make two more the same way: credited, and autopay. If your bank's messages say Sent or Spent instead of debited, add those too.",
   },
 ];
 
@@ -115,7 +122,7 @@ export default function AutoCaptureScreen() {
               }}
             />
             <T variant="small" tone="muted">
-              {"Next time your bank texts you, a small Ledgerline popup shows the amount and asks what it was for. Tap a category and it's saved, without opening the app. If the amount can't be read, the popup asks for it."}
+              {"Next time your bank texts you, a small Ledgerline popup shows the amount and asks what it was for. It shows your five most used categories; tap More categories for the rest. Tap one and it's saved, without opening the app. If the amount can't be read, the popup asks for it. When your bank sends two messages for one payment, you're only asked once."}
             </T>
           </Card>
           <CaptureNotifications />

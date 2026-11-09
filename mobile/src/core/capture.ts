@@ -41,6 +41,11 @@ export interface CaptureAnswer {
   amount?: number | null;
   type?: TxType | null;
   categorySlug?: string | null;
+  /**
+   * The popup saw another message about this same payment a moment ago (a
+   * bank's debit alert and its UPI confirmation, say) and didn't ask again.
+   */
+  repeat?: boolean | null;
 }
 
 const BRAND_NAMES = new Map(PROVIDERS.map((provider) => [provider.id, provider.canonicalName]));
@@ -87,6 +92,22 @@ export function findSameManualPayment(entries: Entry[], parsed: ParsedMessage): 
   );
 }
 
+/** An entry from another bank message with the same amount and direction, around the same day. */
+export function findSameMessagePayment(entries: Entry[], parsed: ParsedMessage): Entry | null {
+  const from = shift(parsed.date, -1);
+  const to = shift(parsed.date, 1);
+  return (
+    entries.find(
+      (entry) =>
+        entry.messageRef !== null &&
+        entry.type === parsed.type &&
+        Math.abs(entry.amount - parsed.amount) < 0.005 &&
+        entry.date >= from &&
+        entry.date <= to,
+    ) ?? null
+  );
+}
+
 export async function captureMessage(
   db: Db,
   message: IncomingMessage,
@@ -98,7 +119,8 @@ export async function captureMessage(
   const read = message.text.trim() ? parseBankMessage(message.text, { sender: message.sender, receivedOn }) : null;
   // No payment Ledgerline could read, but you typed the amount: that's the payment.
   const parsed: ParsedMessage | null = read
-    ? { ...read, amount: typed ?? read.amount, type: answer?.type ?? read.type }
+    ? // The app's reader decides money out or in; the popup's guess only fills in when it can't read the message.
+      { ...read, amount: typed ?? read.amount }
     : typed
       ? { amount: typed, type: answer?.type ?? "debit", date: receivedOn, party: null, upiId: null, reference: null, account: null, method: "other", bank: null }
       : null;
@@ -115,6 +137,9 @@ export async function captureMessage(
     ? messageRef(parsed, message.text)
     : `pop:${(message.receivedAt ?? new Date()).getTime().toString(36)}`;
   if (await messageSeen(db, ref)) return { status: "duplicate", parsed };
+
+  // The second message about a payment the popup just logged: not a new payment.
+  if (answer?.repeat && findSameMessagePayment(context.entries, parsed)) return { status: "duplicate", parsed };
 
   const existing = findSameManualPayment(context.entries, parsed);
   if (existing) {

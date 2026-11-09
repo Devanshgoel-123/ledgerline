@@ -49,4 +49,27 @@ run("Swift bank message preview", () => {
       expect(got, message.text).toEqual(expected);
     });
   }, 120_000);
+
+  it("opens the popup only for money that moved: debits, credits, autopays", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ledgerline-swift-"));
+    const binary = join(dir, "loose");
+    const native = join(__dirname, "..", "plugins", "native", "BankMessagePreview.swift");
+    expect(spawnSync("swiftc", ["-o", binary, native, join(__dirname, "swift", "main.swift")], { encoding: "utf8" }).stderr).toBe("");
+    const cases: [string, boolean, boolean][] = [
+      ["Your a/c XX1234 is debited for a txn at DMART on 05-11. -Some Bank", true, false],
+      ["AutoPay for Netflix processed from your HDFC Bank account on 05-11. Info: NFLX", true, false],
+      ["Your account XX1234 has been credited by a deposit on 05-11. -Some Bank", true, true],
+      ["Avl bal in A/c XX1234 is Rs 10,000.00 as on 05-11. -Some Bank", false, false],
+      ["Get Rs 500 off on your next UPI payment! Use code SAVE500. T&C apply", false, false],
+      ["Your AutoPay of Rs 199 for Netflix has been set up successfully", false, false],
+      ["Your OTP for the transaction of Rs 5,000 is 482913. Do not share it", false, false],
+      ["Hey, are we still on for dinner tonight at 8?", false, false],
+    ];
+    const ran = spawnSync(binary, { input: JSON.stringify(cases.map(([text]) => ({ text, sender: null }))), encoding: "utf8", env: { ...process.env, LOOSE: "1" } });
+    const got = JSON.parse(ran.stdout) as { mightBePayment: boolean; soundsLikeCredit: boolean }[];
+    cases.forEach(([text, payment, credit], index) => {
+      expect(got[index]!.mightBePayment, text).toBe(payment);
+      if (payment) expect(got[index]!.soundsLikeCredit, text).toBe(credit);
+    });
+  }, 120_000);
 });

@@ -30,9 +30,13 @@ export function quickCategories(
     (a, b) => counts.get(b)! - counts.get(a)! || (lastUsed.get(b) ?? "").localeCompare(lastUsed.get(a) ?? ""),
   );
 
-  const roots = categoryTree(categories)
-    .map((node) => node.parent.slug)
-    .filter((slug) => fitsType(slug, options.type, categories) && (options.type === "credit" || slug !== "transfers"));
+  // Money in is sorted by what it was (Salary, Refunds), not the broad "Income".
+  const roots =
+    options.type === "credit"
+      ? CREDIT_DEFAULTS
+      : categoryTree(categories)
+          .map((node) => node.parent.slug)
+          .filter((slug) => fitsType(slug, "debit", categories) && slug !== "transfers");
 
   const order: string[] = [];
   const push = (slug: string | null | undefined) => {
@@ -45,9 +49,14 @@ export function quickCategories(
   return options.limit ? order.slice(0, options.limit) : order;
 }
 
+/** Money-in categories in the order Quick add and the popup offer them before you've used any. */
+export const CREDIT_DEFAULTS = ["salary", "refunds", "from-home", "interest", "transfers", "investments", "other-income"];
+
 /**
- * What the iOS payment popup offers, money out and money in: your most used
- * categories first, then the rest of the top-level ones, and Other last.
+ * What the iOS payment popup offers, money out and money in: exactly Quick
+ * add's order (most used first), every category, with Other last. The popup
+ * shows the first few and pages through the rest behind "More categories"
+ * (plugins/native/CapturePaging.swift), so nothing is cut off.
  */
 export function popupCategories(
   entries: Entry[],
@@ -56,22 +65,11 @@ export function popupCategories(
 ): Record<TxType, { slug: string; label: string; root: string }[]> {
   const list = (type: TxType) => {
     const last = type === "credit" ? "other-income" : "other";
-    const known = new Set(categories.map((category) => category.slug));
-    let slugs = quickCategories(entries, categories, { type, today, limit: 14 });
-    if (type === "credit") {
-      // Money in is mostly sorted by its sub-categories (Salary, Refunds), so offer those, not "Income".
-      const usual = ["salary", "refunds", "from-home", "interest", "transfers", "investments"];
-      const used = slugs.filter((slug) => !TOP_LEVEL_FALLBACK.has(slug));
-      slugs = [...new Set([...used, ...usual])].filter((slug) => known.has(slug));
-    }
-    slugs = slugs.filter((slug) => slug !== last && slug !== "other");
+    const slugs = quickCategories(entries, categories, { type, today }).filter((slug) => slug !== last && slug !== "other");
     return [...slugs, last].map((slug) => ({ slug, label: categoryLabel(slug, categories), root: rootCategory(slug, categories) }));
   };
   return { debit: list("debit"), credit: list("credit") };
 }
-
-// Top-level categories quickCategories adds after the used ones; for money in they're too broad to offer.
-const TOP_LEVEL_FALLBACK = new Set(["income", "family", "investments", "transfers", "other"]);
 
 /** The four categories a widget shows as shortcuts. */
 export function widgetShortcuts(entries: Entry[], categories: Category[], today: string): string[] {

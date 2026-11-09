@@ -57,46 +57,63 @@ struct LogBankMessageIntent: AppIntent {
   func perform() async throws -> some IntentResult {
     let text = (message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     let preview = text.isEmpty ? nil : BankMessagePreview.parse(text, sender: sender)
+    let now = Date()
+    var recent = LedgerlineRecent.load()
 
     if text.isEmpty {
       try? LedgerlineMessageInbox.markEmptyMessage()
+      // No text to tell one message from another: one popup per payment, not one per SMS.
+      if recent.askedRecently(at: now) { return .result() }
     } else if preview == nil && !BankMessagePreview.mightBePayment(text) {
-      // A chat, an OTP, an offer: nothing to ask. The app reads it anyway, in case.
+      // A chat, an OTP, an offer, a balance: nothing to ask. The app reads it anyway, in case.
       try LedgerlineMessageInbox.write(text: text, sender: sender, answer: nil)
+      return .result()
+    } else if let preview, let earlier = recent.match(amount: preview.amount, isCredit: preview.isCredit, at: now) {
+      // The bank's second message about the payment you were just asked about.
+      // Logged quietly (the app matches it to the first), so it never opens a
+      // popup over the one you're answering.
+      try LedgerlineMessageInbox.write(
+        text: text, sender: sender,
+        answer: .init(amount: nil, type: preview.isCredit ? "credit" : "debit", categorySlug: earlier.slug, repeat: true)
+      )
       return .result()
     }
 
-    let isCredit = preview?.isCredit ?? false
+    let isCredit = preview?.isCredit ?? BankMessagePreview.soundsLikeCredit(text)
     var paid: Double? = preview?.amount
-    var picked: CaptureCategory? = category
+    var picked: CaptureCategory? = category?.id == CaptureCategory.moreID ? nil : category
+    // Claim this payment before asking, so messages arriving while the popup is open stay quiet.
+    let slot = recent.record(.init(amount: paid, isCredit: isCredit, at: now, slug: nil))
+    recent.save()
 
     do {
       if paid == nil {
         if text.isEmpty {
-          // No text means this could be any message. Ask once, gently, and say how to fix it.
           try await requestConfirmation(
-            result: .result(dialog: "Ledgerline didn't get this message's text. If it was a payment, add it now. (To fix it, set Message to Shortcut Input in your automation.)"),
+            result: .result(dialog: "A message came in, but Ledgerline couldn't see its text. Was it a payment? (To fix this, set Message to Shortcut Input in your automation.)"),
             confirmationActionName: .add,
             showPrompt: false
           )
         }
         let typed = try await $amount.requestValue(
-          text.isEmpty ? "How much did you pay?" : "Ledgerline couldn't read the amount in this message. How much was it?"
+          text.isEmpty ? "How much was it?" : "Ledgerline couldn't read the amount in this message. How much was it?"
         )
         paid = typed > 0 ? (typed * 100).rounded() / 100 : nil
+        recent.payments[slot].amount = paid
+        recent.save()
       }
       if let paid, picked == nil {
         let what = "\(BankMessagePreview.format(paid)) \(isCredit ? "received" : "spent")"
         let from = preview?.bank.map { " from your \($0) account" } ?? ""
-        picked = try await $category.requestDisambiguation(
-          among: CaptureCategory.choices(credit: isCredit),
-          dialog: IntentDialog(stringLiteral: "\(what)\(from). \(isCredit ? "What was it?" : "What was it for?")")
-        )
+        picked = try await pickCategory(credit: isCredit, dialog: "\(what)\(from). \(isCredit ? "What was it?" : "What was it for?")")
       }
     } catch {
       // Dismissed, or iOS couldn't show the popup (the phone was locked).
       // Whatever we have is kept; the notification below is the reminder.
     }
+
+    recent.payments[slot].slug = picked?.id
+    recent.save()
 
     guard !text.isEmpty || paid != nil else { return .result() }
     let answer = LedgerlineMessageInbox.Answer(
@@ -119,6 +136,24 @@ struct LogBankMessageIntent: AppIntent {
       await LedgerlineCaptureNotice.pending(amount: BankMessagePreview.format(paid), isCredit: isCredit, bank: preview?.bank, key: text.isEmpty ? UUID().uuidString : text)
     }
     return .result()
+  }
+
+  /// Your five most used categories and "More categories", which pages
+  /// through the rest six at a time (CapturePaging): short lists the popup
+  /// shows without scrolling, in the same order as Quick add.
+  private func pickCategory(credit: Bool, dialog: String) async throws -> CaptureCategory? {
+    let all = CaptureCategory.choices(credit: credit)
+    var start = 0
+    while start < all.count {
+      let page = CapturePaging.page(count: all.count, start: start)
+      var options = Array(all[page.range])
+      if page.hasMore { options.append(.more) }
+      let prompt = start == 0 ? dialog : "\(dialog) More categories:"
+      let choice = try await $category.requestDisambiguation(among: options, dialog: IntentDialog(stringLiteral: prompt))
+      if choice.id != CaptureCategory.moreID { return choice }
+      start = page.range.upperBound
+    }
+    return nil
   }
 }
 
@@ -145,23 +180,32 @@ struct CaptureCategory: AppEntity {
     "family": "person.2", "gifts": "gift", "vices": "wineglass", "emi": "building.columns",
     "insurance": "shield", "fees": "doc.text", "investments": "chart.line.uptrend.xyaxis",
     "transfers": "arrow.left.arrow.right", "income": "indianrupeesign.circle", "other": "ellipsis.circle",
+    "more": "chevron.down.circle",
   ]
 
   static func symbol(_ root: String) -> String { symbols[root] ?? "tag" }
 
-  /// Used before the app has written its list. Slugs from src/core/taxonomy.ts
-  /// (tests/capturePopup.test.ts checks they exist).
+  /// The last button on a page of the popup: shows the next categories.
+  static let moreID = "more"
+  static let more = CaptureCategory(id: moreID, label: "More categories", root: "more")
+
+  /// Used before the app has written its list: exactly what
+  /// src/core/quick.ts popupCategories gives with no history yet
+  /// (tests/capturePopup.test.ts checks they match).
   static let fallback: [String: [CaptureCategory]] = [
     "debit": [
       ("food", "Food & dining", "food"), ("grocery", "Groceries", "grocery"), ("shopping", "Shopping", "shopping"),
-      ("transport", "Transport", "transport"), ("bills", "Bills & utilities", "bills"), ("household", "Home", "household"),
-      ("subscriptions", "Subscriptions", "subscriptions"), ("outing", "Entertainment", "outing"),
-      ("healthcare", "Health", "healthcare"), ("travel", "Travel", "travel"), ("personal", "Personal care", "personal"),
-      ("other", "Other", "other"),
+      ("transport", "Transport", "transport"), ("travel", "Travel", "travel"), ("bills", "Bills & utilities", "bills"),
+      ("household", "Home", "household"), ("subscriptions", "Subscriptions", "subscriptions"), ("outing", "Entertainment", "outing"),
+      ("healthcare", "Health", "healthcare"), ("personal", "Personal care", "personal"), ("education", "Education", "education"),
+      ("family", "Family & kids", "family"), ("gifts", "Gifts & donations", "gifts"), ("vices", "Drinks & smokes", "vices"),
+      ("emi", "Loans & EMI", "emi"), ("insurance", "Insurance", "insurance"), ("fees", "Taxes & fees", "fees"),
+      ("investments", "Investments", "investments"), ("other", "Other", "other"),
     ].map { CaptureCategory(id: $0.0, label: $0.1, root: $0.2) },
     "credit": [
-      ("salary", "Salary", "income"), ("from-home", "From family", "income"), ("refunds", "Refunds & cashback", "income"),
-      ("interest", "Interest & dividends", "income"), ("other-income", "Other income", "income"),
+      ("salary", "Salary", "income"), ("refunds", "Refunds & cashback", "income"), ("from-home", "From family", "income"),
+      ("interest", "Interest & dividends", "income"), ("transfers", "Transfers", "transfers"),
+      ("investments", "Investments", "investments"), ("other-income", "Other income", "income"),
     ].map { CaptureCategory(id: $0.0, label: $0.1, root: $0.2) },
   ]
 
@@ -182,7 +226,7 @@ struct CaptureCategory: AppEntity {
 @available(iOS 16.0, *)
 struct CaptureCategoryQuery: EntityQuery {
   func entities(for identifiers: [String]) async throws -> [CaptureCategory] {
-    let all = CaptureCategory.choices(credit: false) + CaptureCategory.choices(credit: true)
+    let all = CaptureCategory.choices(credit: false) + CaptureCategory.choices(credit: true) + [.more]
     return identifiers.compactMap { id in all.first { $0.id == id } }
   }
 
@@ -236,6 +280,8 @@ enum LedgerlineMessageInbox {
     var amount: Double?
     var type: String
     var categorySlug: String?
+    /// Another message about a payment the popup just handled.
+    var `repeat`: Bool = false
   }
 
   static func write(text: String, sender: String?, answer: Answer?) throws {
@@ -252,6 +298,7 @@ enum LedgerlineMessageInbox {
       var fields: [String: Any] = ["type": answer.type]
       if let amount = answer.amount { fields["amount"] = amount }
       if let slug = answer.categorySlug { fields["categorySlug"] = slug }
+      if answer.repeat { fields["repeat"] = true }
       payload["answer"] = fields
     }
     let data = try JSONSerialization.data(withJSONObject: payload)
@@ -276,6 +323,27 @@ enum LedgerlineMessageInbox {
           let data = try? Data(contentsOf: url),
           let settings = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return true }
     return settings["notify"] as? Bool ?? true
+  }
+}
+
+/// RecentPayments (CapturePaging.swift), kept in the App Group so each run
+/// of the automation sees what the one before it asked.
+enum LedgerlineRecent {
+  static let file = "CaptureRecent.json"
+
+  static func load() -> RecentPayments {
+    guard let url = try? LedgerlineMessageInbox.container().appendingPathComponent(file),
+          let data = try? Data(contentsOf: url),
+          let recent = try? JSONDecoder().decode(RecentPayments.self, from: data) else { return RecentPayments() }
+    return recent
+  }
+}
+
+extension RecentPayments {
+  func save() {
+    guard let url = try? LedgerlineMessageInbox.container().appendingPathComponent(LedgerlineRecent.file),
+          let data = try? JSONEncoder().encode(self) else { return }
+    try? data.write(to: url, options: .atomic)
   }
 }
 
