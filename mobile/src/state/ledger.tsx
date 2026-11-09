@@ -7,6 +7,7 @@ import type { IncomingMessage } from "@/core/capture";
 import { captureMessages } from "@/core/capture";
 import { BUILT_IN_CATEGORIES, type Category } from "@/core/catalog";
 import { currentMonth, today } from "@/core/dates";
+import { NOTHING_SEEN, noteMessages, type CaptureSeen } from "@/core/automations";
 import { popupCategories } from "@/core/quick";
 import { todayStats } from "@/core/today";
 import type { Entry, Rule } from "@/core/model";
@@ -114,12 +115,15 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
     if (draining.current) return 0;
     draining.current = true;
     try {
-      const sources: { messages: IncomingMessage[]; done: () => void | Promise<void> }[] = [
-        await readInbox(),
-        await readNewSms(db),
-      ];
+      const inbox = await readInbox();
+      const sources: { messages: IncomingMessage[]; done: () => void | Promise<void> }[] = [inbox, await readNewSms(db)];
       const messages = sources.flatMap((source) => source.messages);
       if (!messages.length) return 0;
+      // Which iOS automations have fired (debited, credited, autopay), for the capture screen.
+      if (inbox.messages.length) {
+        const seen = await getSetting<CaptureSeen>(db, "captureSeen", NOTHING_SEEN);
+        await setSetting(db, "captureSeen", noteMessages(seen, inbox.messages, new Date()));
+      }
       const [entries, custom, rules] = await Promise.all([listEntries(db), listCustomCategories(db), listRules(db)]);
       const outcomes = await captureMessages(
         db,
