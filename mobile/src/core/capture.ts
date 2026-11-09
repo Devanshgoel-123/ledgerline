@@ -1,4 +1,4 @@
-import { addEntry, linkMessage, messageSeen } from "@/db/repo";
+import { addEntry, answerCaptured, linkMessage, messageSeen } from "@/db/repo";
 import type { Db } from "@/db/schema";
 import { fitsType, PROVIDERS, type Category } from "./catalog";
 import { classify } from "./classify";
@@ -22,6 +22,8 @@ export type CaptureOutcome =
   | { status: "added"; entryId: string; parsed: ParsedMessage }
   | { status: "linked"; entryId: string; parsed: ParsedMessage }
   | { status: "duplicate"; parsed: ParsedMessage }
+  /** The popup's answer for a payment added earlier from the same message. */
+  | { status: "categorised"; parsed: ParsedMessage }
   | { status: "not-a-payment" };
 
 export interface IncomingMessage {
@@ -144,7 +146,12 @@ export async function captureMessage(
   const ref = message.text.trim()
     ? messageRef(parsed, message.text)
     : `pop:${(message.receivedAt ?? new Date()).getTime().toString(36)}`;
-  if (await messageSeen(db, ref)) return { status: "duplicate", parsed };
+  if (await messageSeen(db, ref)) {
+    // The popup saves a message before asking, so the app can take it while
+    // the popup is still open; the answer then follows as a second file.
+    if (chosen && (await answerCaptured(db, ref, chosen))) return { status: "categorised", parsed };
+    return { status: "duplicate", parsed };
+  }
 
   // The second message about a payment the popup just logged: not a new payment.
   if (answer?.repeat && findSameMessagePayment(context.entries, parsed)) return { status: "duplicate", parsed };
@@ -209,7 +216,7 @@ export async function captureMessages(
   for (const message of messages) {
     const outcome = await captureMessage(db, message, { ...context, entries });
     outcomes.push(outcome);
-    if (outcome.status === "added" || outcome.status === "linked") entries = await reload();
+    if (outcome.status !== "duplicate" && outcome.status !== "not-a-payment") entries = await reload();
   }
   return outcomes;
 }
