@@ -93,16 +93,29 @@ struct BankMessagePreview: Equatable {
     return BankMessagePreview(amount: (value * 100).rounded() / 100, isCredit: isCredit, bank: bank(text, sender: sender))
   }
 
-  private static let moneyWords = regex(#"(?:rs\.?|inr|₹)\s*\d|\b(?:debited|credited|a\/c|acct|upi|neft|imps|spent|withdrawn)\b"#)
+  // Money actually moving: debits, credits and autopays that went through.
+  // Balance alerts, statements and "Rs 500 off" offers mention money but
+  // don't move any, so they don't open the popup.
+  private static let movedWords = regex(
+    #"\b(?:debited|credited|deducted|spent|paid|sent|received|withdrawn|transferred|refunded|reversed|deposited)\b|\bauto-?pay\b|\bmandate\b.*\b(?:executed|processed|successful)\b|\b(?:txn|transaction|purchase)\b.*\b(?:of|for)\b\s*(?:rs\.?|inr|₹)"#
+  )
 
-  /// A message parse() couldn't read but that still talks about money from a
-  /// bank (not an OTP, offer or due date), so the popup asks for the amount
-  /// rather than dropping it. Chats and everything else stay silent.
+  /// A message parse() couldn't read but that still says money moved
+  /// (debited, credited, an autopay), so the popup asks for the amount rather
+  /// than dropping it. OTPs, offers, dues, balances and chats stay silent.
   static func mightBePayment(_ raw: String) -> Bool {
     let text = raw.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
     guard text.count >= 15, text.count <= 800 else { return false }
     if notAPayment.contains(where: { matches($0, text) }) { return false }
-    return matches(moneyWords, text)
+    return matches(movedWords, text)
+  }
+
+  /// Money in or out for a message parse() couldn't read, by the same words
+  /// parse() uses, so the popup offers the right categories. Out when unsure.
+  static func soundsLikeCredit(_ raw: String) -> Bool {
+    let text = raw.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+    if creditToAccount.contains(where: { matches($0, text) }) { return true }
+    return !matches(debitWords, text) && matches(creditedWord, text)
   }
 
   private static func bank(_ text: String, sender: String?) -> String? {

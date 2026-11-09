@@ -10,7 +10,7 @@ const { IOSConfig, withDangerousMod, withEntitlementsPlist, withXcodeProject } =
 
 // The action, the small reader it uses for a payment's amount, and the
 // "Today" numbers it adds each payment to.
-const FILES = ["LogBankMessageIntent.swift", "BankMessagePreview.swift", "TodayStats.swift"];
+const FILES = ["LogBankMessageIntent.swift", "BankMessagePreview.swift", "TodayStats.swift", "CapturePaging.swift"];
 const APP_GROUP = "group.app.ledgerline.mobile";
 
 module.exports = function withBankMessageIntent(config) {

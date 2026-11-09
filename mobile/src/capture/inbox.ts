@@ -22,13 +22,14 @@ type InboxFile = { text?: unknown; sender?: unknown; receivedAt?: unknown; answe
 /** What you told the popup, written by the action next to the message. Anything malformed is ignored. */
 function readAnswer(raw: unknown): CaptureAnswer | null {
   if (!raw || typeof raw !== "object") return null;
-  const data = raw as { amount?: unknown; type?: unknown; categorySlug?: unknown };
+  const data = raw as { amount?: unknown; type?: unknown; categorySlug?: unknown; repeat?: unknown };
   const answer: CaptureAnswer = {
     amount: typeof data.amount === "number" && Number.isFinite(data.amount) && data.amount > 0 ? data.amount : null,
     type: data.type === "credit" || data.type === "debit" ? data.type : null,
     categorySlug: typeof data.categorySlug === "string" && data.categorySlug ? data.categorySlug : null,
+    repeat: data.repeat === true,
   };
-  return answer.amount || answer.type || answer.categorySlug ? answer : null;
+  return answer.amount || answer.type || answer.categorySlug || answer.repeat ? answer : null;
 }
 
 function inboxDirectory(): Directory | null {
