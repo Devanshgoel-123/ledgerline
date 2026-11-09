@@ -162,3 +162,26 @@ function entry(overrides: Partial<Entry>): Entry {
     ...overrides,
   } as Entry;
 }
+
+describe("money in", () => {
+  const SENT = "Sent Rs.10.00\nFrom HDFC Bank A/C *2641\nTo DEVANSH GOEL\nOn 09/11/26\nRef 432112345678\nNot You?\nCall 18002586161/SMS BLOCK UPI to 7308080808";
+  const GOT = "INR 10.00 credited\nA/c no. XX0483\n09-11-26, 21:00:00\nUPI/P2A/432112345678/DEVANSH GOEL\nNot you? SMS BLOCKUPI Cust ID to 919951860002\nAxis Bank";
+
+  it("adds the credit side of a transfer between your own accounts, as a transfer", async () => {
+    const { db, ctx } = await setup();
+    await captureMessage(db, { text: SENT, receivedAt: RECEIVED }, await ctx());
+    const outcome = await captureMessage(db, { text: GOT, receivedAt: RECEIVED }, await ctx());
+    expect(outcome.status).toBe("added");
+    const entries = await listEntries(db);
+    expect(entries).toHaveLength(2);
+    expect(entries.find((entry) => entry.type === "credit")).toMatchObject({ amount: 10, categorySlug: "self-transfer" });
+  });
+
+  it("adds money from someone else, with what you picked in the popup", async () => {
+    const { db, ctx } = await setup();
+    const fromMehak = "Received Rs.10.00 in your HDFC Bank A/c XX2641 from MEHAK GOEL on 09-11-26. UPI Ref 432112349999";
+    await captureMessage(db, { text: fromMehak, receivedAt: RECEIVED, answer: { type: "credit", categorySlug: "from-home" } }, await ctx());
+    expect((await listEntries(db))[0]).toMatchObject({ type: "credit", amount: 10, categorySlug: "from-home" });
+    expect(await captureMessage(db, { text: fromMehak, receivedAt: RECEIVED }, await ctx())).toMatchObject({ status: "duplicate" });
+  });
+});

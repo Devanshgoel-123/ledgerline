@@ -64,8 +64,16 @@ function fingerprint(text: string): string {
   return (hash >>> 0).toString(36);
 }
 
+/**
+ * What makes a message one payment. Money out keeps the plain bank
+ * reference; money in gets its own, because both sides of a UPI transfer
+ * carry the same reference: moving ₹10 from your HDFC to your Axis account
+ * sends a "debited" SMS and a "credited" SMS with one RRN, and the second
+ * must not be taken for a repeat of the first.
+ */
 export function messageRef(parsed: ParsedMessage, text: string): string {
-  return parsed.reference ? `ref:${parsed.reference}` : `txt:${fingerprint(text)}`;
+  if (!parsed.reference) return `txt:${fingerprint(text)}`;
+  return parsed.type === "credit" ? `ref:cr:${parsed.reference}` : `ref:${parsed.reference}`;
 }
 
 function shift(iso: string, days: number): string {
@@ -147,6 +155,9 @@ export async function captureMessage(
     return { status: "linked", entryId: existing.id, parsed };
   }
 
+  // Money in with the same reference as a payment out you already have: it went between your own accounts.
+  const ownTransfer = parsed.type === "credit" && parsed.reference !== null && (await messageSeen(db, `ref:${parsed.reference}`));
+
   const description = parsed.party ?? parsed.upiId ?? (parsed.type === "credit" ? "Money in" : "Payment");
   const suggestion = classify(
     {
@@ -170,8 +181,8 @@ export async function captureMessage(
     payee: suggestion.payee,
     upiId: parsed.upiId,
     providerId: suggestion.providerId,
-    categorySlug: chosen ?? suggestion.categorySlug,
-    classificationSource: chosen ? "user_override" : suggestion.classificationSource,
+    categorySlug: chosen ?? (ownTransfer ? "self-transfer" : suggestion.categorySlug),
+    classificationSource: chosen ? "user_override" : ownTransfer ? "own_transfer" : suggestion.classificationSource,
     method: parsed.method,
     origin: "manual",
     note: parsed.bank
