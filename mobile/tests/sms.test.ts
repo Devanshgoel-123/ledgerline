@@ -194,3 +194,12 @@ describe("bank SMS: more Indian banks", () => {
     if (party !== undefined) expect(p?.party).toBe(party);
   });
 });
+
+describe("the banks the capture screen lists", () => {
+  it("names every bank the reader knows, once", async () => {
+    const { SUPPORTED_BANKS } = await import("@/core/sms");
+    expect(SUPPORTED_BANKS.length).toBeGreaterThanOrEqual(20);
+    expect(new Set(SUPPORTED_BANKS).size).toBe(SUPPORTED_BANKS.length);
+    expect(SUPPORTED_BANKS).toEqual(expect.arrayContaining(["HDFC", "SBI", "ICICI", "Axis", "Kotak", "Bank of India"]));
+  });
+});

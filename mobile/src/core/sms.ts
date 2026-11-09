@@ -186,6 +186,9 @@ const BANKS: [RegExp, string][] = [
   [/\bamex\b|american express/i, "Amex"],
 ];
 
+/** Every bank the reader names, in the order it checks them: shown on the capture screen. */
+export const SUPPORTED_BANKS: string[] = BANKS.map(([, name]) => name);
+
 function bankOf(text: string, sender: string | null): string | null {
   // The sender ID names the bank best ("AD-KOTAKB"). In the text, a UPI id
   // like netflix@hdfcbank names the payee's bank, not yours: leave those out.

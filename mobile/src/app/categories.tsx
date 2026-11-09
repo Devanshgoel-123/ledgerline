@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryLabel, categoryTree, slugForLabel } from "@/core/catalog";
 import { addCustomCategory, deleteCustomCategory } from "@/db/repo";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, CardTitle, Chip, Divider, Empty, Field, Row, T } from "@/ui/components";
+import { Button, Card, CardTitle, Chip, Divider, Empty, Field, Pill, Row, T } from "@/ui/components";
 import { CategoryIcon } from "@/ui/CategoryVisual";
 import { Icon } from "@/ui/Icon";
 import { fonts, space, useTheme } from "@/ui/theme";
@@ -85,7 +85,7 @@ export default function CategoriesScreen() {
         </Card>
 
         <Card>
-          <CardTitle title="Made by you" />
+          <CardTitle title="Made by you" right={mine.length ? <Pill tone="primary">{String(mine.length)}</Pill> : undefined} />
           {mine.length ? (
             mine.map((category, index) => (
               <View key={category.slug}>

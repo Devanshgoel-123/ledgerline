@@ -349,7 +349,7 @@ export function EntryForm({
                     {errors.split}
                   </T>
                 ) : yourShare != null ? (
-                  <T variant="strong">Your share: {formatInr(yourShare)}</T>
+                  <T variant="strong">{`Your share: ${formatInr(yourShare)} of ${formatInr(parsedAmount ?? 0)}`}</T>
                 ) : null}
               </View>
             ) : null}
