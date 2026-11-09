@@ -30,7 +30,7 @@ struct BankMessagePreview: Equatable {
   ].map(regex)
 
   private static let number = #"(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?(?![\d,])|\d+(?:\.\d{1,2})?(?!\d))"#
-  private static let amountWithCurrency = regex(#"(?:rs\.?|inr|₹)\s*"# + number)
+  private static let amountWithCurrency = regex(#"(?:rs[.:]?|inr|₹)\s*"# + number)
   private static let amountAfterVerb = regex(#"\b(?:debited|credited|spent|paid|sent)\s+(?:by|with|for|of)?\s*"# + number + #"\b"#)
 
   private static let creditToAccount: [NSRegularExpression] = [
@@ -38,7 +38,10 @@ struct BankMessagePreview: Equatable {
     #"\b(?:a\/c|acct|account|ac)\b(?:\s*no\.?)?\s*[x*]*\d{2,6}\s+(?:is\s+|has been\s+)?credited\b"#,
     #"\b(?:you have )?received\b|\brefund(?:ed)?\b|\breversed\b|\bdeposited\b"#,
   ].map(regex)
-  private static let debitWords = regex(#"\b(debited|spent|sent|paid|withdrawn|purchase|debit of|txn of)\b"#)
+  private static let debitWords = regex(#"\b(debited|spent|sent|paid|withdrawn|purchase|debit of|txn of|transferred from)\b"#)
+  // A message that says both ("debited ... and credited to A/c of SWIGGY"): the first word is what happened to you.
+  private static let debitedOrCredited = regex(#"\b(debited|credited)\b"#)
+  private static let debitedWord = regex(#"\bdebited\b"#)
   private static let creditedWord = regex(#"\bcredited\b"#)
   private static let upiId = regex(#"\S+@\S+"#)
 
@@ -57,6 +60,18 @@ struct BankMessagePreview: Equatable {
     (#"federal"#, "Federal"),
     (#"canara"#, "Canara"),
     (#"union bank"#, "Union Bank"),
+    (#"central bank"#, "Central Bank"),
+    (#"indian overseas|\biob\b"#, "Indian Overseas Bank"),
+    (#"\bindian bank\b"#, "Indian Bank"),
+    (#"bank of india|\bboi\b"#, "Bank of India"),
+    (#"bank of maharashtra|\bmahabk\b"#, "Bank of Maharashtra"),
+    (#"\buco\b"#, "UCO"),
+    (#"\bidbi\b"#, "IDBI"),
+    (#"\brbl\b"#, "RBL"),
+    (#"bandhan"#, "Bandhan"),
+    (#"paytm"#, "Paytm Payments Bank"),
+    (#"airtel payments"#, "Airtel Payments Bank"),
+    (#"\bamex\b|american express"#, "Amex"),
   ].map { (regex($0.0), $0.1) }
 
   private static func matches(_ pattern: NSRegularExpression, _ text: String) -> Bool {
@@ -80,7 +95,9 @@ struct BankMessagePreview: Equatable {
           value > 0 else { return nil }
 
     let isCredit: Bool
-    if creditToAccount.contains(where: { matches($0, text) }) {
+    if matches(debitedWord, text) && matches(creditedWord, text) {
+      isCredit = firstGroup(debitedOrCredited, text)?.lowercased() == "credited"
+    } else if creditToAccount.contains(where: { matches($0, text) }) {
       isCredit = true
     } else if matches(debitWords, text) {
       isCredit = false
@@ -114,6 +131,7 @@ struct BankMessagePreview: Equatable {
   /// parse() uses, so the popup offers the right categories. Out when unsure.
   static func soundsLikeCredit(_ raw: String) -> Bool {
     let text = raw.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+    if matches(debitedWord, text) && matches(creditedWord, text) { return firstGroup(debitedOrCredited, text)?.lowercased() == "credited" }
     if creditToAccount.contains(where: { matches($0, text) }) { return true }
     return !matches(debitWords, text) && matches(creditedWord, text)
   }
