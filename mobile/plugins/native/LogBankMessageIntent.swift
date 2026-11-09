@@ -65,8 +65,9 @@ struct LogBankMessageIntent: AppIntent {
       // No text to tell one message from another: one popup per payment, not one per SMS.
       if recent.askedRecently(at: now) { return .result() }
     } else if preview == nil && !BankMessagePreview.mightBePayment(text) {
-      // A chat, an OTP, an offer, a balance: nothing to ask. The app reads it anyway, in case.
-      try LedgerlineMessageInbox.write(text: text, sender: sender, answer: nil)
+      // A chat, an OTP, an offer, a balance: nothing to ask, and nothing kept.
+      // The app's reader agrees with this one (tests/smsPreview.test.ts), so
+      // it would skip it too; a friend's message is never written anywhere.
       return .result()
     } else if let preview, let earlier = recent.match(amount: preview.amount, isCredit: preview.isCredit, at: now) {
       // The bank's second message about the payment you were just asked about.
