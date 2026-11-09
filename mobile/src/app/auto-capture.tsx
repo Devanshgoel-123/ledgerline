@@ -12,6 +12,7 @@ import {
 import { captureNotificationsOn, inboxAvailable, setCaptureNotifications } from "@/capture/inbox";
 import { useCaptureStatus, whenSeen } from "@/capture/status";
 import { TRIGGERS, type CaptureStatus } from "@/core/automations";
+import { SUPPORTED_BANKS } from "@/core/sms";
 import { closeModal } from "@/features/navigation";
 import { useLedger } from "@/state/ledger";
 import { askForNotifications, notificationPermission } from "@/reminders/schedule";
@@ -65,6 +66,7 @@ export default function AutoCaptureScreen() {
             ) : null}
             {status && status.state !== "off" ? <PopupTips toSort={toSort} /> : null}
             {status ? <SetupCard key={status.state} startOpen={status.state === "off"} /> : null}
+            <BanksCard />
             <CaptureNotifications />
             <Backup />
           </>
@@ -252,6 +254,23 @@ function Chip({ word }: { word: string }) {
   );
 }
 
+/** The banks whose SMS Ledgerline reads, from the reader itself (src/core/sms.ts). */
+function BanksCard() {
+  const { c } = useTheme();
+  return (
+    <Card>
+      <CardTitle title={`Works with ${SUPPORTED_BANKS.length} Indian banks`} sub="Money out, money in and autopays, read the same way for each." />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space[2] }}>
+        {SUPPORTED_BANKS.map((bank) => (
+          <View key={bank} style={[s.chip, { backgroundColor: c.primarySoft, borderColor: c.border }]}>
+            <Text style={[s.bankText, { color: c.foreground }]}>{bank}</Text>
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 /** For builds where the action is missing from Shortcuts. */
 function Backup() {
   const { c } = useTheme();
@@ -431,6 +450,7 @@ const s = StyleSheet.create({
   words: { gap: space[2], borderRadius: radius.md, padding: space[3] },
   chip: { paddingHorizontal: space[3], paddingVertical: space[1], borderRadius: radius.pill, borderWidth: 1 },
   chipText: { fontFamily: fonts.sansSemi, fontSize: 15 },
+  bankText: { fontFamily: fonts.sansSemi, fontSize: 13 },
   num: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   numText: { fontFamily: fonts.sansSemi, fontSize: 14 },
 });
