@@ -7,13 +7,13 @@ describe("which iOS automations have fired", () => {
   it("ticks each word when a message with it arrives, keeping the latest", () => {
     let seen = noteMessages(NOTHING_SEEN, [{ text: "INR 5.00 debited A/c no. XX0483", receivedAt: at("2026-11-09T10:00:00Z") }], new Date());
     seen = noteMessages(seen, [
-      { text: "Rs.600 Credited to A/c ...1234 thru UPI", receivedAt: at("2026-11-09T11:00:00Z") },
-      { text: "AutoPay for Netflix processed", receivedAt: at("2026-11-09T09:00:00Z") },
-      { text: "INR 9.00 debited", receivedAt: at("2026-11-08T10:00:00Z") },
+      { text: "Sent Rs.180.00 From HDFC Bank A/C *2641 To MD SAMEER", receivedAt: at("2026-11-09T11:00:00Z") },
+      { text: "Dear UPI user A/C X1234 debited by 120.0 on date 05Nov26", receivedAt: at("2026-11-08T09:00:00Z") },
+      { text: "see you at 7, it's yours", receivedAt: at("2026-11-09T12:00:00Z") },
     ], new Date());
     expect(seen).toEqual({
-      lastRun: "2026-11-09T11:00:00.000Z",
-      words: { debited: "2026-11-09T10:00:00.000Z", credited: "2026-11-09T11:00:00.000Z", autopay: "2026-11-09T09:00:00.000Z" },
+      lastRun: "2026-11-09T12:00:00.000Z",
+      words: { INR: "2026-11-09T10:00:00.000Z", debited: "2026-11-09T10:00:00.000Z", Rs: "2026-11-09T11:00:00.000Z" },
     });
   });
 

@@ -2,15 +2,22 @@
  * Whether iOS automatic capture is working, and which of its automations
  * have fired. iOS gives apps no way to list Shortcuts automations, so this
  * reads it from what arrives: each automation triggers on one word
- * ("debited", "credited", "autopay"), so a message containing that word
- * shows its automation ran. Shown in Settings and on the capture screen.
+ * ("Rs", "INR", "debited"), so a message containing that word shows its
+ * automation ran. Shown in Settings and on the capture screen.
  */
 
-/** The automations the setup asks for, one word each (iOS takes one per automation). */
+/**
+ * The automations the setup asks for, one word each (iOS takes one per
+ * automation). Between them they catch every major Indian bank's payment
+ * SMS: "Sent Rs.180" (HDFC, Kotak), "INR 5.00 debited" (Axis, ICICI cards,
+ * Amex), "debited by 150.0" with no currency (SBI). "Message Contains"
+ * matches inside words too, so a chat with "yours" in it also runs the
+ * action; Ledgerline drops those on the phone without a popup.
+ */
 export const TRIGGERS = [
-  { word: "debited", label: "Money out", pattern: /\bdebited\b/i },
-  { word: "credited", label: "Money in", pattern: /\bcredited\b/i },
-  { word: "autopay", label: "Autopays", pattern: /\bauto-?pay\b/i },
+  { word: "Rs", label: "Amounts in Rs", pattern: /\brs(?=[\s.:\d])/i },
+  { word: "INR", label: "Amounts in INR", pattern: /\binr\b/i },
+  { word: "debited", label: "Debited (SBI and others)", pattern: /\bdebited\b/i },
 ] as const;
 
 export type TriggerWord = (typeof TRIGGERS)[number]["word"];

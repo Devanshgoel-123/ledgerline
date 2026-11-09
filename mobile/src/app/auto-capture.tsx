@@ -11,7 +11,7 @@ import {
 } from "@/capture/androidSms";
 import { captureNotificationsOn, inboxAvailable, setCaptureNotifications } from "@/capture/inbox";
 import { useCaptureStatus, whenSeen } from "@/capture/status";
-import type { CaptureStatus } from "@/core/automations";
+import { TRIGGERS, type CaptureStatus } from "@/core/automations";
 import { closeModal } from "@/features/navigation";
 import { useLedger } from "@/state/ledger";
 import { askForNotifications, notificationPermission } from "@/reminders/schedule";
@@ -25,10 +25,10 @@ import { fonts, radius, space, useTheme } from "@/ui/theme";
  */
 const STEPS = [
   "Open **Shortcuts** → **Automation** → **+** → **Message**.",
-  "Tap **Message Contains** and type `debited`. Leave Sender empty. Tap **Next**.",
+  "Tap **Message Contains** and type the word, like `Rs`. Leave Sender empty. Tap **Next**.",
   "Pick **Run Immediately** and turn off **Notify When Run**. Tap **Next**.",
   "Tap **New Blank Automation** and add **Log bank message** (search for it).",
-  "In the action, tap the blue **Message** and pick **Shortcut Input**. Tap **Done**.",
+  "In the action, tap the blue **Message** and pick **Shortcut Input**. Tap **Shortcut Input** once more and choose **Content**. Tap **Done**.",
 ];
 
 export default function AutoCaptureScreen() {
@@ -186,12 +186,12 @@ function SetupCard({ startOpen }: { startOpen: boolean }) {
           <View style={[s.words, { backgroundColor: c.primarySoft }]}>
             <T variant="strong">Make one for each word</T>
             <View style={{ flexDirection: "row", gap: space[2], flexWrap: "wrap" }}>
-              {["debited", "credited", "autopay"].map((word) => (
+              {TRIGGERS.map(({ word }) => (
                 <Chip key={word} word={word} />
               ))}
             </View>
             <T variant="small" tone="muted">
-              {"Same steps each time, with that word in step 2. Bank says Sent or Spent instead? Add those too."}
+              {"Same steps each time, with that word in step 2. Together they catch every major Indian bank. Chats that happen to contain them are skipped without a popup."}
             </T>
           </View>
           {STEPS.map((step, index) => (
