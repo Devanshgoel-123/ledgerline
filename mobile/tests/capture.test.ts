@@ -42,6 +42,34 @@ describe("capturing bank messages", () => {
     expect(names.map((row) => row[0])).toContain("Swiggy");
   });
 
+  it("saves an unanswered popup payment, then takes the category when the answer follows", async () => {
+    const { db, ctx } = await setup();
+    // Saved before the popup asks: no category yet.
+    const first = await captureMessage(db, { text: SWIGGY, receivedAt: RECEIVED, answer: { type: "debit" } }, await ctx());
+    expect(first.status).toBe("added");
+    expect((await listEntries(db))[0]).toMatchObject({ amount: 250, needsReview: true });
+    // The answer arrives as a second file after the app took the first.
+    const answered = await captureMessage(
+      db,
+      { text: SWIGGY, receivedAt: RECEIVED, answer: { type: "debit", categorySlug: "outing" } },
+      await ctx(),
+    );
+    expect(answered.status).toBe("categorised");
+    const entries = await listEntries(db);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ categorySlug: "outing", needsReview: false, classificationSource: "user_override" });
+  });
+
+  it("a late popup answer never overrides a category you already set", async () => {
+    const { db, ctx } = await setup();
+    await captureMessage(db, { text: SWIGGY, receivedAt: RECEIVED }, await ctx());
+    const [entry] = await listEntries(db);
+    await markReviewed(db, [entry.id]);
+    const late = await captureMessage(db, { text: SWIGGY, receivedAt: RECEIVED, answer: { categorySlug: "outing" } }, await ctx());
+    expect(late.status).toBe("duplicate");
+    expect((await listEntries(db))[0].categorySlug).toBe("food");
+  });
+
   it("never adds the same message twice", async () => {
     const { db, ctx } = await setup();
     await captureMessage(db, { text: SWIGGY, receivedAt: RECEIVED }, await ctx());

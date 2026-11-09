@@ -249,6 +249,21 @@ export async function messageSeen(db: Db, messageRef: string): Promise<boolean> 
   return Boolean(ignored);
 }
 
+/**
+ * The popup's answer for a payment the app already added from the same
+ * message, unanswered: set the category, unless you have already reviewed or
+ * recategorised the entry yourself. Returns whether it changed anything.
+ */
+export async function answerCaptured(db: Db, messageRef: string, categorySlug: string): Promise<boolean> {
+  const result = await db.runAsync(
+    "UPDATE entries SET category_slug = ?, classification_source = 'user_override', needs_review = 0, updated_at = ? WHERE message_ref = ? AND needs_review = 1 AND classification_source != 'user_override'",
+    categorySlug,
+    now(),
+    messageRef,
+  );
+  return result.changes > 0;
+}
+
 /** Delete a captured entry and remember its message, so it isn't captured again. */
 export async function dismissCaptured(db: Db, id: string): Promise<void> {
   await db.withTransactionAsync(async () => {

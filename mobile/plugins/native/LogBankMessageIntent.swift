@@ -12,12 +12,15 @@ import ActivityKit
 //    are doing: "₹640 spent. What was it for?" with your categories as
 //    buttons. When the amount can't be read (or the automation handed over no
 //    text at all), it asks for the amount first.
-// 2. It writes the message and your answer to the App Group folder the app
-//    shares with its widget. The app adds the entry when it next opens
-//    (src/capture/inbox.ts, src/core/capture.ts), with your amount and
-//    category, its full parser, and duplicate checks.
-// 3. If you dismiss the popup, or iOS can't show it (a locked phone), the
-//    payment is still saved and a notification stays behind to check it later.
+// 2. Before asking, it saves the message to the App Group folder the app
+//    shares with its widget, and schedules a reminder a minute out. So the
+//    payment is kept even when you ignore the popup and iOS ends the run, or
+//    the popup can't show at all (a locked phone): the app adds it as "to
+//    review" when it next opens (src/capture/inbox.ts, src/core/capture.ts),
+//    and the reminder asks you to pick its category.
+// 3. When you answer, the saved file is rewritten with your amount and
+//    category and the reminder is cancelled. When you dismiss the popup, the
+//    reminder is shown right away instead.
 //
 // Chats, OTPs and offers are saved for the app to ignore, with no popup.
 // The message never leaves the phone. Copied into the iOS project by
@@ -87,6 +90,24 @@ struct LogBankMessageIntent: AppIntent {
     let slot = recent.record(.init(amount: paid, isCredit: isCredit, at: now, slug: nil))
     recent.save()
 
+    // Save it before asking. iOS may end this run while the popup waits
+    // (ignored, or the phone locks), and nothing after the popup would run;
+    // this file and the scheduled reminder are what's left then.
+    var saved: URL? = nil
+    if !text.isEmpty {
+      saved = try LedgerlineMessageInbox.write(
+        text: text, sender: sender,
+        answer: .init(amount: nil, type: isCredit ? "credit" : "debit", categorySlug: picked?.id)
+      )
+    }
+    let notice = LedgerlineCaptureNotice.id(for: text.isEmpty ? UUID().uuidString : text)
+    if picked == nil {
+      await LedgerlineCaptureNotice.pending(
+        id: notice, amount: paid.map(BankMessagePreview.format), isCredit: isCredit,
+        bank: preview?.bank, saved: !text.isEmpty, after: LedgerlineCaptureNotice.unansweredDelay
+      )
+    }
+
     do {
       if paid == nil {
         if text.isEmpty {
@@ -116,13 +137,19 @@ struct LogBankMessageIntent: AppIntent {
     recent.payments[slot].slug = picked?.id
     recent.save()
 
-    guard !text.isEmpty || paid != nil else { return .result() }
+    guard !text.isEmpty || paid != nil else {
+      await LedgerlineCaptureNotice.cancel(id: notice)
+      return .result()
+    }
     let answer = LedgerlineMessageInbox.Answer(
       amount: preview == nil ? paid : nil,
       type: isCredit ? "credit" : "debit",
       categorySlug: picked?.id
     )
-    try LedgerlineMessageInbox.write(text: text, sender: sender, answer: answer)
+    // Same file as before asking, now with your answer. If the app already
+    // took the first one, this arrives as a new file and the app applies the
+    // category to the entry it made (src/core/capture.ts).
+    try LedgerlineMessageInbox.write(text: text, sender: sender, answer: answer, replacing: saved)
 
     // Keep "Today" on the Lock Screen current.
     if let paid {
@@ -132,9 +159,14 @@ struct LogBankMessageIntent: AppIntent {
       )
     }
 
-    // Not sorted yet: leave a quiet notification to come back to.
-    if picked == nil, let paid {
-      await LedgerlineCaptureNotice.pending(amount: BankMessagePreview.format(paid), isCredit: isCredit, bank: preview?.bank, key: text.isEmpty ? UUID().uuidString : text)
+    if picked != nil {
+      await LedgerlineCaptureNotice.cancel(id: notice)
+    } else {
+      // Dismissed: saved without a category. Remind now rather than in a minute.
+      await LedgerlineCaptureNotice.pending(
+        id: notice, amount: paid.map(BankMessagePreview.format), isCredit: isCredit,
+        bank: preview?.bank, saved: true, after: nil
+      )
     }
     return .result()
   }
@@ -285,7 +317,10 @@ enum LedgerlineMessageInbox {
     var `repeat`: Bool = false
   }
 
-  static func write(text: String, sender: String?, answer: Answer?) throws {
+  /// Writes one message as its own file and returns where. With `replacing`,
+  /// rewrites that file instead, unless the app has already taken it.
+  @discardableResult
+  static func write(text: String, sender: String?, answer: Answer?, replacing: URL? = nil) throws -> URL {
     let container = try container()
     let folder = container.appendingPathComponent(folderName, isDirectory: true)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -305,12 +340,18 @@ enum LedgerlineMessageInbox {
     let data = try JSONSerialization.data(withJSONObject: payload)
 
     // One file per message, written atomically, so the app never reads half a file.
-    let millis = Int(Date().timeIntervalSince1970 * 1000)
-    let name = "\(millis)-\(UUID().uuidString).json"
-    try data.write(to: folder.appendingPathComponent(name), options: .atomic)
+    let target: URL
+    if let replacing, FileManager.default.fileExists(atPath: replacing.path) {
+      target = replacing
+    } else {
+      let millis = Int(Date().timeIntervalSince1970 * 1000)
+      target = folder.appendingPathComponent("\(millis)-\(UUID().uuidString).json")
+    }
+    try data.write(to: target, options: .atomic)
 
     // A message came through, so the automation is set up right.
     if !text.isEmpty { try? FileManager.default.removeItem(at: container.appendingPathComponent(emptyMarker)) }
+    return target
   }
 
   static func markEmptyMessage() throws {
@@ -357,21 +398,43 @@ enum LedgerlineCaptureNotice {
     return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
   }
 
-  /// "₹640 spent": a quiet notification for a payment you haven't sorted yet.
-  /// It stays in Notification Center; tapping it opens the review screen.
-  static func pending(amount: String, isCredit: Bool, bank: String?, key: String) async {
+  /// Where the app adds a payment by hand, for a run that saved nothing.
+  static let addRoute = "/quick"
+  /// How long the popup may wait for an answer before the reminder shows.
+  static let unansweredDelay: TimeInterval = 60
+
+  /// The same message twice replaces its notification instead of adding one.
+  static func id(for key: String) -> String { "captured-\(stableHash(key))" }
+
+  /// "₹640 spent": a notification for a payment you haven't sorted yet. With
+  /// `after`, it's scheduled that far out, so it still arrives if iOS ends the
+  /// run while the popup waits; `cancel` takes it back once you answer. It
+  /// stays in Notification Center; tapping it opens the review screen.
+  static func pending(id: String, amount: String?, isCredit: Bool, bank: String?, saved: Bool, after delay: TimeInterval?) async {
     guard LedgerlineMessageInbox.notificationsWanted(), await allowed() else { return }
     let content = UNMutableNotificationContent()
-    content.title = "\(amount) \(isCredit ? "received" : "spent")"
-    content.body = bank.map { "From your \($0) message. Tap to pick its category." }
-      ?? "Saved in Ledgerline. Tap to pick its category."
+    if let amount {
+      content.title = "\(amount) \(isCredit ? "received" : "spent")"
+      content.body = bank.map { "Saved from your \($0) message. Tap to pick its category." }
+        ?? "Saved in Ledgerline. Tap to pick its category."
+    } else {
+      content.title = isCredit ? "Money came in" : "A payment came in"
+      content.body = saved ? "Saved in Ledgerline. Tap to add its amount and category." : "Tap to add it in Ledgerline."
+    }
     content.threadIdentifier = "captured"
-    content.userInfo = ["url": reviewRoute]
+    // Without an amount the app may not be able to add it, so open Quick add.
+    content.userInfo = ["url": saved && amount != nil ? reviewRoute : addRoute]
     // The bank's SMS already made a sound.
     content.sound = nil
-    // The same message twice replaces its notification instead of adding one.
-    let id = "captured-\(stableHash(key))"
-    try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+    let trigger = delay.map { UNTimeIntervalNotificationTrigger(timeInterval: $0, repeats: false) }
+    try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+  }
+
+  /// You answered the popup: no reminder needed.
+  static func cancel(id: String) async {
+    let center = UNUserNotificationCenter.current()
+    center.removePendingNotificationRequests(withIdentifiers: [id])
+    center.removeDeliveredNotifications(withIdentifiers: [id])
   }
 
   /// FNV-1a, the same on every launch (String.hashValue is not).

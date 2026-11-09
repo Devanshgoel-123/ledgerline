@@ -106,7 +106,7 @@ export default function CaptureScreen() {
           </Card>
         ) : null}
 
-        {outcome?.status === "duplicate" ? (
+        {outcome?.status === "duplicate" || outcome?.status === "categorised" ? (
           <Card>
             <CardTitle title="Already added" sub="This message was added before, so nothing changed." />
             <Button label="Done" onPress={closeModal} />
