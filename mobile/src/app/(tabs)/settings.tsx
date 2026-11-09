@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Linking, Platform, StyleSheet, View } from "react-native";
+import { useCaptureStatus, whenSeen } from "@/capture/status";
 import { backupAge, backupStatus } from "@/core/backupStatus";
 import { categoryLabel } from "@/core/catalog";
 import { entriesCsv } from "@/core/csv";
@@ -16,7 +17,7 @@ import { TimeChoice } from "@/features/pickers";
 import { applyReminders, askForNotifications, notificationPermission, type PermissionState } from "@/reminders/schedule";
 import type { ReminderSettings } from "@/reminders/settings";
 import { useLedger } from "@/state/ledger";
-import { Button, Card, CardTitle, Chip, Divider, Field, PageHeader, Row, Screen, T, Toggle } from "@/ui/components";
+import { Button, Card, CardTitle, Chip, Divider, Field, PageHeader, Pill, Row, Screen, T, Toggle } from "@/ui/components";
 import { Icon } from "@/ui/Icon";
 import { space, useTheme } from "@/ui/theme";
 
@@ -115,14 +116,7 @@ export default function SettingsScreen() {
     <Screen>
       <PageHeader title="Settings" />
 
-      <Card>
-        <CardTitle
-          title="Add payments from bank SMS"
-          sub="Set up once and payments your bank texts you about are added by themselves. Read on this phone only."
-        />
-        <Button label="Set up automatic capture" icon="bell" onPress={() => router.push("/auto-capture")} />
-        <Button label="Paste a bank message" variant="secondary" onPress={() => router.push("/capture")} />
-      </Card>
+      <CaptureCard />
 
       <Card>
         <CardTitle title="Reminders" sub="Nudges from this phone. No account, no server." />
@@ -421,3 +415,35 @@ const s = StyleSheet.create({
   switchRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
   backupLine: { flexDirection: "row", gap: space[3], alignItems: "flex-start", padding: space[3], borderRadius: 12 },
 });
+
+/** Bank SMS capture: whether it's on (iOS reads that from what's arrived), and the way in. */
+function CaptureCard() {
+  const status = useCaptureStatus();
+  const ios = Platform.OS === "ios";
+  const on = ios && status?.state === "on";
+  const fix = ios && status?.state === "no-text";
+  const working = status?.automations.filter((automation) => automation.seenAt).length ?? 0;
+  return (
+    <Card>
+      <CardTitle
+        title={on ? "Bank SMS capture is on" : fix ? "Bank SMS capture needs a fix" : "Add payments from bank SMS"}
+        sub={
+          on && status?.lastRun
+            ? `Last bank message ${whenSeen(status.lastRun)} · ${working} of 3 automations seen working.`
+            : fix
+              ? "Your automation isn't passing the message. Open it to see the fix."
+              : "Set up once and payments your bank texts you about are added by themselves. Read on this phone only."
+        }
+        right={on ? <Pill tone="success">On</Pill> : fix ? <Pill tone="warning">Fix</Pill> : undefined}
+      />
+      <Button
+        label={on ? "Check automations" : fix ? "See the fix" : "Set up automatic capture"}
+        icon="bell"
+        variant={on ? "secondary" : "primary"}
+        onPress={() => router.push("/auto-capture")}
+      />
+      <Button label="Paste a bank message" variant={on ? "ghost" : "secondary"} onPress={() => router.push("/capture")} />
+    </Card>
+  );
+}
+
