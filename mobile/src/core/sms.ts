@@ -34,7 +34,8 @@ const NOT_A_PAYMENT = [
   /\bwill be (debited|deducted)\b|\bscheduled\b|\bmandate\b.*\b(created|registered)\b|\bauto-?pay\b.*\b(set|registered)\b/i,
 ];
 
-const MONEY = String.raw`(?:rs\.?|inr|₹)`;
+// "Rs.250", "Rs 250", "Rs:350" (Union Bank), "INR 5.00", "₹99".
+const MONEY = String.raw`(?:rs[.:]?|inr|₹)`;
 // Indian grouping (1,00,000) or plain digits; never stop mid-number ("5000" is not "500").
 const NUMBER = String.raw`(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?(?![\d,])|\d+(?:\.\d{1,2})?(?!\d))`;
 const AMOUNT_WITH_CURRENCY = new RegExp(String.raw`${MONEY}\s*${NUMBER}`, "i");
@@ -45,7 +46,10 @@ const CREDIT_TO_ACCOUNT = [
   /\b(?:a\/c|acct|account|ac)\b(?:\s*no\.?)?\s*[x*]*\d{2,6}\s+(?:is\s+|has been\s+)?credited\b/i,
   /\b(?:you have )?received\b|\brefund(?:ed)?\b|\breversed\b|\bdeposited\b/i,
 ];
-const DEBIT_WORDS = /\b(debited|spent|sent|paid|withdrawn|purchase|debit of|txn of)\b/i;
+const DEBIT_WORDS = /\b(debited|spent|sent|paid|withdrawn|purchase|debit of|txn of|transferred from)\b/i;
+// PNB, BOI and ICICI debits also say the payee was credited ("debited ... and credited to A/c of SWIGGY"):
+// when a message says both, the word that comes first is what happened to your account.
+const DEBITED_OR_CREDITED = /\b(debited|credited)\b/i;
 
 const MONTHS: Record<string, number> = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
@@ -88,6 +92,9 @@ function amountOf(text: string): number | null {
 }
 
 function directionOf(text: string): TxType | null {
+  if (/\bdebited\b/i.test(text) && /\bcredited\b/i.test(text)) {
+    return text.match(DEBITED_OR_CREDITED)![1]!.toLowerCase() === "debited" ? "debit" : "credit";
+  }
   if (CREDIT_TO_ACCOUNT.some((pattern) => pattern.test(text))) return "credit";
   if (DEBIT_WORDS.test(text)) return "debit";
   if (/\bcredited\b/i.test(text)) return "credit";
@@ -96,7 +103,7 @@ function directionOf(text: string): TxType | null {
 
 const UPI_ID = /\b([a-z0-9][a-z0-9._-]{1,63}@[a-z][a-z0-9.]{1,30})\b/i;
 const OWN_ACCOUNT = /\b(a\/c|acct|account|bank|card|ac)\b|^[x*]*\d+$/i;
-const STOP = String.raw`(?=\s+(?:on|ref|refno|upi|via|for|dated|avl|bal|info|txn|not you|if not|\(|-|\.)\b|[.;(]|$)`;
+const STOP = String.raw`(?=\s+(?:on|from|ref|refno|upi|via|for|dated|avl|bal|info|txn|not you|if not|\(|-|\.)\b|[.;,(]|$)`;
 
 function cleanParty(raw: string | undefined): string | null {
   if (!raw) return null;
@@ -109,18 +116,22 @@ function cleanParty(raw: string | undefined): string | null {
   return party.slice(0, 60);
 }
 
+// Axis and others: "UPI/P2A/667790166602/DEVANSH GOEL", the name running to the next slash or line of boilerplate.
+const P2X_NAME = /UPI\/P2[MA]\/\d+\/([A-Za-z0-9 .&'_-]{2,50}?)(?=\/|\s+(?:not you|avl|bal|ref|axis bank)\b|[.;]|$)/i;
+
 function partyOf(text: string, type: TxType): string | null {
   const name = String.raw`([A-Za-z0-9][A-Za-z0-9 .&'_@-]{1,50}?)`;
   const patterns =
     type === "debit"
       ? [
-          new RegExp(String.raw`UPI\/P2[MA]\/\d+\/([A-Za-z0-9 .&'_-]{2,50}?)(?:\/|\s+not you|\s|$)`, "i"),
+          P2X_NAME,
           new RegExp(String.raw`;\s*${name}\s+credited\b`, "i"),
           new RegExp(String.raw`\b(?:trf|transfer(?:red)?|sent|paid)\s+to\s+${name}${STOP}`, "i"),
           new RegExp(String.raw`\bat\s+${name}${STOP}`, "i"),
           new RegExp(String.raw`\bto\s+(?:vpa\s+)?${name}${STOP}`, "i"),
         ]
       : [
+          P2X_NAME,
           new RegExp(String.raw`\bfrom\s+(?:vpa\s+)?${name}${STOP}`, "i"),
           new RegExp(String.raw`\bby\s+(?:neft|imps|rtgs)[\s/:*-]+${name}${STOP}`, "i"),
           // "credited by Rs.500" is the amount, not who paid.
@@ -161,6 +172,18 @@ const BANKS: [RegExp, string][] = [
   [/federal/i, "Federal"],
   [/canara/i, "Canara"],
   [/union bank/i, "Union Bank"],
+  [/central bank/i, "Central Bank"],
+  [/indian overseas|\biob\b/i, "Indian Overseas Bank"],
+  [/\bindian bank\b/i, "Indian Bank"],
+  [/bank of india|\bboi\b/i, "Bank of India"],
+  [/bank of maharashtra|\bmahabk\b/i, "Bank of Maharashtra"],
+  [/\buco\b/i, "UCO"],
+  [/\bidbi\b/i, "IDBI"],
+  [/\brbl\b/i, "RBL"],
+  [/bandhan/i, "Bandhan"],
+  [/paytm/i, "Paytm Payments Bank"],
+  [/airtel payments/i, "Airtel Payments Bank"],
+  [/\bamex\b|american express/i, "Amex"],
 ];
 
 function bankOf(text: string, sender: string | null): string | null {

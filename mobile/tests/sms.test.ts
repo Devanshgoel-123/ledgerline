@@ -140,3 +140,57 @@ describe("which bank, and who paid", () => {
     expect(p?.party).toBe("ACME CORP");
   });
 });
+
+// More banks. Wording from the templates these banks send (as collected by
+// open-source SMS parsers), with made-up names, accounts and references.
+// [message, amount, type, bank, party or undefined to skip]
+const MORE_BANKS: [string, number, "debit" | "credit", string | null, string | null | undefined][] = [
+  // HDFC and Axis, from a tester's phone
+  ["Sent Rs.180.00\nFrom HDFC Bank A/C *2641\nTo MD SAMEER\nOn 09/11/26\nRef 132617110699\nNot You?\nCall 18002586161/SMS BLOCK UPI to 7308080808", 180, "debit", "HDFC", "MD SAMEER"],
+  ["INR 5.00 debited\nA/c no. XX0483\n07-11-26, 17:30:57\nUPI/P2A/667790166602/DEVANSH GOEL\nNot you? SMS BLOCKUPI Cust ID to 919951860002\nAxis Bank", 5, "debit", "Axis", "DEVANSH GOEL"],
+  ["INR 2,500.00 credited\nA/c no. XX0483\n05-11-26, 10:12:01\nUPI/P2A/532912345690/RAHUL SHARMA\nNot you? SMS BLOCKUPI Cust ID to 919951860002\nAxis Bank", 2500, "credit", "Axis", "RAHUL SHARMA"],
+  ["Spent Rs.1,250 On HDFC Bank Card 1234 At AMAZON On 2026-11-05:18:30:00 Not You? To Block+Reissue Call 18002586161/SMS BLOCK CC 1234 to 7308080808", 1250, "debit", "HDFC", "AMAZON"],
+  ["Credit Alert!\nRs.500.00 credited to HDFC Bank A/c XX2641 on 05-11-26 from VPA rahul@okaxis (UPI 532912345691)", 500, "credit", "HDFC", undefined],
+  // SBI
+  ["Dear SBI UPI User, ur A/cX1234 credited by Rs500 on 05Nov26 by (Ref no 532912345692)", 500, "credit", "SBI", undefined],
+  ["Rs.1,499.00 spent on your SBI Credit Card ending 1234 at FLIPKART on 05/11/26. Trxn. not done by you? Report at https://sbicard.com/Dispute", 1499, "debit", "SBI", "FLIPKART"],
+  // ICICI
+  ["Dear Customer, Acct XX123 is credited with Rs 750.00 on 05-Nov-26 from RAHUL. UPI:532912345693-ICICI Bank.", 750, "credit", "ICICI", "RAHUL"],
+  ["INR 2,999.00 spent using ICICI Bank Card XX1234 on 05-Nov-26 on MYNTRA. Avl Limit: INR 50,000.00. If not you, call 1800 2662/SMS BLOCK 1234 to 9215676766.", 2999, "debit", "ICICI", undefined],
+  // Kotak
+  ["Sent Rs.320.00 from Kotak Bank AC X1234 to swiggy@icici on 05-11-26.UPI Ref 532912345694. Not you, https://kotak.com/KBANKT/Fraud", 320, "debit", "Kotak", undefined],
+  ["Received Rs.1,000.00 in your Kotak Bank AC X1234 from rahul@okaxis on 05-11-26.UPI Ref:532912345695.", 1000, "credit", "Kotak", undefined],
+  // PNB: the debit also says "credited to A/c of" the payee
+  ["Your A/c XX1234 has been debited for Rs.250.00 on 05-11-2026 18:30:00 and credited to A/c of SWIGGY (UPI Ref No 532912345696). If not done by you, call 18001802222 - PNB", 250, "debit", "PNB", undefined],
+  // Bank of Baroda: "transferred", and a balance marked CR
+  ["Rs.400.00 transferred from A/c ...1234 to:UPI/532912345697. Total Bal:Rs.10000.00CR. Avlbl Amt:Rs.10000.00(05-11-2026 18:30:00) - Bank of Baroda", 400, "debit", "Bank of Baroda", undefined],
+  ["Rs.600 Credited to A/c ...1234 thru UPI/532912345698 by rahul@okaxis. Total Bal:Rs.10600.00CR. Avlbl Amt:Rs.10600.00(05-11-2026) - Bank of Baroda", 600, "credit", "Bank of Baroda", undefined],
+  // Union Bank: "Rs:" with a colon
+  ["A/c *1234 Debited for Rs:350.00 on 05-11-2026 18:30:00 by Mob Bk ref no 532912345699 Avl Bal Rs:10000.00.If not you, Call 1800222243 -Union Bank of India", 350, "debit", "Union Bank", undefined],
+  // Canara
+  ["Rs.220.00 paid thru A/C XX1234 on 05-11-26 18:30:00 to SWIGGY, UPI Ref 532912345700. If not done, SMS BLOCKUPI to 9901771222.-Canara Bank", 220, "debit", "Canara", "SWIGGY"],
+  ["An amount of INR 1,200.00 has been CREDITED to your account XXX1234 on 05/11/2026 towards UPI/532912345701. Total Avail.bal INR 11,200.00. - Canara Bank", 1200, "credit", "Canara", undefined],
+  // Bank of India: the debit also says "credited to" the payee
+  ["Rs.180.00 debited A/cXX1234 and credited to ZEPTO via UPI Ref No 532912345702 on 05Nov26. Call 18001031906, if not done by you. -BOI", 180, "debit", "Bank of India", undefined],
+  // IDFC First, IndusInd, Yes, Federal, AU, Indian Bank
+  ["Your A/C XXXXX1234 is debited by INR 650.00 on 05/11/26 18:30. New Bal :INR 10,000.00. UPI Ref 532912345703 - IDFC FIRST Bank", 650, "debit", "IDFC First", undefined],
+  ["Your A/c 1234XXXX1234 is debited for INR 275.00 towards UPI/532912345704/SWIGGY. Avl Bal INR 10,000.00 - IndusInd Bank", 275, "debit", "IndusInd", undefined],
+  ["INR 99.00 debited from A/c XX1234 on 05-11-2026 towards UPI/532912345705/SPOTIFY. Avl Bal: INR 10,000.00 - YES BANK", 99, "debit", "Yes Bank", undefined],
+  ["Rs 430.00 debited from your A/c using UPI on 05-11-2026 18:30:00 to VPA blinkit@hdfcbank - (UPI Ref No 532912345706)-Federal Bank", 430, "debit", "Federal", undefined],
+  ["Debited INR 199.00 from A/c XX1234 on 05-11-2026 UPI/DR/532912345707/NETFLIX. Bal INR 10,000.00 - AU Small Finance Bank", 199, "debit", "AU", undefined],
+  ["Your A/c XX1234 is debited Rs. 560.00 on 05-11-26 to VPA zomato@icici. UPI Ref 532912345708 -Indian Bank", 560, "debit", "Indian Bank", undefined],
+  // Autopay and NACH that went through
+  ["Rs.149.00 debited from A/c XX1234 on 05-11-26 for AutoPay of NETFLIX via UPI Mandate. UPI Ref 532912345709 - HDFC Bank", 149, "debit", "HDFC", undefined],
+  ["Your A/c XX1234 is debited for Rs.5,000.00 on 05-11-26 towards NACH-DR- SIP GROWW. Avl Bal Rs.20,000.00 -ICICI Bank", 5000, "debit", "ICICI", undefined],
+  // Paytm Payments Bank, Amex
+  ["Paid Rs.85 to CHAI POINT from Paytm Payments Bank a/c 91XX1234. UPI Ref: 532912345710", 85, "debit", "Paytm Payments Bank", "CHAI POINT"],
+  ["Alert: You've spent INR 3,400.00 on your AMEX card ** 12345 at CROMA on 05 November 2026 at 06:30 PM IST.", 3400, "debit", "Amex", "CROMA"],
+];
+
+describe("bank SMS: more Indian banks", () => {
+  it.each(MORE_BANKS)("%s", (text, amount, type, bank, party) => {
+    const p = parseBankMessage(text, { ...ON, sender: null });
+    expect(p).toMatchObject({ amount, type, bank });
+    if (party !== undefined) expect(p?.party).toBe(party);
+  });
+});
